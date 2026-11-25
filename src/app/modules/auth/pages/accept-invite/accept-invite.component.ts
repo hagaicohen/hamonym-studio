@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EntitiesService } from '../../../../core/services/entities.service';
 
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 // Phase 4 — Partner Management, Epic 3 (Invite). Public entry point for a
 // Partner-invite email link. Three states depending on auth: not logged in
 // (choose login/register, both carry ?returnUrl= back here), logged in and
@@ -10,7 +11,7 @@ import { EntitiesService } from '../../../../core/services/entities.service';
 @Component({
   selector: 'app-accept-invite',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [HmIconComponent, CommonModule, RouterLink],
   templateUrl: './accept-invite.component.html',
   styleUrl: './accept-invite.component.css',
 })

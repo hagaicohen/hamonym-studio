@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { CampaignDraft } from '../../../../services/campaign-studio-state.service';
 
+import { HmIconComponent } from '../../../../../../shared/ui/design-system/icon.component';
 // "דורש תשומת לב" (2026-08-06) — mockup showed 4 cards (manual donations
 // pending / new registrants / rewards out of stock / new ambassadors), but
 // only "rewards out of stock" is honestly computable from real data today.
@@ -17,7 +18,7 @@ import { CampaignDraft } from '../../../../services/campaign-studio-state.servic
 @Component({
   selector: 'app-campaign-dashboard-attention',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [HmIconComponent, CommonModule, RouterLink],
   templateUrl: './campaign-dashboard-attention.component.html',
   styleUrl: './campaign-dashboard-attention.component.css',
 })

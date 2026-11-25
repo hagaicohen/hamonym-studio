@@ -4,11 +4,12 @@ import {
   CampaignStudioStateService,
   CampaignDraft,
 } from '../../../services/campaign-studio-state.service';
-
+
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 @Component({
   selector: 'app-campaign-donation-step',
   standalone: true,
-  imports: [CommonModule],
+  imports: [HmIconComponent, CommonModule],
   templateUrl: './campaign-donation-step.component.html',
   styleUrl: './campaign-donation-step.component.css',
 })

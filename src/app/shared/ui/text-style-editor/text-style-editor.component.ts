@@ -23,6 +23,14 @@ export class TextStyleEditorComponent {
 
   @Input() showPosition = false;
   @Input() showCta = false;
+  // Hero: separate size and color for the title and the subtitle.
+  @Input() splitTitleSubtitle = false;
+  // Studio direct editing: only this part's controls, open right away (no
+  // "עיצוב מתקדם" toggle). The alignment written is the part's own one.
+  @Input() part: 'title' | 'subtitle' | 'cta' | null = null;
+  // What the part shows when it has no alignment of its own (on the Hero the
+  // copy is centered; above/below it follows the shared alignment).
+  @Input() partAlignFallback: TextAlign = 'center';
 
   expanded = false;
 
@@ -50,6 +58,21 @@ export class TextStyleEditorComponent {
 
   patchStyle(partial: Partial<TextStyle>): void {
     this.textStyleChange.emit({ ...this.textStyle, ...partial });
+  }
+
+  // The shared alignment also resets the per-part alignment set by dragging,
+  // so it keeps controlling both lines.
+  setAlign(align: TextAlign): void {
+    this.patchStyle(this.splitTitleSubtitle ? { align, titleAlign: undefined, subtitleAlign: undefined } : { align });
+  }
+
+  partAlign(): TextAlign {
+    const own = this.part === 'subtitle' ? this.textStyle.subtitleAlign : this.textStyle.titleAlign;
+    return own ?? this.partAlignFallback;
+  }
+
+  setPartAlign(align: TextAlign): void {
+    this.patchStyle(this.part === 'subtitle' ? { subtitleAlign: align } : { titleAlign: align });
   }
 
   patchCta(partial: Partial<CtaConfig>): void {

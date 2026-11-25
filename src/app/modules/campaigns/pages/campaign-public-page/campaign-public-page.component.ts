@@ -15,11 +15,12 @@ import { AmbassadorService, Ambassador, AmbassadorPublicInfo } from '../../servi
 import { CurrentContextService } from '../../../../core/services/current-context.service';
 import { DonationService } from '../../services/donation.service';
 import { AnalyticsService } from '../../../../core/services/analytics.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 @Component({
   selector: 'app-campaign-public-page',
   standalone: true,
-  imports: [CommonModule, CampaignPreviewComponent, MinimalDonationPageComponent, PaymentFailedPopupComponent, DonationToastComponent, PlatformTopStripComponent],
+  imports: [HmIconComponent, CommonModule, CampaignPreviewComponent, MinimalDonationPageComponent, PaymentFailedPopupComponent, DonationToastComponent, PlatformTopStripComponent],
   templateUrl: './campaign-public-page.component.html',
   styleUrls: ['./campaign-public-page.component.css'],
 })

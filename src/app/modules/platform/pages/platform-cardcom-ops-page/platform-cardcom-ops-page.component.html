@@ -17,7 +17,7 @@
        honest resolutionKind labels instead of an implied action. -->
   @if (!loading && totalAnomalyCount > 0) {
     <button type="button" class="ops-anomaly-bar" (click)="toggleAnomalies()">
-      <span>⚠ קיימות {{ totalAnomalyCount }} {{ totalAnomalyCount === 1 ? 'חריגה מערכתית' : 'חריגות מערכתיות' }} בתרומות</span>
+      <span><app-icon name="alert" /> קיימות {{ totalAnomalyCount }} {{ totalAnomalyCount === 1 ? 'חריגה מערכתית' : 'חריגות מערכתיות' }} בתרומות</span>
       <span class="ops-anomaly-bar-toggle">{{ showAnomalies ? 'הסתר' : 'הצג חריגות' }}</span>
     </button>
   }

@@ -12,6 +12,7 @@ import { AppLoaderService } from '../../core/services/app-loader.service';
 import { NotificationBellComponent } from '../../core/layout/notification-bell/notification-bell.component';
 import { PlatformService } from '../platform/services/platform.service';
 import { EntitiesService } from '../../core/services/entities.service';
+import { campaignCreatePath } from '../campaigns/campaign-editor-route';
 
 describe('Campaign drafts before organization approval', () => {
   const entity = signal<any>({ id: 'org-a', status: 'draft' });
@@ -45,7 +46,7 @@ describe('Campaign drafts before organization approval', () => {
       expect(fixture.nativeElement.querySelector('.campaigns-alert--pending')).toBeNull();
       const navigate=spyOn(TestBed.inject(Router),'navigate').and.resolveTo(true);
       fixture.nativeElement.querySelector('.fc-cta').click();
-      expect(navigate).toHaveBeenCalledWith(['/campaigns/create']);
+      expect(navigate).toHaveBeenCalledWith(campaignCreatePath());
       expect(list).toHaveBeenCalledWith('org-a');
       fixture.destroy();
     });
@@ -94,7 +95,7 @@ describe('Campaign drafts before organization approval', () => {
     it('launches the existing creation flow from the primary CTA', () => {
       const fixture=open(); const navigate=spyOn(TestBed.inject(Router),'navigate').and.resolveTo(true);
       q(fixture,'.fc-cta')!.click();
-      expect(navigate).toHaveBeenCalledWith(['/campaigns/create']);
+      expect(navigate).toHaveBeenCalledWith(campaignCreatePath());
       fixture.destroy();
     });
     it('flags the welcome for the layout and clears it on leave or when a campaign exists', () => {

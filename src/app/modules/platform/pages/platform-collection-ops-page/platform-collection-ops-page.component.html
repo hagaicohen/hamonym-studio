@@ -315,7 +315,7 @@
           @if (((selectedStatement.status === 'approved' || selectedStatement.status === 'open') && selectedStatement.readiness.route === 'card') || selectedStatement.status === 'paid') {
             <div class="col-exceptional">
               <button class="col-exceptional-toggle" (click)="showExceptionalActions = !showExceptionalActions">
-                ⚠ פעולות מתקדמות / חריגות {{ showExceptionalActions ? '▲' : '▼' }}
+                <app-icon name="alert" /> פעולות מתקדמות / חריגות {{ showExceptionalActions ? '▲' : '▼' }}
               </button>
               @if (showExceptionalActions) {
                 <div class="col-exceptional-body">
@@ -336,7 +336,7 @@
           @if (selectedStatement.status === 'approved' || selectedStatement.status === 'paid') {
             <div class="col-exceptional">
               <button class="col-exceptional-toggle" (click)="showAdjustment = !showAdjustment">
-                ⚠ תיקון סכום (פעולה חריגה) {{ showAdjustment ? '▲' : '▼' }}
+                <app-icon name="alert" /> תיקון סכום (פעולה חריגה) {{ showAdjustment ? '▲' : '▼' }}
               </button>
               @if (showAdjustment) {
                 <div class="col-exceptional-body">

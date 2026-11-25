@@ -1,19 +1,23 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { ActiveContext, RoleType, UserContext, UserRoleGroup } from '../models/user-context.model';
 import { isRegistrationDraft, registeredOrganizations } from '../utils/organization-registration-status';
+import type { HmIconName } from '../../shared/ui/design-system/icon.component';
 
 // entity-manager's group can hold both nonprofits and businesses (a Partner
 // entity, or any entity registered as עוסק פטור/מורשה) — 'מנהל עמותה' is
 // only correct for an association, not an umbrella term. The GROUP label
 // stays neutral; the ACTIVE context's label is computed per-entity below via
 // entityManagerLabel().
-const ROLE_META: Record<RoleType, { label: string; icon: string }> = {
-  'entity-manager':   { label: 'הגופים שלי', icon: '🏢' },
-  'ambassador':       { label: 'שגריר',       icon: '🤝' },
-  'campaign-manager': { label: 'קמפיינר',     icon: '🎯' },
-  'company':          { label: 'חברה',         icon: '🏭' },
-  'donor':            { label: 'תורם',         icon: '💛' },
+const ROLE_META: Record<RoleType, { label: string; icon: HmIconName }> = {
+  'entity-manager':   { label: 'הגופים שלי', icon: 'building' },
+  'ambassador':       { label: 'שגריר',       icon: 'handshake' },
+  'campaign-manager': { label: 'קמפיינר',     icon: 'target' },
+  'company':          { label: 'חברה',         icon: 'factory' },
+  'donor':            { label: 'תורם',         icon: 'heart' },
 };
+
+// The role's icon, by role (not the stored roleIcon value).
+export function roleIconName(role: RoleType): HmIconName { return ROLE_META[role]?.icon ?? 'user'; }
 
 // Mirrors organization-registration/config/entity-config.ts's EntityType
 // labels, phrased as a role/identity label rather than a form-field label —

@@ -1,6 +1,6 @@
 <div class="pdt-stack" *ngIf="toasts.length">
   <div class="pdt-toast" *ngFor="let t of toasts" [class.pdt-toast--visible]="t.visible">
-    <div class="pdt-icon">🎉</div>
+    <div class="pdt-icon"><app-icon name="party" /></div>
     <div class="pdt-body">
       <div class="pdt-title">התקבלה תרומה חדשה!</div>
       <div class="pdt-text">{{ t.donorLabel }} תרם/תרמה ₪{{ t.amount.toLocaleString('he-IL') }}</div>

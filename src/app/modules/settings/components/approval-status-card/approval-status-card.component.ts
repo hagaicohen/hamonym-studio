@@ -4,6 +4,7 @@ import { OrganizationLifecycleEventsService } from '../../../../core/services/or
 import { CommonModule } from '@angular/common';
 import { EntitiesService } from '../../../../core/services/entities.service';
 import { approvalReasonLabel } from '../../../../shared/config/approval-reason-tags';
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 
 interface ApprovalStatus {
   status: string;
@@ -14,18 +15,18 @@ interface ApprovalStatus {
 }
 
 const STATUS_META: Record<string, { label: string; icon: string; level: 'good' | 'warn' | 'bad' | 'neutral' }> = {
-  draft:              { label: 'השלמת פרטים',   icon: '⚪', level: 'neutral' },
-  pending_review:     { label: 'ממתין לאישור',   icon: '🟡', level: 'warn' },
-  active:             { label: 'מאושרת',         icon: '🟢', level: 'good' },
-  changes_requested:  { label: 'נדרשים תיקונים', icon: '🟡', level: 'warn' },
-  rejected:           { label: 'נדחתה',          icon: '🔴', level: 'bad' },
-  suspended:          { label: 'מושעית',         icon: '🔴', level: 'bad' },
+  draft:              { label: 'השלמת פרטים',   icon: 'neutral', level: 'neutral' },
+  pending_review:     { label: 'ממתין לאישור',   icon: 'warning', level: 'warn' },
+  active:             { label: 'מאושרת',         icon: 'success', level: 'good' },
+  changes_requested:  { label: 'נדרשים תיקונים', icon: 'warning', level: 'warn' },
+  rejected:           { label: 'נדחתה',          icon: 'danger', level: 'bad' },
+  suspended:          { label: 'מושעית',         icon: 'danger', level: 'bad' },
 };
 
 @Component({
   selector: 'app-approval-status-card',
   standalone: true,
-  imports: [CommonModule],
+  imports: [HmIconComponent, CommonModule],
   templateUrl: './approval-status-card.component.html',
   styleUrl: './approval-status-card.component.css',
 })
@@ -103,7 +104,7 @@ export class ApprovalStatusCardComponent implements OnChanges, OnDestroy {
   }
 
   meta(status: string) {
-    return STATUS_META[status] ?? { label: status, icon: '⚪', level: 'neutral' as const };
+    return STATUS_META[status] ?? { label: status, icon: 'neutral', level: 'neutral' as const };
   }
 
   // The entity-settings hero row already shows registration number + status

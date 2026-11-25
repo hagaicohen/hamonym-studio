@@ -1,6 +1,6 @@
 <div class="pb-load-state" *ngIf="loading">טוען את דף השותף...</div>
 
-<div class="pb-load-state pb-load-state--error" *ngIf="loadError">⚠ {{ loadError }}</div>
+<div class="pb-load-state pb-load-state--error" *ngIf="loadError"><app-icon name="alert" /> {{ loadError }}</div>
 
 <ng-container *ngIf="ui.state$ | async as s">
 <div class="pb-page" [class.pb-page--fullscreen]="s.fullscreen" *ngIf="!loading && !loadError">
@@ -58,7 +58,7 @@
     <button type="button" class="pb-return-btn" [disabled]="returningToCampaign" (click)="returnAndLink()">
       {{ returningToCampaign ? 'שומר ומחבר...' : 'שמירה וחזרה לקמפיין, עם השותף מקושר ←' }}
     </button>
-    <span class="pb-invite-error" *ngIf="returnError">⚠ {{ returnError }}</span>
+    <span class="pb-invite-error" *ngIf="returnError"><app-icon name="alert" /> {{ returnError }}</span>
   </div>
 
   <div class="pb-invite-panel" *ngIf="showInviteForm && !s.fullscreen">
@@ -71,7 +71,7 @@
     <ng-template #inviteSentTpl>
       <span class="pb-invite-sent">✓ ההזמנה נשלחה ל-{{ inviteEmail }}</span>
     </ng-template>
-    <p class="pb-invite-error" *ngIf="inviteError">⚠ {{ inviteError }}</p>
+    <p class="pb-invite-error" *ngIf="inviteError"><app-icon name="alert" /> {{ inviteError }}</p>
   </div>
 
   <div class="pb-using-campaigns" *ngIf="!s.fullscreen">
@@ -101,7 +101,7 @@
     <p>הפעולה תסתיר את דף השותף לצמיתות (הדף הציבורי יחזיר "לא נמצא"). קמפיינים שכבר קישרו לשותף הזה ימשיכו להציג שהקישור מצביע על שותף שנמחק. הפעולה הפיכה רק ע"י Super Admin.</p>
     <label class="pb-delete-label">להקלדת אישור, יש להקליד את שם השותף במדויק:</label>
     <input class="pb-invite-input" type="text" [(ngModel)]="deleteConfirmText" [placeholder]="displayName">
-    <p class="pb-invite-error" *ngIf="deleteError">⚠ {{ deleteError }}</p>
+    <p class="pb-invite-error" *ngIf="deleteError"><app-icon name="alert" /> {{ deleteError }}</p>
     <div class="pb-delete-actions">
       <button type="button" class="pb-invite-btn" (click)="closeDeleteModal()">ביטול</button>
       <button type="button" class="pb-delete-confirm-btn" [disabled]="!deleteConfirmValid || isDeleting" (click)="confirmDelete()">

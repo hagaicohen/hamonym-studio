@@ -1282,3 +1282,16 @@
   .theme-palette-row { max-width: 228px; gap: 12px; }
   .theme-palette-label { flex-basis: 100%; margin: 0; }
 }
+
+/* Studio single-block mode: the editor sits directly in the Studio's
+   properties panel, without the classic block box. */
+.block-editor--studio { padding: 0; border-top: 0; background: transparent; }
+
+/* Studio design mode: the design sections sit directly in the properties
+   panel, so they need their own spacing. */
+.builder-zone--studio { display: flex; flex-direction: column; gap: 12px; }
+
+/* Donation layout picker — the four main layouts, the earlier variants below. */
+.donation-layout-options { flex-wrap: wrap; }
+.donation-layout-more { flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.donation-layout-more .editor-hint { font-size: 12px; color: #64748b; padding-inline-end: 4px; }

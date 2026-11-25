@@ -10,7 +10,8 @@ import { AmbassadorService, Ambassador, AmbassadorFormData, ImportRow } from '..
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { AmbassadorSlugFieldComponent } from '../../shared/components/ambassador-slug-field/ambassador-slug-field.component';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 function parseCommas(s: string): number | null {
   const digits = s.replace(/[^0-9]/g, '');
   if (!digits) return null;
@@ -36,7 +37,7 @@ const EMPTY_FORM: AmbassadorFormData = {
 @Component({
   selector: 'app-campaign-ambassadors-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, AmbassadorSlugFieldComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, LucideAngularModule, AmbassadorSlugFieldComponent],
   templateUrl: './campaign-ambassadors-page.component.html',
   styleUrls: ['./campaign-ambassadors-page.component.css'],
 })

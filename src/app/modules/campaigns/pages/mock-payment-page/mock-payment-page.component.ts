@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 const FAILURE_REASONS = [
   'כרטיס פג תוקף',
   'סורב ע"י חברת אשראי',
@@ -16,7 +17,7 @@ const FAILURE_REASONS = [
 @Component({
   selector: 'app-mock-payment-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HmIconComponent, CommonModule, FormsModule],
   templateUrl: './mock-payment-page.component.html',
   styleUrls: ['./mock-payment-page.component.css'],
 })

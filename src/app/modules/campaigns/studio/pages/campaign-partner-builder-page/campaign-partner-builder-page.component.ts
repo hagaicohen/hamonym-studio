@@ -9,6 +9,7 @@ import { CampaignPartnersService } from '../../../services/campaign-partners.ser
 import { CampaignApiService } from '../../../services/campaign-api.service';
 import { StudioUiService } from '../../services/studio-ui.service';
 
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 // Phase 5 model refinement (2026-07-30) — "Campaign Participation" Builder.
 // Edits ONE campaign_partners row's own blocks/layout (Campaign Hero, offer/
 // coupon, campaign-specific story/images, CTA) — the per-campaign layer that
@@ -20,7 +21,7 @@ import { StudioUiService } from '../../services/studio-ui.service';
 @Component({
   selector: 'app-campaign-partner-builder-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, LucideAngularModule, CampaignPageBuilderStepComponent, CampaignPreviewComponent],
+  imports: [HmIconComponent, CommonModule, RouterLink, LucideAngularModule, CampaignPageBuilderStepComponent, CampaignPreviewComponent],
   templateUrl: './campaign-partner-builder-page.component.html',
   styleUrl: './campaign-partner-builder-page.component.css',
 })

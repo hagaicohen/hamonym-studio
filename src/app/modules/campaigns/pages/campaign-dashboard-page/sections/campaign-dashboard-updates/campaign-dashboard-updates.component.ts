@@ -8,6 +8,7 @@ import { UploadService } from '../../../../../../core/services/upload.service';
 import { RichTextEditorComponent } from '../../../../../../shared/ui/rich-text-editor/rich-text-editor.component';
 import { sanitizeRichHtml } from '../../../../../../shared/utils/sanitize-rich-html';
 
+import { HmIconComponent } from '../../../../../../shared/ui/design-system/icon.component';
 // Sprint 2.2 (2026-08-05) — wired to real data, see docs/CAMPAIGN_UPDATES_UX_SPEC.md
 // and the Migration Plan in docs/CAMPAIGN_MANAGEMENT_DASHBOARD_SPEC.md.
 //
@@ -42,7 +43,7 @@ import { sanitizeRichHtml } from '../../../../../../shared/utils/sanitize-rich-h
 @Component({
   selector: 'app-campaign-dashboard-updates',
   standalone: true,
-  imports: [CommonModule, FormsModule, RichTextEditorComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, RichTextEditorComponent],
   templateUrl: './campaign-dashboard-updates.component.html',
   styleUrl: './campaign-dashboard-updates.component.css',
 })

@@ -132,7 +132,7 @@
       <h2>הקמפיין הראשון שלכם מתחיל כאן</h2>
       <p>כאן תופיע הפעילות לאחר יצירת קמפיין. אפשר להכין טיוטה כבר עכשיו; הפרסום וקבלת התרומות כפופים לאישורים ולהגדרות הקיימים.</p>
       @if (!nextAction.ready && !['rejected', 'suspended'].includes(currentEntity.currentEntity()?.status)) {
-        <a class="btn-new-campaign first-campaign-action" routerLink="/campaigns/create">+ קמפיין חדש</a>
+        <a class="btn-new-campaign first-campaign-action" [routerLink]="createCampaignPath">+ קמפיין חדש</a>
       }
     </section>
   }

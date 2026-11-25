@@ -4,13 +4,14 @@ import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
 import { DashboardOverview, DashboardRange, PlatformDashboardService } from '../../services/platform-dashboard.service';
-
+
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 interface ChartPoint { date: string; value: number; }
 
 @Component({
   selector: 'app-platform-dashboard-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [HmIconComponent, CommonModule, RouterLink],
   templateUrl: './platform-dashboard-page.component.html',
   styleUrl: './platform-dashboard-page.component.css',
 })

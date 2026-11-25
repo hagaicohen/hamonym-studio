@@ -42,12 +42,12 @@ type SortDir = 'asc' | 'desc';
 type ChipKey = 'all' | 'published' | 'paused' | 'draft' | 'ended' | 'featured' | 'deleted';
 
 const CHIPS: { key: ChipKey; label: string; dot: string }[] = [
-  { key: 'published', label: 'פעילים',   dot: '🟢' },
-  { key: 'paused',    label: 'מושהים',   dot: '⚫' },
-  { key: 'draft',     label: 'טיוטה',    dot: '🔵' },
-  { key: 'ended',     label: 'הסתיימו',  dot: '⚪' },
-  { key: 'featured',  label: 'מומלצים',  dot: '⭐' },
-  { key: 'deleted',   label: 'נמחקו',    dot: '🗑️' },
+  { key: 'published', label: 'פעילים',   dot: 'success' },
+  { key: 'paused',    label: 'מושהים',   dot: 'dark' },
+  { key: 'draft',     label: 'טיוטה',    dot: 'info' },
+  { key: 'ended',     label: 'הסתיימו',  dot: 'neutral' },
+  { key: 'featured',  label: 'מומלצים',  dot: 'star' },
+  { key: 'deleted',   label: 'נמחקו',    dot: 'trash' },
 ];
 
 const STATUS_LABELS: Record<string, string> = {

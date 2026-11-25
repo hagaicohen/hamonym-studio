@@ -16,54 +16,54 @@
 
   <a class="cms-item cms-item--main" [routerLink]="['/campaigns', campaignId, 'dashboard']"
     routerLinkActive="cms-item--active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobile()">
-    <span class="cms-icon">🏠</span> סקירה כללית
+    <span class="cms-icon"><app-icon name="house" /></span> סקירה כללית
   </a>
 
   <div class="cms-section">
     <span class="cms-section-label">תוכן הקמפיין</span>
     <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'dashboard']" fragment="updates" (click)="closeMobile()">
-      <span class="cms-icon">📰</span> עדכונים
+      <span class="cms-icon"><app-icon name="megaphone" /></span> עדכונים
     </a>
     <a class="cms-item" *ngIf="!isMinimalFormat" [routerLink]="['/campaigns', campaignId, 'rewards']" routerLinkActive="cms-item--active" (click)="closeMobile()">
-      <span class="cms-icon">🎁</span> תשורות
+      <span class="cms-icon"><app-icon name="gift" /></span> תשורות
     </a>
     <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'ambassadors']" routerLinkActive="cms-item--active" (click)="closeMobile()">
-      <span class="cms-icon">🏃</span> שגרירים
+      <span class="cms-icon"><app-icon name="star" /></span> שגרירים
     </a>
     <a class="cms-item" *ngIf="!isMinimalFormat" [routerLink]="['/campaigns', campaignId, 'sponsors']" routerLinkActive="cms-item--active" (click)="closeMobile()">
-      <span class="cms-icon">🤝</span> חסויות
+      <span class="cms-icon"><app-icon name="handshake" /></span> חסויות
     </a>
     <a class="cms-item" *ngIf="!isOngoing" [routerLink]="['/campaigns', campaignId, 'registration']" routerLinkActive="cms-item--active" (click)="closeMobile()">
-      <span class="cms-icon">📝</span> הרשמה
+      <span class="cms-icon"><app-icon name="ticket" /></span> הרשמה
     </a>
     <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'donation']" routerLinkActive="cms-item--active" (click)="closeMobile()">
-      <span class="cms-icon">💳</span> טופס תרומה
+      <span class="cms-icon"><app-icon name="card" /></span> טופס תרומה
     </a>
   </div>
 
   <div class="cms-section">
     <span class="cms-section-label">תרומות ונתונים</span>
     <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'donations']" routerLinkActive="cms-item--active" (click)="closeMobile()">
-      <span class="cms-icon">💰</span> תרומות
+      <span class="cms-icon"><app-icon name="coins" /></span> תרומות
     </a>
     <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'donors']" routerLinkActive="cms-item--active" (click)="closeMobile()">
-      <span class="cms-icon">🧑‍🤝‍🧑</span> תורמים
+      <span class="cms-icon"><app-icon name="users" /></span> תורמים
     </a>
     <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'reports']" routerLinkActive="cms-item--active" (click)="closeMobile()">
-      <span class="cms-icon">📊</span> דוחות
+      <span class="cms-icon"><app-icon name="chart" /></span> דוחות
     </a>
     <a class="cms-item" *ngIf="!isOngoing" [routerLink]="['/campaigns', campaignId, 'registrations']" routerLinkActive="cms-item--active" (click)="closeMobile()">
-      <span class="cms-icon">🏁</span> משתתפים
+      <span class="cms-icon"><app-icon name="flag" /></span> משתתפים
     </a>
   </div>
 
   <div class="cms-section">
     <span class="cms-section-label">הגדרות</span>
     <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'settings']" routerLinkActive="cms-item--active" (click)="closeMobile()">
-      <span class="cms-icon">⚙️</span> הגדרות קמפיין
+      <span class="cms-icon"><app-icon name="settings" /></span> הגדרות קמפיין
     </a>
     <a class="cms-item" [routerLink]="['/campaigns', campaignId, 'visibility']" routerLinkActive="cms-item--active" (click)="closeMobile()">
-      <span class="cms-icon">👁</span> נראות לציבור
+      <span class="cms-icon"><app-icon name="eye" /></span> נראות לציבור
     </a>
   </div>
 </nav>

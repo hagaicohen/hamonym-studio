@@ -10,6 +10,7 @@ import { PartnerImportService } from '../../services/partner-import.service';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 interface PartnerRow {
   id: string;
   display_name: string;
@@ -26,7 +27,7 @@ interface PartnerRow {
 @Component({
   selector: 'app-partners-list-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, LucideAngularModule, EmptyStateComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, RouterLink, LucideAngularModule, EmptyStateComponent],
   templateUrl: './partners-list-page.component.html',
   styleUrl: './partners-list-page.component.css',
 })

@@ -41,7 +41,7 @@
         <input id="sp-logo-input" type="file" accept="image/*" style="display:none" (change)="onLogoSelected($event)">
         <div class="sf-logo-area" *ngIf="!form.logoUrl">
           <label for="sp-logo-input" class="sf-upload-label">
-            <span class="sf-upload-icon">☁️</span>
+            <span class="sf-upload-icon"><app-icon name="cloud-upload" /></span>
             <span>לחץ להעלאת לוגו</span>
             <span class="sf-upload-hint">PNG / SVG מומלץ, רקע שקוף</span>
           </label>
@@ -69,9 +69,9 @@
 
       <!-- Actions -->
       <div class="sf-actions">
-        <button class="sf-btn-clear" type="button" (click)="clearForm()">🗑 נקה</button>
+        <button class="sf-btn-clear" type="button" (click)="clearForm()"><app-icon name="trash" /> נקה</button>
         <button class="sf-btn-save" type="button" (click)="save()" [disabled]="!form.name.trim()">
-          💾 {{ isEditing ? 'עדכן חסות' : 'שמור חסות' }}
+          <app-icon name="save" /> {{ isEditing ? 'עדכן חסות' : 'שמור חסות' }}
         </button>
       </div>
 
@@ -86,7 +86,7 @@
       <div class="sp-card">
         <div class="sp-logo-wrap">
           <img *ngIf="form.logoUrl" [src]="form.logoUrl" alt="">
-          <span *ngIf="!form.logoUrl" class="sp-logo-placeholder">🏢</span>
+          <span *ngIf="!form.logoUrl" class="sp-logo-placeholder"><app-icon name="building" /></span>
         </div>
         <div class="sp-name">{{ form.name || 'שם החסות' }}</div>
         <div class="sp-link" *ngIf="form.link">{{ form.link }}</div>
@@ -111,14 +111,14 @@
           <img [src]="s.logoUrl" alt="">
         </div>
         <div class="ss-card-logo ss-card-logo--empty" *ngIf="!s.logoUrl">
-          <span>🏢</span>
+          <span><app-icon name="building" /></span>
         </div>
         <div class="ss-card-body">
           <div class="ss-card-name">{{ s.name }}</div>
           <div class="ss-card-link" *ngIf="s.link">{{ s.link }}</div>
           <div class="ss-card-actions">
-            <button class="ss-card-btn ss-card-btn--delete" type="button" (click)="deleteSponsor(s.id)">🗑 מחיקה</button>
-            <button class="ss-card-btn ss-card-btn--edit"   type="button" (click)="editSponsor(s)">✏ עריכה</button>
+            <button class="ss-card-btn ss-card-btn--delete" type="button" (click)="deleteSponsor(s.id)"><app-icon name="trash" /> מחיקה</button>
+            <button class="ss-card-btn ss-card-btn--edit"   type="button" (click)="editSponsor(s)"><app-icon name="pencil" /> עריכה</button>
           </div>
         </div>
       </div>

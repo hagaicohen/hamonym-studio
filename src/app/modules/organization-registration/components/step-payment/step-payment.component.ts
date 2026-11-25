@@ -6,11 +6,12 @@ import { FormsModule } from '@angular/forms';
 import { OrganizationRegistrationStateService } from '../../services/organization-registration-state.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 
 @Component({
   selector: 'app-step-payment',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HmIconComponent, CommonModule, FormsModule],
   templateUrl: './step-payment.component.html',
   styleUrls: ['./step-payment.component.css'],
 })
@@ -149,7 +150,7 @@ export class StepPaymentComponent {
           }, remaining);
         },
 
-        error: () => {
+        error: (err) => {
           const elapsed = Date.now() - start;
 
           const remaining = Math.max(0, 1200 - elapsed);
@@ -159,7 +160,7 @@ export class StepPaymentComponent {
 
             this.connectionSuccess = false;
 
-            this.connectionError = 'שגיאת שרת';
+            this.connectionError = err?.error?.message || 'שגיאת שרת';
 
             this.saveState();
           }, remaining);

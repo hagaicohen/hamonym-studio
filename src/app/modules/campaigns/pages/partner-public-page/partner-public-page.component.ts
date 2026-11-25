@@ -11,6 +11,7 @@ import { CampaignApiService } from '../../services/campaign-api.service';
 import { PlatformTopStripComponent } from '../../../../core/layout/platform-top-strip/platform-top-strip.component';
 import { StudioUiService } from '../../studio/services/studio-ui.service';
 
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 // Phase 5, Sprint 5.1 — Public Partner Page. Guiding principle (see
 // docs/PARTNER_DOMAIN_MODEL_ADR.md "Phase 5"): public pages are Renderers
 // only, no business logic. This component does exactly one thing beyond
@@ -36,7 +37,7 @@ import { StudioUiService } from '../../studio/services/studio-ui.service';
 @Component({
   selector: 'app-partner-public-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, CampaignPreviewComponent, PlatformTopStripComponent],
+  imports: [HmIconComponent, CommonModule, RouterLink, CampaignPreviewComponent, PlatformTopStripComponent],
   templateUrl: './partner-public-page.component.html',
   styleUrl: './partner-public-page.component.css',
 })

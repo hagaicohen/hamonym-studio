@@ -7,6 +7,7 @@ import { CurrentContextService } from '../../services/current-context.service';
 import { CATEGORY_SUGGESTIONS_ENABLED } from '../../../shared/config/category-suggestions';
 import { CampaignsWelcomeService } from '../../services/campaigns-welcome.service';
 import { RoleType } from '../../models/user-context.model';
+import { campaignCreatePath } from '../../../modules/campaigns/campaign-editor-route';
 
 interface NavItem {
   route: string;
@@ -112,6 +113,6 @@ export class SidebarComponent {
 
   createCampaign(): void {
     this.closeMobile.emit();
-    this.router.navigate(['/campaigns/create']);
+    this.router.navigate(campaignCreatePath());
   }
 }

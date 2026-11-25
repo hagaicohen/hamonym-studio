@@ -10,6 +10,8 @@ import { EntitiesService } from '../../../../../core/services/entities.service';
 import { CampaignPartnersService } from '../../../services/campaign-partners.service';
 import { StudioUiService } from '../../services/studio-ui.service';
 
+import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
+import { campaignEditPath } from '../../../campaign-editor-route';
 // Phase 3 — Page Builder Owner Context. Minimal host page proving the SAME
 // Builder/Renderer (CampaignPageBuilderStepComponent / CampaignPreviewComponent)
 // work unmodified against a Partner entity's own draft instead of a
@@ -19,7 +21,7 @@ import { StudioUiService } from '../../services/studio-ui.service';
 @Component({
   selector: 'app-partner-builder-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, LucideAngularModule, CampaignPageBuilderStepComponent, CampaignPreviewComponent],
+  imports: [HmIconComponent, CommonModule, FormsModule, RouterLink, LucideAngularModule, CampaignPageBuilderStepComponent, CampaignPreviewComponent],
   templateUrl: './partner-builder-page.component.html',
   styleUrl: './partner-builder-page.component.css',
 })
@@ -128,7 +130,7 @@ export class PartnerBuilderPageComponent implements OnInit {
           rewardId: this.returnRewardId || null,
         }).subscribe({
           next: () => {
-            this.router.navigate(['/campaigns', this.returnCampaignId, 'edit'], {
+            this.router.navigate(campaignEditPath(this.returnCampaignId!), {
               queryParams: this.returnStep ? { returnStep: this.returnStep } : undefined,
             });
           },

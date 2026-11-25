@@ -13,6 +13,7 @@ import {
   OrganizationRegistrationState,
   OrganizationRegistrationStateService,
   buildPayload,
+  resumeStep,
 } from '../../services/organization-registration-state.service';
 import { EntitiesService } from '../../../../core/services/entities.service';
 import { ActivatedRoute } from '@angular/router';
@@ -80,6 +81,12 @@ export class OrganizationRegistrationComponent implements OnInit {
   // What the open registration looked like when it was last loaded or saved.
   private savedSnapshot = signal('');
   readonly isDirty = computed(() => snapshot(this.stateService.state()) !== this.savedSnapshot());
+  // The wizard step the open draft was last saved on. Moving to another step
+  // is worth saving on its own, so the draft reopens there.
+  private savedStep = 1;
+  get stepUnsaved(): boolean {
+    return !!this.currentId() && this.currentStep !== this.savedStep;
+  }
   readonly currentId = computed(() => this.stateService.state().entityId);
 
   ngOnInit(): void {
@@ -138,7 +145,7 @@ export class OrganizationRegistrationComponent implements OnInit {
         this.stateService.resetState();
         this.stateService.loadFromEntity(entity);
         this.drafts.update((list) => list.map((d) => (d.id === entity.id ? { ...d, ...entity } : d)));
-        this.afterSwitch();
+        this.afterSwitch(resumeStep(entity.onboarding_step));
       },
       error: () => {
         this.loadingDraftId.set(null);
@@ -152,8 +159,9 @@ export class OrganizationRegistrationComponent implements OnInit {
     return draft ? this.draftName(draft) : '';
   }
 
-  private afterSwitch(): void {
-    this.currentStep = 1;
+  private afterSwitch(step = 1): void {
+    this.currentStep = step;
+    this.savedStep = step;
     this.draftSaveError.set('');
     this.draftSaved.set(false);
     this.markClean();
@@ -238,14 +246,14 @@ export class OrganizationRegistrationComponent implements OnInit {
   // Save is only ever offered on the open registration's row, so it can only
   // write to state().entityId (or create it once, for a new registration).
   canSaveRow(row: any): boolean {
-    return this.isCurrent(row) && this.isDirty() && this.stateService.canSaveDraft && !this.busy;
+    return this.isCurrent(row) && (this.isDirty() || this.stepUnsaved) && this.stateService.canSaveDraft && !this.busy;
   }
 
   saveTitle(row: any): string {
     if (!this.isCurrent(row)) return 'ניתן לשמור רק את הטיוטה שבעריכה';
     if (this.savingDraft()) return 'שומר...';
     if (!this.stateService.canSaveDraft) return 'יש למלא סוג ישות, שם ומספר רישום לפני שמירת טיוטה';
-    return this.isDirty() ? 'שמור שינויים' : 'אין שינויים לשמירה';
+    return this.isDirty() || this.stepUnsaved ? 'שמור שינויים' : 'אין שינויים לשמירה';
   }
 
   private markClean(state: OrganizationRegistrationState = this.stateService.state()): void {
@@ -307,10 +315,12 @@ export class OrganizationRegistrationComponent implements OnInit {
     this.savingDraft.set(true);
     this.draftSaveError.set('');
     const sent = this.stateService.state();
+    const sentStep = this.currentStep;
 
-    this.stateService.save({ includeBilling: false }).subscribe({
+    this.stateService.save({ includeBilling: false, onboardingStep: this.currentStep }).subscribe({
       next: (entity) => {
         this.savingDraft.set(false);
+        this.savedStep = sentStep;
         // Uploads clear the pending File fields after a save; edits typed
         // during the request still count as unsaved.
         const now = this.stateService.state();

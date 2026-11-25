@@ -233,7 +233,7 @@ exports.createDonation = async ({ campaignId, donor, amount, currency, rewards =
   // 1. Fetch campaign → entity
   const campaignRes = await db.query(
     `SELECT c.id, c.slug, c.title, c.entity_id, c.status, c.is_hidden AS campaign_hidden, c.deleted_at, c.rewards,
-            e.status AS entity_status, e.is_hidden AS entity_hidden,
+            e.status AS entity_status, e.entity_type, e.is_hidden AS entity_hidden,
             e.cardcom_terminal_number, e.cardcom_api_username, e.cardcom_api_password_encrypted,
             e.cardcom_connection_status
      FROM campaigns c
@@ -248,6 +248,7 @@ exports.createDonation = async ({ campaignId, donor, amount, currency, rewards =
   if (campaign.entity_status !== 'active') {
     throw new Error('Entity not approved');
   }
+  await require('../entities/commercial-entity').assertCommercialPaymentReady(db, campaign);
 
   // A public payment request must never turn an editor draft into a real charge.
   if (campaign.status !== 'published') {

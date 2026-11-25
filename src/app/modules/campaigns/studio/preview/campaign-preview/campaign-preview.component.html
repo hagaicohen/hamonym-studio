@@ -1,4 +1,4 @@
-<ng-container *ngIf="{ draft: draft$ | async, mobile: (isMobile$ | async) === 'mobile' } as vm">
+<ng-container *ngIf="{ draft: viewDraft(draft$ | async), mobile: (isMobile$ | async) === 'mobile' } as vm">
 <ng-container *ngIf="vm.draft as draft">
 
 <div class="campaign-page"
@@ -53,7 +53,7 @@
 
   <!-- ── EMPTY STATE ── -->
   <div class="empty-state" *ngIf="isEmpty(draft)">
-    <div class="empty-icon">👁️</div>
+    <div class="empty-icon"><app-icon name="eye" /></div>
     <div class="empty-title">תצוגה מקדימה חיה</div>
     <div class="empty-desc" *ngIf="isCampaign(draft)">הזינו כותרת ותמונה<br>הדף יופיע כאן בזמן אמת</div>
     <div class="empty-desc" *ngIf="!isCampaign(draft)">הוסיפו בלוק ראשון מהעריכה שמימין<br>הדף יופיע כאן בזמן אמת</div>
@@ -73,7 +73,8 @@
          link is pointless clutter on what's meant to be a short,
          single-scroll page. -->
     <div class="hm-sticky-header">
-      <nav class="campaign-nav" *ngIf="isCampaign(draft)" [class.campaign-nav--mobile]="vm.mobile">
+      <nav class="campaign-nav" *ngIf="isCampaign(draft)" [class.campaign-nav--mobile]="vm.mobile"
+        [attr.data-studio-area]="pageBuilderActive ? 'nav' : null" (click)="onAreaClick($event, 'nav')">
         <!-- Inner content is constrained to the SAME container the campaign
              content below (Hero/sidebar) already uses (.page-content-outer,
              max-width:1200px) — 2026-09-28, so the header reads as one
@@ -108,7 +109,7 @@
                       [style.color]="themePrimaryColor(draft)"
                       [style.borderColor]="themePrimaryColor(draft)"
                       (click)="openJoinModal()">
-                <span>🚀 הצטרפו כשגרירים</span>
+                <span><app-icon name="rocket" /> הצטרפו כשגרירים</span>
               </button>
               <button class="nav-donate-btn" *ngIf="hasDonationWidget(draft)" [style.background]="themePrimaryColor(draft)" (click)="scrollToDonation()">
                 תרמו עכשיו
@@ -138,7 +139,7 @@
           [class.nav-link--faded]="item.faded"
           [style.color]="primaryColor(draft)" (click)="onNavItemClick(item)">{{ item.label }}</a>
         <a class="nav-drawer-link" *ngIf="hasAmbassadorsSection(draft)"
-          [style.color]="primaryColor(draft)" (click)="openJoinModal(); navOpen=false">🚀 הצטרפו כשגרירים</a>
+          [style.color]="primaryColor(draft)" (click)="openJoinModal(); navOpen=false"><app-icon name="rocket" /> הצטרפו כשגרירים</a>
         <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="goToAccount(); navOpen=false">כניסה / אזור אישי</a>
         <a class="nav-drawer-link" [style.color]="primaryColor(draft)">צור קשר</a>
       </div>
@@ -191,13 +192,13 @@
         <button class="amb-donate-btn"
                 [style.background]="primaryColor(draft)"
                 (click)="scrollTo('section-donate')">
-          ❤ תרמו דרך {{ ambassador.fullName.split(' ')[0] }}
+          <app-icon name="heart" /> תרמו דרך {{ ambassador.fullName.split(' ')[0] }}
         </button>
         <button class="amb-donors-btn"
                 [style.color]="primaryColor(draft)"
                 [style.borderColor]="primaryColor(draft)"
                 (click)="scrollTo('section-donors')">
-          👥 צפו ברשימת התורמים
+          <app-icon name="users" /> צפו ברשימת התורמים
         </button>
       </div>
 
@@ -218,12 +219,28 @@
           [class.hm-logo-above-badge--square]="draft.heroLogoShape === 'square'"
           [class.hm-logo-above-badge--none]="draft.heroLogoShape === 'none'"
           [class.hm-logo-above-badge--sm]="(draft.heroLogoSize ?? 'md') === 'sm'"
-          [class.hm-logo-above-badge--lg]="draft.heroLogoSize === 'lg'">
+          [class.hm-logo-above-badge--lg]="draft.heroLogoSize === 'lg'"
+          [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
+          [attr.data-studio-part]="pageBuilderActive ? 'logo' : null" (dragstart)="onHeroPartDragStart($event, 'logo')" (dragend)="onHeroPartDragEnd()">
           <img *ngIf="resolvedEntityLogo(draft)"
                class="hm-logo-above-img"
-               [src]="resolvedEntityLogo(draft)" alt="">
-          <span *ngIf="!resolvedEntityLogo(draft)" class="hero-logo-emoji">🏢</span>
+               [src]="resolvedEntityLogo(draft)" alt="" draggable="false">
+          <span *ngIf="!resolvedEntityLogo(draft)" class="hero-logo-emoji"><app-icon name="building" /></span>
+          <button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת הלוגו" title="הסתרה" (click)="hideHeroPart($event, 'logo')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span>
         </div>
+      </div>
+    </ng-template>
+
+    <!-- Studio only: drop zones shown while a Hero part (logo, title,
+         subtitle) is being dragged; see onHeroPartDragStart(). -->
+    <ng-template #heroDropStripTpl let-place="place" let-label="label">
+      <div class="hm-hero-dropstrip" [class.hm-hero-dropstrip--on-hero]="place === 'hero'">
+        <div *ngFor="let z of heroDropAligns" class="hm-hero-dropzone"
+          [attr.data-drop-zone]="place + '-' + z.align"
+          [class.hm-hero-dropzone--active]="heroDropZone === place + '-' + z.align"
+          (dragover)="onHeroZoneDragOver($event, place + '-' + z.align)"
+          (dragleave)="heroDropZone = null"
+          (drop)="onHeroZoneDrop($event, place, z.align)">{{ label }} · {{ z.label }}</div>
       </div>
     </ng-template>
 
@@ -237,19 +254,27 @@
 
     <!-- Title/subtitle rendered outside the Hero — independent per-field
          position (heroTitlePosition/heroSubtitlePosition), NOT the Hero's own
-         overlay style (heroTextStyle.color is tuned for legibility over a
-         photo and would be invisible on the plain page background here) —
-         only text-align carries over, since that's still meaningful outside
-         the Hero. See CampaignLayout's doc comment. -->
+         overlay style. Align always carries over; size and color only when the
+         manager set the title/subtitle ones explicitly (the legacy shared
+         color is tuned for a photo and is white by default). See
+         heroTextSize()/heroTextColor() and CampaignLayout's doc comment. -->
+    <ng-container *ngIf="heroPartDrag" [ngTemplateOutlet]="heroDropStripTpl" [ngTemplateOutletContext]="{ place: 'above', label: 'מעל ה-Hero' }"></ng-container>
     <h1 *ngIf="draft.layout.heroTitlePosition === 'above'" class="hm-hero-title-external"
-      [style.textAlign]="draft.heroTextStyle.align">{{ draft.title }}</h1>
+      [style.textAlign]="heroTextAlign(draft, 'title', false)"
+      [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
+      [attr.data-studio-part]="pageBuilderActive ? 'title' : null" (dragstart)="onHeroPartDragStart($event, 'title')" (dragend)="onHeroPartDragEnd()"
+      [style.--hm-hero-title-size]="heroTextSize(draft, 'title', 'desktop')" [style.--hm-hero-title-size-m]="heroTextSize(draft, 'title', 'mobile')" [style.color]="heroTextColor(draft, 'title', false)">{{ draft.title }}<button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת הכותרת" title="הסתרה" (click)="hideHeroPart($event, 'title')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span></h1>
     <p *ngIf="draft.layout.heroSubtitlePosition === 'above' && draft.shortDescription" class="hm-hero-subtitle-external"
-      [style.textAlign]="draft.heroTextStyle.align">{{ draft.shortDescription }}</p>
+      [style.textAlign]="heroTextAlign(draft, 'subtitle', false)"
+      [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
+      [attr.data-studio-part]="pageBuilderActive ? 'subtitle' : null" (dragstart)="onHeroPartDragStart($event, 'subtitle')" (dragend)="onHeroPartDragEnd()"
+      [style.--hm-hero-subtitle-size]="heroTextSize(draft, 'subtitle', 'desktop')" [style.--hm-hero-subtitle-size-m]="heroTextSize(draft, 'subtitle', 'mobile')" [style.color]="heroTextColor(draft, 'subtitle', false)">{{ draft.shortDescription }}<button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת כותרת המשנה" title="הסתרה" (click)="hideHeroPart($event, 'subtitle')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span></p>
     <div class="hm-project-description" *ngIf="draft.layout.projectDescriptionPosition === 'above' && draft.layout.projectDescription"
       [innerHTML]="safeHtml(draft.layout.projectDescription)"></div>
 
     <!-- ══ HERO ══ -->
     <section class="hm-hero" [class.hm-hero--mobile]="vm.mobile"
+      [attr.data-studio-area]="pageBuilderActive ? 'opening' : null" (click)="onAreaClick($event, 'opening')"
       [class.hm-hero--in-column]="!vm.mobile && draft.layout.heroPlacement === 'main-column'">
 
       <!-- Background image layer (separate div to avoid Angular [style] parsing issues) -->
@@ -259,11 +284,21 @@
 
         <!-- Title, subtitle, play button -->
         <div class="hm-hero-copy">
-          <h1 *ngIf="draft.layout.heroTitlePosition === 'hero'" class="hm-hero-title" [style.--hm-hero-title-size]="heroTitleSize(draft)" [style.color]="draft.heroTextStyle.color">
+          <h1 *ngIf="draft.layout.heroTitlePosition === 'hero'" class="hm-hero-title"
+            [style.textAlign]="heroTextAlign(draft, 'title', true)" [style.alignSelf]="heroTextAlign(draft, 'title', true) ? 'stretch' : null"
+            [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
+            [attr.data-studio-part]="pageBuilderActive ? 'title' : null" (dragstart)="onHeroPartDragStart($event, 'title')" (dragend)="onHeroPartDragEnd()"
+            [style.--hm-hero-title-size]="heroTitleSize(draft)" [style.--hm-hero-title-size-m]="heroTextSize(draft, 'title', 'mobile')" [style.color]="heroTextColor(draft, 'title', true)">
             {{ draft.title }}
+            <button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת הכותרת" title="הסתרה" (click)="hideHeroPart($event, 'title')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span>
           </h1>
-          <p class="hm-hero-subtitle" *ngIf="draft.layout.heroSubtitlePosition === 'hero' && draft.shortDescription" [style.color]="draft.heroTextStyle.color">
+          <p class="hm-hero-subtitle" *ngIf="draft.layout.heroSubtitlePosition === 'hero' && draft.shortDescription"
+            [style.textAlign]="heroTextAlign(draft, 'subtitle', true)" [style.alignSelf]="heroTextAlign(draft, 'subtitle', true) ? 'stretch' : null"
+            [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
+            [attr.data-studio-part]="pageBuilderActive ? 'subtitle' : null" (dragstart)="onHeroPartDragStart($event, 'subtitle')" (dragend)="onHeroPartDragEnd()"
+            [style.--hm-hero-subtitle-size]="heroTextSize(draft, 'subtitle', 'desktop')" [style.--hm-hero-subtitle-size-m]="heroTextSize(draft, 'subtitle', 'mobile')" [style.color]="heroTextColor(draft, 'subtitle', true)">
             {{ draft.shortDescription }}
+            <button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת כותרת המשנה" title="הסתרה" (click)="hideHeroPart($event, 'subtitle')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span>
           </p>
           <div class="hm-project-description hm-project-description--in-hero"
             *ngIf="draft.layout.projectDescriptionPosition === 'hero' && draft.layout.projectDescription"
@@ -282,7 +317,7 @@
                has no ctaAction field (unlike the generic cta block), so it's
                always donation-oriented by design. `?.` guards campaigns
                saved before this field existed. -->
-          <div class="hm-hero-cta-wrap cta-btn-wrap" *ngIf="draft.heroCtaConfig?.visible"
+          <div class="hm-hero-cta-wrap cta-btn-wrap" *ngIf="draft.heroCtaConfig?.visible" [attr.data-studio-part]="pageBuilderActive ? 'hero-cta' : null"
             [style.justifyContent]="ctaAlignStyle(draft.heroCtaConfig.align)">
             <button class="cta-btn" type="button" [style.background]="draft.heroCtaConfig.color"
               (click)="scrollToDonation()">
@@ -304,12 +339,17 @@
              [class.hm-hero-org-logo--square]="draft.heroLogoShape === 'square'"
              [class.hm-hero-org-logo--none]="draft.heroLogoShape === 'none'"
              [class.hm-hero-org-logo--sm]="(draft.heroLogoSize ?? 'md') === 'sm'"
-             [class.hm-hero-org-logo--lg]="draft.heroLogoSize === 'lg'">
-          <img *ngIf="resolvedEntityLogo(draft)" [src]="resolvedEntityLogo(draft)" alt="">
-          <span *ngIf="!resolvedEntityLogo(draft)" class="hero-logo-emoji">🏢</span>
+             [class.hm-hero-org-logo--lg]="draft.heroLogoSize === 'lg'"
+             [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
+             [attr.data-studio-part]="pageBuilderActive ? 'logo' : null" (dragstart)="onHeroPartDragStart($event, 'logo')" (dragend)="onHeroPartDragEnd()">
+          <img *ngIf="resolvedEntityLogo(draft)" [src]="resolvedEntityLogo(draft)" alt="" draggable="false">
+          <span *ngIf="!resolvedEntityLogo(draft)" class="hero-logo-emoji"><app-icon name="building" /></span>
+          <button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת הלוגו" title="הסתרה" (click)="hideHeroPart($event, 'logo')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span>
         </div>
 
       </div>
+
+      <ng-container *ngIf="heroPartDrag" [ngTemplateOutlet]="heroDropStripTpl" [ngTemplateOutletContext]="{ place: 'hero', label: 'ב-Hero' }"></ng-container>
 
       <!-- Meta chips — always visible at the absolute bottom center. Pure
            campaign metadata (end date/category/manager) — meaningless on a
@@ -350,10 +390,17 @@
 
     </section>
 
+    <ng-container *ngIf="heroPartDrag && heroPartDrag !== 'logo'" [ngTemplateOutlet]="heroDropStripTpl" [ngTemplateOutletContext]="{ place: 'below', label: 'מתחת ל-Hero' }"></ng-container>
     <h1 *ngIf="draft.layout.heroTitlePosition === 'below'" class="hm-hero-title-external"
-      [style.textAlign]="draft.heroTextStyle.align">{{ draft.title }}</h1>
+      [style.textAlign]="heroTextAlign(draft, 'title', false)"
+      [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
+      [attr.data-studio-part]="pageBuilderActive ? 'title' : null" (dragstart)="onHeroPartDragStart($event, 'title')" (dragend)="onHeroPartDragEnd()"
+      [style.--hm-hero-title-size]="heroTextSize(draft, 'title', 'desktop')" [style.--hm-hero-title-size-m]="heroTextSize(draft, 'title', 'mobile')" [style.color]="heroTextColor(draft, 'title', false)">{{ draft.title }}<button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת הכותרת" title="הסתרה" (click)="hideHeroPart($event, 'title')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span></h1>
     <p *ngIf="draft.layout.heroSubtitlePosition === 'below' && draft.shortDescription" class="hm-hero-subtitle-external"
-      [style.textAlign]="draft.heroTextStyle.align">{{ draft.shortDescription }}</p>
+      [style.textAlign]="heroTextAlign(draft, 'subtitle', false)"
+      [class.hm-hero-part]="pageBuilderActive" [attr.draggable]="pageBuilderActive ? 'true' : null" [attr.title]="pageBuilderActive ? 'גררו לשינוי מיקום' : null"
+      [attr.data-studio-part]="pageBuilderActive ? 'subtitle' : null" (dragstart)="onHeroPartDragStart($event, 'subtitle')" (dragend)="onHeroPartDragEnd()"
+      [style.--hm-hero-subtitle-size]="heroTextSize(draft, 'subtitle', 'desktop')" [style.--hm-hero-subtitle-size-m]="heroTextSize(draft, 'subtitle', 'mobile')" [style.color]="heroTextColor(draft, 'subtitle', false)">{{ draft.shortDescription }}<button *ngIf="pageBuilderActive" type="button" class="hm-hero-part-hide" aria-label="הסתרת כותרת המשנה" title="הסתרה" (click)="hideHeroPart($event, 'subtitle')"></button><span *ngIf="pageBuilderActive" class="hm-hero-part-grip" aria-hidden="true"><lucide-icon [img]="GripVertical" [size]="14"></lucide-icon></span></p>
     <div class="hm-project-description" *ngIf="draft.layout.projectDescriptionPosition === 'below' && draft.layout.projectDescription"
       [innerHTML]="safeHtml(draft.layout.projectDescription)"></div>
 
@@ -715,7 +762,8 @@
     </div>
 
     <!-- ══ FOOTER ══ -->
-    <footer class="hm-footer" *ngIf="draft.layout.showFooter !== false">
+    <footer class="hm-footer" *ngIf="draft.layout.showFooter !== false"
+      [attr.data-studio-area]="pageBuilderActive ? 'footer' : null" (click)="onAreaClick($event, 'footer')">
 
       <!-- Brand -->
       <div class="hm-footer-brand">
@@ -858,7 +906,7 @@
                 [style.background]="primaryColor(draft)"
                 [disabled]="!joinForm.fullName.trim() || joinStatus === 'loading' || !joinSlugAvailable"
                 (click)="submitJoin(draft)">
-          <span *ngIf="joinStatus !== 'loading'">קבלו קישור שיתוף אישי 🚀</span>
+          <span *ngIf="joinStatus !== 'loading'">קבלו קישור שיתוף אישי <app-icon name="rocket" /></span>
           <span *ngIf="joinStatus === 'loading'" class="hm-join-spinner"></span>
         </button>
       </div>
@@ -1202,7 +1250,7 @@
   <!-- SHARE -->
   <div class="hm-share-row" *ngIf="block.type === 'share'">
     <button class="hm-share-btn hm-share-btn--link" type="button" *ngIf="asShare(block.data).platforms.link" (click)="copyShareLink(draft)" [attr.aria-label]="linkCopied ? 'הועתק!' : 'העתקת קישור'" [title]="linkCopied ? 'הועתק!' : 'העתקת קישור'">
-      <span class="hm-share-icon">🔗</span>
+      <span class="hm-share-icon"><app-icon name="link" /></span>
     </button>
     <button class="hm-share-btn hm-share-btn--email" type="button" *ngIf="asShare(block.data).platforms.email" (click)="shareEmail(draft)" aria-label="שיתוף באימייל" title="אימייל">
       <lucide-icon [img]="Mail" [size]="16" class="hm-share-icon"></lucide-icon>
@@ -1237,7 +1285,7 @@
 
   <!-- MAP / LOCATION (Partner-only, Phase 3) -->
   <div class="hm-map-block" *ngIf="block.type === 'map' && (asMap(block.data).address || (asMap(block.data).lat && asMap(block.data).lng))">
-    <p class="hm-map-address" *ngIf="asMap(block.data).address">📍 {{ asMap(block.data).address }}</p>
+    <p class="hm-map-address" *ngIf="asMap(block.data).address"><app-icon name="map-pin" /> {{ asMap(block.data).address }}</p>
     <iframe class="hm-map-embed"
       [src]="mapEmbedUrl(asMap(block.data))"
       loading="lazy" referrerpolicy="no-referrer-when-downgrade">
@@ -1281,10 +1329,49 @@
     [class.conv-compact]="effectiveDonationComposition(draft) === 'compact'"
     [class.conv-hero]="effectiveDonationComposition(draft) === 'hero'"
     [class.conv-split]="effectiveDonationComposition(draft) === 'split-horizontal'"
+    [class.conv-merged]="isMergedDonationLayout(draft)"
+    [class.conv-compact-bar]="effectiveDonationComposition(draft) === 'compact-bar'"
+    [class.conv-conversion-first]="effectiveDonationComposition(draft) === 'conversion-first'"
+    [class.conv-modern]="effectiveDonationComposition(draft) === 'modern'"
     data-style-role="container"
     [style.background]="donationContainerBackground(asDonationWidget(block.data))"
     [style.borderColor]="donationContainerBorderColor(asDonationWidget(block.data))"
     [style.borderRadius.px]="donationContainerBorderRadius(asDonationWidget(block.data))">
+    <!-- Merged layouts (compact-bar / conversion-first / modern): the same
+         figures the stats block shows, inside this card. Where it sits and
+         how much weight it gets is CSS (.hm-donate is a flex column):
+         first and condensed, last and secondary, or a header band. -->
+    <div class="hm-donate-progress" *ngIf="isMergedDonationLayout(draft)">
+      <div class="hm-dp-summary">
+        <div class="hm-ring-wrapper hm-dp-ring" *ngIf="effectiveDonationComposition(draft) === 'modern'">
+          <svg class="hm-ring-svg" viewBox="0 0 36 36">
+            <circle class="hm-ring-bg" cx="18" cy="18" r="15" stroke-width="5"/>
+            <circle class="hm-ring-fill" cx="18" cy="18" r="15" stroke-width="5" [attr.stroke-dasharray]="ringDash(draft)" stroke-linecap="round"/>
+          </svg>
+          <div class="hm-ring-text"><strong>{{ raisedPct(draft) }}%</strong><span>מהיעד</span></div>
+        </div>
+        <div class="hm-dp-raised">
+          <span class="hm-dp-label">גויס עד כה</span>
+          <strong class="hm-dp-amount">{{ formatAmount(draft.currentAmount ?? 0) }}</strong>
+          <span class="hm-dp-goal">מתוך {{ formatAmount(draft.targetAmount) }}</span>
+        </div>
+        <span class="hm-dp-pct" *ngIf="effectiveDonationComposition(draft) !== 'modern'">{{ raisedPct(draft) }}%</span>
+      </div>
+      <div class="hm-dp-bar" *ngIf="effectiveDonationComposition(draft) !== 'modern'"
+        role="progressbar" aria-label="התקדמות הגיוס" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="Math.min(100, raisedPct(draft))">
+        <span [style.width.%]="Math.min(100, raisedPct(draft))"></span>
+      </div>
+      <div class="hm-dp-stats">
+        <div class="hm-dp-stat">
+          <strong>{{ formatAmount(Math.max(0, (draft.targetAmount ?? 0) - (draft.currentAmount ?? 0))) }}</strong>
+          <span>נותר ליעד</span>
+        </div>
+        <div class="hm-dp-stat" *ngFor="let item of mergedStatItems(draft)">
+          <strong>{{ statValue(item.key, draft) }}</strong>
+          <span>{{ statLabels[item.key] }}</span>
+        </div>
+      </div>
+    </div>
     <!-- "תרמו סכום חופשי לקמפיין" only when a free/custom amount is actually
          allowed (allowCustomAmount) -- this used to key off registrationOptions
          alone, so with custom amount turned off it kept promising a "free
@@ -1353,10 +1440,10 @@
         (input)="onCustomAmountInput($event)">
     </div>
     <p class="hm-recurring-note" data-text-role="secondaryMeta" [style.color]="donationSecondaryMetaColor(draft, asDonationWidget(block.data))" *ngIf="donationFrequency === 'monthly' && draft.recurringBillingMode !== 'fixed_installments'">
-      🔁 חיוב חודשי קבוע — יחויב מדי חודש עד לביטול.
+      <app-icon name="repeat" /> חיוב חודשי קבוע — יחויב מדי חודש עד לביטול.
     </p>
     <p class="hm-recurring-note" data-text-role="secondaryMeta" [style.color]="donationSecondaryMetaColor(draft, asDonationWidget(block.data))" *ngIf="donationFrequency === 'monthly' && draft.recurringBillingMode === 'fixed_installments'">
-      🔁 חיוב חודשי — {{ draft.recurringInstallmentsCount }} תשלומים בסה״כ (סה״כ ₪{{ (getEffectiveAmount(draft) * draft.recurringInstallmentsCount).toLocaleString('he-IL') }}).
+      <app-icon name="repeat" /> חיוב חודשי — {{ draft.recurringInstallmentsCount }} תשלומים בסה״כ (סה״כ ₪{{ (getEffectiveAmount(draft) * draft.recurringInstallmentsCount).toLocaleString('he-IL') }}).
     </p>
 
     <!-- Total breakdown -->
@@ -1412,7 +1499,7 @@
          that. `!== false` treats an absent field (older campaigns) as the
          current always-shown default. -->
     <p class="hm-security-note" data-text-role="secondaryMeta" [style.color]="donationSecondaryMetaColor(draft, asDonationWidget(block.data))" *ngIf="asDonationWidget(block.data).showSecurityBadge !== false">
-      🔒 תשלום מאובטח באמצעות קארדקום בע״מ
+      <app-icon name="lock" /> תשלום מאובטח באמצעות קארדקום בע״מ
     </p>
     <!-- showPaymentLogos (2026-09-28) -- wired, but deliberately renders
          only the one genuinely-real badge (generic card acceptance via
@@ -1432,7 +1519,10 @@
   </div>
 
   <!-- STATS BLOCK -->
-  <div class="hm-stats" *ngIf="block.type === 'stats'"
+  <!-- In a merged donation layout the donation card shows these figures;
+       the marker lets CSS drop this block's now-empty wrapper too. -->
+  <span class="hm-stats-merged" hidden *ngIf="block.type === 'stats' && statsMergedIntoDonation(draft)"></span>
+  <div class="hm-stats" *ngIf="block.type === 'stats' && !statsMergedIntoDonation(draft)"
     [class.conv-unified]="effectiveDonationComposition(draft) === 'unified'"
     [class.conv-compact]="effectiveDonationComposition(draft) === 'compact'"
     [class.conv-hero]="effectiveDonationComposition(draft) === 'hero'"
@@ -1546,7 +1636,7 @@
           [class.is-selected]="isOfferingInCart(offering.id)"
           [class.hm-reward-soldout]="isSoldOut(offering)"
           (click)="selectOffering(offering, draft)">
-          <div class="hm-reward-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
+          <div class="hm-reward-badge" *ngIf="offering.featured === true"><app-icon name="star" /> מומלץ</div>
 
           <!-- Fixed order: price → title (+ small icon when there's no
                separate full-image row) → full image row (default mode) →
@@ -1565,7 +1655,7 @@
           <div class="hm-reward-list-icon-row" *ngIf="rewardsImagePosition(draft) === 'inline'">
             <div class="hm-reward-icon-wrap hm-reward-icon-wrap--center">
               <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" [alt]="offering.title" class="hm-reward-img-small">
-              <span *ngIf="!offering.imageUrl" class="hm-reward-avatar-icon">🎁</span>
+              <span *ngIf="!offering.imageUrl" class="hm-reward-avatar-icon"><app-icon name="gift" /></span>
             </div>
           </div>
           <div class="hm-reward-list-img" *ngIf="offering.imageUrl && rewardsImagePosition(draft) === 'full'"
@@ -1617,11 +1707,11 @@
                 [class.is-selected]="isOfferingInCart(offering.id)"
                 [class.hm-reward-soldout]="isSoldOut(offering)"
                 (click)="selectOffering(offering, draft)">
-                <div class="hm-reward-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
+                <div class="hm-reward-badge" *ngIf="offering.featured === true"><app-icon name="star" /> מומלץ</div>
                 <div class="hm-reward-card-top">
                   <div class="hm-reward-icon-wrap">
                     <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" [alt]="offering.title" class="hm-reward-img-small">
-                    <span *ngIf="!offering.imageUrl" class="hm-reward-avatar-icon">🎁</span>
+                    <span *ngIf="!offering.imageUrl" class="hm-reward-avatar-icon"><app-icon name="gift" /></span>
                   </div>
                   <div class="hm-reward-price">₪{{ offering.minimumAmount.toLocaleString('he-IL') }}</div>
                 </div>
@@ -1664,11 +1754,11 @@
                 [class.is-selected]="isOfferingInCart(offering.id)"
                 [class.hm-reward-soldout]="isSoldOut(offering)"
                 (click)="selectOffering(offering, draft)">
-                <div class="hm-reward-badge" *ngIf="offering.featured === true">⭐ מומלץ</div>
+                <div class="hm-reward-badge" *ngIf="offering.featured === true"><app-icon name="star" /> מומלץ</div>
                 <div class="hm-reward-price-top">₪{{ offering.minimumAmount.toLocaleString('he-IL') }}</div>
                 <div class="hm-reward-img-hero">
                   <img *ngIf="offering.imageUrl" [src]="offering.imageUrl" [alt]="offering.title">
-                  <span *ngIf="!offering.imageUrl" class="hm-reward-img-hero-placeholder">🎁</span>
+                  <span *ngIf="!offering.imageUrl" class="hm-reward-img-hero-placeholder"><app-icon name="gift" /></span>
                 </div>
                 <div class="hm-reward-body">
                   <h3>{{ offering.title }}</h3>
@@ -1717,7 +1807,7 @@
 
     <ng-template #rewardsEmpty>
       <div class="hm-rewards-empty">
-        <span class="hm-rewards-empty-icon">🎁</span>
+        <span class="hm-rewards-empty-icon"><app-icon name="gift" /></span>
         <p>התשורות יוצגו כאן לאחר הגדרתן בשלב התשורות</p>
       </div>
     </ng-template>
@@ -1743,7 +1833,7 @@
     </ng-container>
     <ng-template #sponsorsEmpty>
       <div class="hm-section-placeholder">
-        <span>🤝</span><p>נותני חסות יוצגו כאן לאחר הגדרתם בבונה הדף</p>
+        <span><app-icon name="handshake" /></span><p>נותני חסות יוצגו כאן לאחר הגדרתם בבונה הדף</p>
       </div>
     </ng-template>
   </section>
@@ -1859,10 +1949,10 @@
         </ng-container>
         <ng-template #ambassadorsEmptySidebar>
           <div class="hm-lb-empty">
-            <div class="hm-lb-empty-icon">🤝</div>
+            <div class="hm-lb-empty-icon"><app-icon name="handshake" /></div>
             <div class="hm-lb-empty-title">היו הראשונים להצטרף!</div>
             <button class="hm-lb-empty-btn" [style.background]="primaryColor(draft)" (click)="openJoinModal()">
-              🚀 הצטרפו כשגרירים
+              <app-icon name="rocket" /> הצטרפו כשגרירים
             </button>
           </div>
         </ng-template>
@@ -1879,13 +1969,13 @@
       <div class="hm-lb-section-header" [class.hm-lb-section-header--center]="ambEffective.length === 0">
         <h2 class="hm-lb-section-title" data-text-role="sectionTitle" [style.color]="ambassadorsSectionTitleColor(draft, asAmbassadorsBlock(block.data))">שגרירים</h2>
         <button class="hm-amb-join-btn" *ngIf="ambEffective.length > 0" [style.background]="primaryColor(draft)" (click)="openJoinModal()">
-          🚀 הצטרפו כשגרירים
+          <app-icon name="rocket" /> הצטרפו כשגרירים
         </button>
       </div>
 
       <!-- ── Social proof ── -->
       <div class="hm-lb-proof" *ngIf="ambEffective.length > 0">
-        💡 כבר <strong>{{ ambEffective.length | number }}</strong> שגרירים הצטרפו
+        <app-icon name="lightbulb" /> כבר <strong>{{ ambEffective.length | number }}</strong> שגרירים הצטרפו
         <ng-container *ngIf="ambTotalRaised > 0"> וגייסו <strong>₪{{ ambTotalRaised | number }}</strong></ng-container>
       </div>
 
@@ -2014,11 +2104,11 @@
       </ng-container>
       <ng-template #ambassadorsEmpty>
         <div class="hm-lb-empty">
-          <div class="hm-lb-empty-icon">🤝</div>
+          <div class="hm-lb-empty-icon"><app-icon name="handshake" /></div>
           <div class="hm-lb-empty-title">היו הראשונים להצטרף!</div>
           <div class="hm-lb-empty-sub">עזרו לנו להפיץ ותקבלו קישור אישי לשיתוף</div>
           <button class="hm-lb-empty-btn" [style.background]="primaryColor(draft)" (click)="openJoinModal()">
-            🚀 הצטרפו כשגרירים
+            <app-icon name="rocket" /> הצטרפו כשגרירים
           </button>
         </div>
       </ng-template>
@@ -2035,7 +2125,7 @@
          item markup itself follows Section Presentation, independent of
          placement. ── -->
     <ng-container *ngIf="inSidebarSection(draft, 'donors')">
-      <h2 class="hm-donor-list-title" data-text-role="sectionTitle" [style.color]="donorsSectionTitleColor(draft, asDonors(block.data))">התורמים שלנו ❤️</h2>
+      <h2 class="hm-donor-list-title" data-text-role="sectionTitle" [style.color]="donorsSectionTitleColor(draft, asDonors(block.data))">התורמים שלנו <app-icon name="heart" /></h2>
 
       <!-- Compact filtering (2026-10-04) -- same donorPeriod/donorSort
            state + setters as the main-content controls below, just a
@@ -2105,7 +2195,7 @@
 
     <!-- ── Below-sidebar placement (default): unchanged ── -->
     <ng-container *ngIf="!inSidebarSection(draft, 'donors')">
-      <h2 class="hm-section-title" data-text-role="sectionTitle" [style.color]="donorsSectionTitleColor(draft, asDonors(block.data))">התורמים שלנו ❤️</h2>
+      <h2 class="hm-section-title" data-text-role="sectionTitle" [style.color]="donorsSectionTitleColor(draft, asDonors(block.data))">התורמים שלנו <app-icon name="heart" /></h2>
 
       <!-- Stats row -->
       <div class="hm-donors-stats">
@@ -2362,7 +2452,7 @@
     </ng-container>
     <ng-template #updatesEmpty>
       <div class="hm-section-placeholder">
-        <span>📢</span><p>עדכוני הקמפיין יוצגו כאן לאחר הוספתם בבונה הדף</p>
+        <span><app-icon name="megaphone" /></span><p>עדכוני הקמפיין יוצגו כאן לאחר הוספתם בבונה הדף</p>
       </div>
     </ng-template>
 
@@ -2406,7 +2496,7 @@
     </div>
     <ng-template #commentsEmpty>
       <div class="hm-section-placeholder">
-        <span>💬</span><p>{{ commentSearchTerm ? 'לא נמצאו תגובות תואמות' : 'אין עדיין תגובות — היו הראשונים להגיב' }}</p>
+        <span><app-icon name="message" /></span><p>{{ commentSearchTerm ? 'לא נמצאו תגובות תואמות' : 'אין עדיין תגובות — היו הראשונים להגיב' }}</p>
       </div>
     </ng-template>
 

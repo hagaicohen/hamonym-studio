@@ -11,10 +11,13 @@ import { CurrentEntityService } from '../../../../core/services/current-entity.s
 import { LucideAngularModule, Trash2, Eye, EyeOff, Users, Pencil, Link, Sparkles } from 'lucide-angular';
 import { FUNDING_TYPE_LABELS } from '../../services/campaign-studio-state.service';
 
+import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
+import { campaignCreatePath, campaignEditPath } from '../../campaign-editor-route';
+
 @Component({
   selector: 'app-campaigns-page',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [HmIconComponent, CommonModule, LucideAngularModule],
   templateUrl: './campaigns-page.component.html',
   styleUrls: ['./campaigns-page.component.css'],
 })
@@ -224,7 +227,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
   }
 
   createCampaign(): void {
-    this.router.navigate(['/campaigns/create']);
+    this.router.navigate(campaignCreatePath());
   }
 
   createCampaignWithAi(): void {
@@ -239,7 +242,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
     if (!this.hasEntityManagerRole() && this.ambassadorCampaignIds().has(id)) {
       this.router.navigate(['/campaigns', id, 'ambassador-studio']);
     } else {
-      this.router.navigate(['/campaigns', id, 'edit']);
+      this.router.navigate(campaignEditPath(id));
     }
   }
 

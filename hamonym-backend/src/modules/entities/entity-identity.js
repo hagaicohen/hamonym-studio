@@ -1,4 +1,4 @@
-const TYPES = Object.freeze({association:'association_number',chalatz:'company_number',political_party_new:'party_number',political_party_registered:'party_number',sole_exempt:'business_number',sole_registered:'business_number'});
+const TYPES = Object.freeze({association:'association_number',chalatz:'company_number',political_party_new:'party_number',political_party_registered:'party_number',sole_exempt:'business_number',sole_registered:'business_number',company:'company_number'});
 const MESSAGE = 'מספר הזיהוי הזה כבר רשום במערכת. לא ניתן ליצור גוף נוסף עם אותו מספר.';
 function normalize(value) { return String(value ?? '').replace(/[\s\u200B-\u200D\uFEFF\-\u2010-\u2015\u2212]/g,'') || null; }
 function scope(type) {

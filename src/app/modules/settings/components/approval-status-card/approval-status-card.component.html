@@ -1,7 +1,7 @@
 <div class="approval-card" [class.approval-card-compact]="compact" *ngIf="!loading && data && needsAttention">
 
   <div class="approval-header" *ngIf="!compact">
-    <span class="approval-icon">{{ meta(data.status).icon }}</span>
+    <span class="approval-icon"><app-icon name="dot" [tone]="$any(meta(data.status).icon)" /></span>
     <span class="approval-label">סטטוס העמותה: {{ meta(data.status).label }}</span>
   </div>
 

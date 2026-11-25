@@ -335,6 +335,24 @@
   background: #fafaf9;
 }
 
+.upload-button.disabled {
+  opacity: 0.6;
+
+  pointer-events: none;
+}
+
+.masav-doc-status {
+  display: flex;
+
+  align-items: center;
+
+  gap: 6px;
+
+  font-size: 13px;
+
+  color: #475569;
+}
+
 .upload-box {
   display: flex;
 

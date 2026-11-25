@@ -3,7 +3,11 @@
 
     <div class="tp-header">
       <h1 class="tp-title">בחרו עיצוב לדף הקמפיין</h1>
-      <p class="tp-subtitle">תוכלו לשנות ולהתאים אישית הכל לאחר הבחירה</p>
+      @if (mode === 'switch') {
+        <p class="tp-subtitle">התוכן, הבלוקים והגדרות הקמפיין נשמרים. התבנית משנה את הפריסה, את סדר המקטעים ואת הצבעים שלא שיניתם ידנית.</p>
+      } @else {
+        <p class="tp-subtitle">תוכלו לשנות ולהתאים אישית הכל לאחר הבחירה</p>
+      }
     </div>
 
     <div class="tp-palette-row">
@@ -22,7 +26,15 @@
       <div class="tp-card"
         *ngFor="let t of templates"
         [class.tp-card--hovered]="hoveredId === t.id"
+        [class.tp-card--current]="t.id === currentTemplateId"
+        [attr.aria-current]="t.id === currentTemplateId ? 'true' : null"
         [style.--accent]="selectedPalette.base"
+        role="button"
+        tabindex="0"
+        [attr.aria-label]="'בחירת עיצוב ' + t.name"
+        (click)="select(t)"
+        (keydown.enter)="select(t)"
+        (keydown.space)="$event.preventDefault(); select(t)"
         (mouseenter)="hoveredId = t.id"
         (mouseleave)="hoveredId = null">
 
@@ -45,18 +57,19 @@
 
         <!-- Info -->
         <div class="tp-card-body">
-          <div class="tp-card-name">{{ t.name }}</div>
+          <div class="tp-card-name">{{ t.name }}@if (t.id === currentTemplateId) { <span class="tp-current">התבנית הנוכחית</span> }</div>
           <div class="tp-card-desc">{{ t.description }}</div>
-          <button class="tp-btn" (click)="select(t)">
-            בחרו עיצוב זה
-          </button>
+          @if (mode === 'switch' && t.pageFormat === 'minimal') {
+            <div class="tp-card-note">תוכן הדף הרגיל נשמר ומוסתר, ויחזור בבחירת תבנית רגילה.</div>
+          }
+          <span class="tp-btn" aria-hidden="true">בחרו עיצוב זה</span>
         </div>
 
       </div>
     </div>
 
     <div class="tp-footer">
-      <button class="tp-skip-btn" (click)="skip()">דלגו — אתחיל ידנית</button>
+      <button class="tp-skip-btn" (click)="skip()">{{ mode === 'switch' ? 'ביטול' : 'דלגו — אתחיל ידנית' }}</button>
     </div>
 
   </div>

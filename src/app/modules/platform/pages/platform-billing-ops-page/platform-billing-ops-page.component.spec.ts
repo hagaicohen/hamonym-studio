@@ -1705,7 +1705,7 @@ describe('PlatformBillingOpsPageComponent - "דורש טיפול" task list (202
   it('heading reads "דורש טיפול" regardless of count -- no "X דברים דורשים טיפול"', async () => {
     const { fixture } = await setup([finding({}), finding({ id: 2, subject_id: 'entity-2' })]);
     const title = fixture.debugElement.query(By.css('.bo-card-title'));
-    expect(title.nativeElement.textContent.trim()).toBe('🔴 דורש טיפול');
+    expect(title.nativeElement.textContent.trim()).toBe('דורש טיפול');
   });
 
   it('active_entity_missing_billing_account: shows the association + amount + a button that opens Billing Setup for that exact entity', async () => {

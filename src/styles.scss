@@ -101,3 +101,14 @@ html body button.ai-unavailable[disabled]:disabled {
   cursor: pointer;
 }
 :where(input[type="checkbox"]:disabled) { cursor: default; }
+
+/* Inline interface icons (Lucide) next to text, e.g. in builder section
+   titles and hints: same size, stroke and alignment everywhere; color
+   follows the surrounding text. */
+.ui-icon {
+  display: inline-flex;
+  vertical-align: -0.2em;
+  flex-shrink: 0;
+  color: currentColor;
+}
+.ui-icon svg { display: block; }

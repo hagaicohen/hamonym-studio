@@ -15,15 +15,15 @@
   <!-- Three ways to create a Partner, deliberately no more. -->
   <div class="pl-create-panel pl-create-panel--choose" *ngIf="createMode === 'choose'">
     <button class="pl-choice-btn" type="button" [disabled]="partners.length === 0" (click)="duplicateSourceId = ''; createMode = 'duplicate-pick'">
-      <span class="pl-choice-icon">🧬</span>
+      <span class="pl-choice-icon"><app-icon name="dna" /></span>
       <span class="pl-choice-text"><b>שכפול שותף קיים</b><small>מעתיק את תוכן הדף כנקודת פתיחה</small></span>
     </button>
     <button class="pl-choice-btn" type="button" (click)="createMode = 'clone'; loadMyCampaigns()">
-      <span class="pl-choice-icon">🌐</span>
+      <span class="pl-choice-icon"><app-icon name="globe" /></span>
       <span class="pl-choice-text"><b>ייבוא מאתר (URL)</b><small>בונה את הדף אוטומטית מהאתר, כולל תמונות</small></span>
     </button>
     <button class="pl-choice-btn" type="button" (click)="createMode = 'blank'">
-      <span class="pl-choice-icon">📄</span>
+      <span class="pl-choice-icon"><app-icon name="file" /></span>
       <span class="pl-choice-text"><b>דף ריק</b><small>מתחילים מאפס, בונים ידנית</small></span>
     </button>
   </div>
@@ -63,7 +63,7 @@
         {{ creating ? 'יוצר...' : 'יצירת שותף' }}
       </button>
     </div>
-    <p class="pl-error" *ngIf="createError">⚠ {{ createError }}</p>
+    <p class="pl-error" *ngIf="createError"><app-icon name="alert" /> {{ createError }}</p>
   </div>
 
   <!-- Clone from URL — deterministic, no review step: paste a URL, get a
@@ -85,7 +85,7 @@
         {{ cloning ? 'בונה את הדף...' : 'בניית הדף' }}
       </button>
     </div>
-    <p class="pl-error" *ngIf="cloneError">⚠ {{ cloneError }}</p>
+    <p class="pl-error" *ngIf="cloneError"><app-icon name="alert" /> {{ cloneError }}</p>
   </div>
 
   <p class="pl-loading" *ngIf="loading">טוען...</p>
@@ -93,7 +93,7 @@
   <div class="pl-grid" *ngIf="!loading">
     <div class="pl-card" *ngFor="let p of partners">
       <img *ngIf="p.logo_url" [src]="p.logo_url" class="pl-card-logo" alt="">
-      <div class="pl-card-logo pl-card-logo--empty" *ngIf="!p.logo_url">🏢</div>
+      <div class="pl-card-logo pl-card-logo--empty" *ngIf="!p.logo_url"><app-icon name="building" /></div>
       <div class="pl-card-name">{{ p.display_name }}</div>
       <div class="pl-card-actions">
         <a class="pl-icon-btn" [routerLink]="['/partners', p.id, 'details']" title="פרטי שותף (שם, טלפון, מייל, לוגו)">
@@ -132,7 +132,7 @@
     <p>ייווצר שותף חדש עם אותו תוכן דף (בלוקים ועיצוב) — פרטי יצירת קשר ישארו ריקים למילוי. תוכלו לשנות הכל אחר כך בעורך.</p>
     <label class="pl-delete-label">שם העסק החדש:</label>
     <input class="pl-input" type="text" [(ngModel)]="duplicateName">
-    <p class="pl-error" *ngIf="duplicateError">⚠ {{ duplicateError }}</p>
+    <p class="pl-error" *ngIf="duplicateError"><app-icon name="alert" /> {{ duplicateError }}</p>
     <div class="pl-delete-actions">
       <button type="button" class="pl-card-btn" (click)="closeDuplicateModal()">ביטול</button>
       <button type="button" class="pl-new-btn" [disabled]="!duplicateName.trim() || duplicating" (click)="confirmDuplicate()">
@@ -149,7 +149,7 @@
     <p>הפעולה תסתיר את דף השותף לצמיתות (הדף הציבורי יחזיר "לא נמצא"). קמפיינים שכבר קישרו לשותף הזה ימשיכו להציג שהקישור מצביע על שותף שנמחק. הפעולה הפיכה רק ע"י Super Admin.</p>
     <label class="pl-delete-label">להקלדת אישור, יש להקליד את שם השותף במדויק:</label>
     <input class="pl-input" type="text" [(ngModel)]="deleteConfirmText" [placeholder]="deleteTarget!.display_name">
-    <p class="pl-error" *ngIf="deleteError">⚠ {{ deleteError }}</p>
+    <p class="pl-error" *ngIf="deleteError"><app-icon name="alert" /> {{ deleteError }}</p>
     <div class="pl-delete-actions">
       <button type="button" class="pl-card-btn" (click)="closeDeleteModal()">ביטול</button>
       <button type="button" class="pl-delete-confirm-btn" [disabled]="!deleteConfirmValid || isDeleting" (click)="confirmDelete()">

@@ -9,7 +9,7 @@
     <div class="pp-grid">
       <button class="pp-card" type="button" *ngFor="let p of presets"
         [style.order]="orderFor(p.id)" (click)="select(p)">
-        <span class="pp-icon">{{ p.icon }}</span>
+        <span class="pp-icon"><lucide-icon [img]="presetIcon(p.id)" [size]="28" [strokeWidth]="1.75" aria-hidden="true"></lucide-icon></span>
         <span class="pp-name">{{ p.name }}</span>
         <span class="pp-desc">{{ p.description }}</span>
       </button>
@@ -20,7 +20,7 @@
            order:2 places it right after קמפיין תרומות regardless of
            `presets`' own array order. -->
       <button class="pp-card" type="button" style="order: 2" (click)="selectMinimal()">
-        <span class="pp-icon">⚡</span>
+        <span class="pp-icon"><lucide-icon [img]="ui.Zap" [size]="28" [strokeWidth]="1.75" class="ui-icon" aria-hidden="true"></lucide-icon></span>
         <span class="pp-name">דף תרומה מהיר</span>
         <span class="pp-desc">עמוד פשוט וממוקד לקבלת תרומות. מקימים במהירות ומשתפים קישור לתורמים.</span>
       </button>

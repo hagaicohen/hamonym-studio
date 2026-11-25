@@ -5,7 +5,8 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../../../core/services/current-entity.service';
 import { AnalyticsRangeService } from '../../../../../../core/services/analytics-range.service';
-
+
+import { HmIconComponent } from '../../../../../../shared/ui/design-system/icon.component';
 interface CampaignPerf {
   id: string;
   title: string;
@@ -51,7 +52,7 @@ const COLUMNS_STORAGE_KEY = 'reports-campaigns-hidden-columns';
 @Component({
   selector: 'app-campaign-performance-report',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HmIconComponent, CommonModule, FormsModule],
   templateUrl: './campaign-performance-report.component.html',
   styleUrls: ['./campaign-performance-report.component.css', '../../../../shared/reports-shared.css'],
 })

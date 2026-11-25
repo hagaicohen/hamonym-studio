@@ -7,6 +7,8 @@ export { SurfaceStyle, ButtonStyle, ProgressStyle } from '../../../shared/models
 import { DonationAmountButtonPreset } from '../utils/donation-amount-button-presets';
 export { DonationAmountButtonPreset } from '../utils/donation-amount-button-presets';
 import { CampaignStyleId, StyleColorField, OpeningComposition, SectionPresentation, PresentableSection, resolveTheme } from '../builder/styles/campaign-styles';
+import type { CampaignTemplate, TemplatePalette } from '../builder/templates/campaign-templates';
+import { isUntouchedStarter, mergePaletteTheme, reorderForTemplate } from '../builder/templates/template-switch';
 export { CampaignStyleId, StyleColorField, OpeningComposition, SectionPresentation, PresentableSection, CAMPAIGN_STYLES, CampaignStyleDefinition } from '../builder/styles/campaign-styles';
 
 export type CampaignFundingType =
@@ -582,6 +584,8 @@ export interface CampaignLocation {
   city?:  string;
 }
 
+export type StudioCanvasArea = 'opening' | 'nav' | 'footer' | 'title' | 'subtitle' | 'logo' | 'hero-cta';
+
 export interface CampaignLayout {
   layoutMode:         LayoutMode;
   templateId?:        string;
@@ -700,7 +704,10 @@ export interface CampaignLayout {
   // all three, only markup/CSS differs. Absent/'classic' = today's stacked
   // look for every existing campaign — no migration needed, same pattern as
   // heroPlacement above. See DECISIONS.md (2026-07-26).
-  conversionWidgetLayout?: 'classic' | 'unified' | 'compact' | 'hero' | 'split-horizontal';
+  // 'compact-bar' / 'conversion-first' / 'modern' (2026-11) are the merged
+  // layouts: the donation card renders the progress summary itself (see
+  // CampaignPreviewComponent.isMergedDonationLayout).
+  conversionWidgetLayout?: 'classic' | 'unified' | 'compact' | 'hero' | 'split-horizontal' | 'compact-bar' | 'conversion-first' | 'modern';
   // Campaign Design Evolution Phase 1 (2026-09-29) — see campaign-styles.ts.
   // Both absent = legacy campaign, `theme` below is the one and only source
   // of truth exactly as before. Once campaignStyleId is set, `theme`'s 4
@@ -1270,6 +1277,83 @@ export class CampaignStudioStateService {
   readonly focusBlockRequest$ = this._focusBlockRequest.asObservable();
   requestFocusBlock(id: string, type: BlockType): void { this._focusBlockRequest.next({ id, type }); }
 
+  // Page areas clicked on the canvas (Studio): the opening (Hero), the campaign
+  // navigation bar, the footer, and the opening's own parts (title, subtitle,
+  // logo, Hero button) so each opens its own editor.
+  private _focusAreaRequest = new Subject<StudioCanvasArea>();
+  readonly focusAreaRequest$ = this._focusAreaRequest.asObservable();
+  requestFocusArea(area: StudioCanvasArea): void { this._focusAreaRequest.next(area); }
+
+  // Replaces the draft without touching edit mode or anything else (Studio
+  // undo/redo restores a snapshot through this).
+  replaceDraft(draft: CampaignDraft): void { this.draftSubject.next(draft); }
+
+  // Last draft the server accepted (create/update), for the Studio's
+  // unsaved-changes warning. Server-owned fields are ignored when comparing.
+  private savedFingerprint: string | null = null;
+  private static readonly SERVER_FIELDS = ['id', 'entityId', 'status', 'currentAmount', 'supportersCount', 'isHidden',
+    'createdAt', 'updatedAt', 'publishedAt', 'publishRequestedAt', 'entityGaMeasurementId', 'entityName', 'entityLogo'] as const;
+  draftFingerprint(draft: CampaignDraft): string {
+    const copy: Record<string, unknown> = { ...draft };
+    for (const k of CampaignStudioStateService.SERVER_FIELDS) delete copy[k];
+    return JSON.stringify(copy);
+  }
+  markSaved(draft: CampaignDraft = this.draft): void { this.savedFingerprint = this.draftFingerprint(draft); }
+  hasUnsavedChanges(): boolean {
+    return this.savedFingerprint !== null && this.savedFingerprint !== this.draftFingerprint(this.draft);
+  }
+
+  // Duplicates a block (and everything nested in it, with new ids) right after
+  // the original, in the same container. Types that may appear once per page
+  // are not duplicated.
+  canDuplicateBlock(id: string, singleInstance: BlockType[]): boolean {
+    const blocks = this.draft.blocks;
+    const isParent = (b: CampaignBlock) => b.type === 'container' || b.type === 'tabs' || b.type === 'accordion';
+    const hasSingle = (b: CampaignBlock | undefined): boolean => !!b && (singleInstance.includes(b.type)
+      || (isParent(b) && (b.data as ContainerBlockData).childBlockIds.some(cid => hasSingle(blocks.find(x => x.id === cid)))));
+    const block = blocks.find(b => b.id === id);
+    return !!block && !hasSingle(block);
+  }
+
+  duplicateBlock(id: string, singleInstance: BlockType[]): string | null {
+    const blocks = this.draft.blocks;
+    const original = blocks.find(b => b.id === id);
+    if (!original || singleInstance.includes(original.type)) return null;
+    const isParent = (b: CampaignBlock) => b.type === 'container' || b.type === 'tabs' || b.type === 'accordion';
+    const idMap = new Map<string, string>();
+    const collect = (b: CampaignBlock): CampaignBlock[] => {
+      idMap.set(b.id, generateId());
+      const kids = isParent(b) ? (b.data as ContainerBlockData).childBlockIds.map(cid => blocks.find(x => x.id === cid)).filter((x): x is CampaignBlock => !!x) : [];
+      return [b, ...kids.flatMap(collect)];
+    };
+    const subtree = collect(original);
+    // Copying a container must not sneak in a second single-instance block.
+    if (subtree.some(b => singleInstance.includes(b.type))) return null;
+    const copies = subtree.map(b => {
+      const copy: CampaignBlock = structuredClone(b);
+      copy.id = idMap.get(b.id)!;
+      if (isParent(copy)) {
+        const data = copy.data as ContainerBlockData;
+        copy.data = { ...data, childBlockIds: data.childBlockIds.filter(c => idMap.has(c)).map(c => idMap.get(c)!) } as ContainerBlockData;
+      }
+      return copy;
+    });
+    const newId = idMap.get(id)!;
+    const parent = blocks.find(b => isParent(b) && (b.data as ContainerBlockData).childBlockIds.includes(id)) ?? null;
+    const scope = this.scopeIdsFor(parent?.id ?? null, blocks);
+    const newScope = [...scope];
+    newScope.splice(scope.indexOf(id) + 1, 0, newId);
+    const orderById = new Map(newScope.map((bid, i) => [bid, i + 1]));
+    let next = [...blocks, ...copies].map(b => orderById.has(b.id) ? { ...b, order: orderById.get(b.id)! } : b);
+    if (parent) {
+      next = next.map(b => b.id === parent.id
+        ? { ...b, data: { ...(b.data as ContainerBlockData), childBlockIds: [...(b.data as ContainerBlockData).childBlockIds, newId] } as ContainerBlockData }
+        : b);
+    }
+    this.patch({ blocks: next });
+    return newId;
+  }
+
   get draft(): CampaignDraft {
     return this.draftSubject.value;
   }
@@ -1365,6 +1449,67 @@ export class CampaignStudioStateService {
     this.draftSubject.next({ ...base, blocks, layout });
   }
 
+  // Initial creation from a template (new, unsaved campaign): a fresh draft
+  // built from the template starter blocks. Shared by the classic editor and
+  // the Studio so both start a campaign the same way.
+  startFromTemplate(template: CampaignTemplate, palette: TemplatePalette): void {
+    this.applyTemplate(
+      template.createBlocks(palette), template.buildTheme(palette), template.layoutMode,
+      template.id, template.heroPlacement, template.pageFormat,
+    );
+  }
+
+  // Template switching for an existing page (Step 9's "שנה תבנית"). Unlike
+  // applyTemplate() it never rebuilds the draft: identity, every top-level
+  // field and every block (ids, content, visibility, nesting) are kept.
+  // What changes:
+  // - layoutMode / templateId / heroPlacement;
+  // - the order of top-level blocks, re-sequenced by the template's sections
+  //   (reorderForTemplate) -- no block is added, removed, hidden or merged;
+  // - palette fields that still hold a template value (customized colors are
+  //   kept); a chosen Campaign Style and its overrides still win.
+  // An unsaved campaign whose blocks are still untouched starter blocks gets
+  // the new template's starter blocks instead.
+  //
+  // The quick donation page ('minimal-donation', pageFormat 'minimal') is one
+  // of these templates. Choosing it sets pageFormat and leaves every block and
+  // the regular layout settings in the draft (the minimal page just doesn't
+  // render them); choosing a regular template again drops pageFormat and
+  // shows those blocks as they were, in their saved order. A page created as
+  // minimal has no blocks yet and gets the chosen template's starter blocks.
+  switchTemplate(template: CampaignTemplate, palette: TemplatePalette): boolean {
+    const draft = this.draft;
+    const layout = draft.layout;
+    const initial = createInitialDraft();
+    const theme = resolveTheme(mergePaletteTheme(layout.theme, palette, initial.layout.theme), layout.campaignStyleId, layout.styleOverrides);
+    if (template.pageFormat === 'minimal') {
+      this.patch({ layout: { ...layout, pageFormat: 'minimal', templateId: template.id, theme } });
+      return true;
+    }
+    const fromMinimal = layout.pageFormat === 'minimal';
+    const starter = template.createBlocks(palette);
+    const blocks = fromMinimal
+      ? (draft.blocks.length ? draft.blocks : starter)
+      : !draft.id && isUntouchedStarter(draft.blocks, initial.blocks)
+        ? starter
+        : reorderForTemplate(draft.blocks, starter);
+    const isSidebar = template.layoutMode === 'sidebar-right' || template.layoutMode === 'sidebar-left';
+    const { pageFormat: _minimal, ...regularLayout } = layout;
+    this.patch({
+      blocks,
+      layout: {
+        ...regularLayout,
+        layoutMode: template.layoutMode,
+        templateId: template.id,
+        // 'main-column' only renders inside the sidebar layouts; elsewhere it
+        // would hide the Hero on desktop.
+        heroPlacement: isSidebar ? template.heroPlacement : undefined,
+        theme,
+      },
+    });
+    return true;
+  }
+
   // Sidebar section placement — shared by every step editor whose section
   // (rewards/donors/ambassadors/updates) supports rendering in the sidebar
   // rail. See CampaignLayout.sidebarSections doc comment.
@@ -1426,6 +1571,7 @@ export class CampaignStudioStateService {
   loadDraft(data: CampaignDraft): void {
     this.editModeSubject.next(true);
     this.draftSubject.next(data);
+    this.markSaved(data);
   }
 
   // Applies newly-polled live donations to the displayed totals without a
@@ -1538,6 +1684,50 @@ export class CampaignStudioStateService {
   // Tabs and accordion share the exact same data shape (childBlockIds +
   // styleVariant + accentColor) — converting between them is just swapping
   // `type`, no data transformation. See BlockType's 'accordion' doc comment.
+  // Swaps the order of a container's first two children (the right/left
+  // columns of a row container). Moved from Step 9 so the Studio shares it.
+  swapContainerChildren(id: string): void {
+    const block = this.draft.blocks.find(b => b.id === id);
+    if (!block) return;
+    const data = block.data as ContainerBlockData;
+    if (data.childBlockIds.length < 2) return;
+    const children = data.childBlockIds
+      .map(cid => this.draft.blocks.find(b => b.id === cid))
+      .filter((b): b is CampaignBlock => !!b)
+      .sort((a, b) => a.order - b.order);
+    if (children.length < 2) return;
+    const blocks = this.draft.blocks.map(b => ({ ...b }));
+    const a = blocks.find(b => b.id === children[0].id)!;
+    const bBlock = blocks.find(b => b.id === children[1].id)!;
+    [a.order, bBlock.order] = [bBlock.order, a.order];
+    this.patch({ blocks });
+  }
+
+  // A tab / a panel is a container child of the tabs / accordion block,
+  // named by its position ("טאב 3", "פאנל 3").
+  addTab(tabsBlockId: string): string | null { return this.addNamedChildContainer(tabsBlockId, 'טאב'); }
+  addPanel(accordionBlockId: string): string | null { return this.addNamedChildContainer(accordionBlockId, 'פאנל'); }
+
+  private addNamedChildContainer(parentId: string, noun: string): string | null {
+    const parent = this.draft.blocks.find(b => b.id === parentId);
+    if (!parent) return null;
+    const count = ((parent.data as ContainerBlockData).childBlockIds ?? [])
+      .filter(cid => this.draft.blocks.some(b => b.id === cid)).length;
+    const newId = this.addBlockToContainer(parentId, 'container');
+    if (newId) this.updateBlockLabel(newId, `${noun} ${count + 1}`);
+    return newId;
+  }
+
+  // Marks a block created by the website import as reviewed.
+  clearImportReview(id: string): void {
+    const blocks = this.draft.blocks.map(b => {
+      if (b.id !== id) return b;
+      const { importReview, ...rest } = b;
+      return rest as CampaignBlock;
+    });
+    this.patch({ blocks });
+  }
+
   convertTabsAccordionType(id: string): void {
     const block = this.draft.blocks.find(b => b.id === id);
     if (!block || (block.type !== 'tabs' && block.type !== 'accordion')) return;
@@ -1829,6 +2019,14 @@ export class CampaignStudioStateService {
     }
 
     this.patch({ blocks });
+  }
+
+  updateBlockLabel(id: string, label: string): void {
+    this.patch({ blocks: this.draft.blocks.map(b => b.id === id ? { ...b, label } : b) });
+  }
+
+  updateBlockSpacing(id: string, field: 'spacingTop' | 'spacingBottom', value: number): void {
+    this.patch({ blocks: this.draft.blocks.map(b => b.id === id ? { ...b, [field]: value } : b) });
   }
 
   toggleBlockVisibility(id: string): void {
