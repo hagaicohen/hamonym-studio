@@ -152,6 +152,23 @@ async function verifyAmbassadorOwnership(userId, ambassadorId) {
   if (rows.length === 0) throw new Error('Unauthorized');
 }
 
+async function editableRecord(userId, id) {
+  const { rows } = await db.query(
+    `SELECT a.*, c.title AS campaign_title, c.slug AS campaign_slug,
+            c.target_amount AS campaign_target_amount, ${STATS_SQL},
+            EXISTS(SELECT 1 FROM user_entities ue WHERE ue.entity_id=c.entity_id AND ue.user_id=$2) AS can_manage
+     FROM campaign_ambassadors a JOIN campaigns c ON c.id=a.campaign_id
+     WHERE a.id=$1`, [id, userId]);
+  const row = rows[0];
+  if (!row) throw new Error('Ambassador not found');
+  if (!row.can_manage && String(row.user_id || '') !== String(userId)) throw new Error('Unauthorized');
+  return row;
+}
+exports.getEditable = async (userId, id) => {
+  const row = await editableRecord(userId, id);
+  return { ...mapRow(row), campaign: {title:row.campaign_title,slug:row.campaign_slug,target_amount:Number(row.campaign_target_amount)||0} };
+};
+
 // Exported (not just used internally) because the entity-manager-facing route
 // (listForEntity) needs this check, while the platform-admin route that also
 // calls getEntityAmbassadors() is already authorized via requireSuperAdmin
@@ -222,7 +239,8 @@ exports.create = async (userId, campaignId, data) => {
 };
 
 exports.update = async (userId, id, data) => {
-  await verifyAmbassadorOwnership(userId, id);
+  const record = await editableRecord(userId, id);
+  if (!record.can_manage && data.status !== undefined) throw new Error('Unauthorized');
 
   // Auto-record deactivation audit fields when status switches to inactive
   if (data.status === 'inactive') {
@@ -348,7 +366,7 @@ exports.listPublic = async (campaignSlug) => {
   return rows.map(mapRow);
 };
 
-exports.selfRegister = async (campaignSlug, { full_name, phone, email, goal_amount, slug: requestedSlug }) => {
+exports.selfRegister = async (campaignSlug, { full_name, phone, email, goal_amount, slug: requestedSlug }, userId = null) => {
   if (!full_name?.trim()) throw new Error('Name required');
 
   const { rows: camps } = await db.query(
@@ -373,10 +391,10 @@ exports.selfRegister = async (campaignSlug, { full_name, phone, email, goal_amou
 
   const { rows } = await db.query(
     `INSERT INTO campaign_ambassadors
-       (campaign_id, full_name, phone, email, goal_amount, personal_message, slug)
-     VALUES ($1,$2,$3,$4,$5,'', $6)
+       (campaign_id, full_name, phone, email, goal_amount, personal_message, slug, user_id)
+     VALUES ($1,$2,$3,$4,$5,'', $6, $7)
      RETURNING id, slug`,
-    [campaignId, full_name.trim(), phone||null, email||null, goal_amount||null, slug]
+    [campaignId, full_name.trim(), phone||null, email||null, goal_amount||null, slug, userId]
   );
   const appUrl = process.env.APP_URL || 'https://app.hamonym.com';
   return {

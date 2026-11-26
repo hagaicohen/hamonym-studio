@@ -56,6 +56,7 @@ export interface AmbassadorPublicInfo {
 }
 
 export interface AmbassadorCampaignSummary {
+  ambassadorId: string;
   id:               string;
   name:             string;
   slug:             string;
@@ -203,6 +204,7 @@ export class AmbassadorService {
       .pipe(
         map(r => (r.campaigns ?? []).map((c: any): AmbassadorCampaignSummary => ({
           id:               c.id,
+          ambassadorId:     c.ambassadorId || '',
           name:             c.name             || '',
           slug:             c.slug             || '',
           cover:            c.cover            ?? null,
@@ -227,7 +229,8 @@ export class AmbassadorService {
         email:       data.email || null,
         goal_amount: data.goalAmount ?? null,
         ...(data.slug ? { slug: data.slug } : {}),
-      }
+      },
+      localStorage.getItem('token') ? { headers: this.headers() } : {}
     );
   }
 

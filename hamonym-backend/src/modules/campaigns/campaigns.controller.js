@@ -477,7 +477,7 @@ exports.updateMyAmbassadorRecord = async (req, res) => {
     const record = await service.updateMyAmbassadorRecord(req.user.id, req.params.campaignId, req.body);
     res.json({ ambassador: record });
   } catch (err) {
-    const status = err.message === 'Ambassador not found' ? 404
+    const status = err.message === 'Unauthorized' ? 403 : err.message === 'Ambassador not found' ? 404
       : err.message === 'Slug taken' ? 409
       : err.message === 'No fields supplied' || err.message === 'Slug too short' ? 400 : 500;
     res.status(status).json({ error: err.message });
@@ -489,7 +489,7 @@ exports.myAmbassadorRecord = async (req, res) => {
     const record = await service.myAmbassadorRecord(req.user.id, req.params.campaignId);
     res.json({ ambassador: record });
   } catch (err) {
-    const status = err.message === 'Ambassador not found' ? 404 : 500;
+    const status = err.message === 'Unauthorized' ? 403 : err.message === 'Ambassador not found' ? 404 : 500;
     res.status(status).json({ error: err.message });
   }
 };

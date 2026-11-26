@@ -1339,109 +1339,25 @@ exports.publishRequestedCampaigns = async (entityId, client = db) => {
   return publishedIds;
 };
 
-exports.updateMyAmbassadorRecord = async (userId, campaignId, data) => {
-  const { rows: found } = await db.query(
-    `SELECT a.id FROM campaign_ambassadors a
-     WHERE a.campaign_id = $2
-       AND a.email IS NOT NULL
-       AND LOWER(a.email) = LOWER((SELECT email FROM users WHERE id = $1 LIMIT 1))
-     LIMIT 1`,
-    [userId, campaignId]
-  );
-  if (!found.length) throw new Error('Ambassador not found');
-  const ambassadorId = found[0].id;
-
-  // Validated/reserved before the generic field loop, same reasoning as
-  // ambassadors.service.js#update: a change to an already-taken personal
-  // link must fail loudly rather than surface the DB unique constraint as
-  // an opaque error. campaignId is already this function's own parameter,
-  // so no extra lookup is needed, and the ambassador is self-excluded.
-  if (data.slug !== undefined) {
-    data = { ...data, slug: await validateAndReserveSlug(campaignId, data.slug, ambassadorId) };
-  }
-
-  const fields = [];
-  const vals   = [];
-  let   i      = 1;
-  const allowed    = ['full_name','phone','email','goal_amount','personal_message','personal_title','slug'];
-  const notNullable = new Set(['full_name', 'personal_message']);
-  for (const key of allowed) {
-    if (data[key] !== undefined) {
-      fields.push(`${key} = $${i++}`);
-      vals.push(data[key] === '' && !notNullable.has(key) ? null : data[key]);
-    }
-  }
-  if (!fields.length) throw new Error('No fields supplied');
-  vals.push(ambassadorId);
-  const { rows } = await db.query(
-    `UPDATE campaign_ambassadors SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`,
-    vals
-  );
-  if (!rows.length) throw new Error('Ambassador not found');
-  const r = rows[0];
-  return {
-    id:               r.id,
-    campaign_id:      r.campaign_id,
-    full_name:        r.full_name,
-    phone:            r.phone        ?? null,
-    email:            r.email        ?? null,
-    goal_amount:      r.goal_amount  != null ? Number(r.goal_amount) : null,
-    personal_message: r.personal_message ?? '',
-    personal_title:   r.personal_title   ?? '',
-    status:           r.status,
-    slug:             r.slug,
-  };
-};
-
-exports.myAmbassadorRecord = async (userId, campaignId) => {
-  const { rows } = await db.query(
-    `SELECT a.id, a.campaign_id, a.full_name, a.phone, a.email,
-            a.goal_amount, a.personal_message, a.status, a.slug,
-            a.personal_title, a.created_at,
-            c.title AS campaign_title, c.slug AS campaign_slug,
-            c.cover_image_url AS campaign_cover, c.target_amount AS campaign_target_amount
-     FROM campaign_ambassadors a
-     JOIN campaigns c ON c.id = a.campaign_id
-     WHERE a.campaign_id = $2
-       AND a.email IS NOT NULL
-       AND LOWER(a.email) = LOWER((SELECT email FROM users WHERE id = $1 LIMIT 1))
-     LIMIT 1`,
-    [userId, campaignId]
-  );
-  if (!rows.length) throw new Error('Ambassador not found');
-  const r = rows[0];
-  return {
-    id:               r.id,
-    campaign_id:      r.campaign_id,
-    full_name:        r.full_name,
-    phone:            r.phone        ?? null,
-    email:            r.email        ?? null,
-    goal_amount:      r.goal_amount  != null ? Number(r.goal_amount) : null,
-    personal_message: r.personal_message ?? '',
-    personal_title:   r.personal_title   ?? '',
-    status:           r.status,
-    slug:             r.slug,
-    created_at:       r.created_at,
-    campaign: {
-      title: r.campaign_title ?? '',
-      slug:  r.campaign_slug  ?? '',
-      cover: r.campaign_cover ?? null,
-      // Context for the ambassador's own personal goal, which is
-      // motivational only — never enforced as a cap.
-      target_amount: r.campaign_target_amount != null ? Number(r.campaign_target_amount) : 0,
-    },
-  };
-};
+// Compatibility entry point: resolve an authenticated membership, never an email match.
+async function myAmbassadorId(userId, campaignId) {
+  const {rows}=await db.query('SELECT id FROM campaign_ambassadors WHERE campaign_id=$1 AND user_id::text=$2::text',[campaignId,userId]);
+  if(rows.length!==1) throw new Error('Ambassador not found');
+  return rows[0].id;
+}
+exports.updateMyAmbassadorRecord = async (userId,campaignId,data) =>
+  require('../ambassadors/ambassadors.service').update(userId,await myAmbassadorId(userId,campaignId),data);
+exports.myAmbassadorRecord = async (userId,campaignId) =>
+  require('../ambassadors/ambassadors.service').getEditable(userId,await myAmbassadorId(userId,campaignId));
 
 exports.myAmbassadorCampaigns = async (userId) => {
   const { rows } = await db.query(
-    `SELECT c.id, c.title AS name, c.slug, c.cover_image_url, c.status,
+    `SELECT c.id, a.id AS ambassador_id, c.title AS name, c.slug, c.cover_image_url, c.status,
             a.slug AS ambassador_slug, a.status AS ambassador_status,
             a.goal_amount AS personal_goal
      FROM campaign_ambassadors a
      JOIN campaigns c ON c.id = a.campaign_id
-     WHERE a.email IS NOT NULL
-       AND LOWER(a.email) = LOWER((SELECT email FROM users WHERE id = $1 LIMIT 1))
+     WHERE a.user_id::text = $1::text AND c.deleted_at IS NULL
      ORDER BY c.title`,
     [userId]
   );
@@ -1451,6 +1367,7 @@ exports.myAmbassadorCampaigns = async (userId) => {
     slug:             r.slug             || '',
     cover:            r.cover_image_url  ?? null,
     status:           r.status           || 'published',
+    ambassadorId:     r.ambassador_id,
     ambassadorSlug:   r.ambassador_slug  || '',
     ambassadorStatus: r.ambassador_status || 'active',
     personalGoal:     r.personal_goal != null ? Number(r.personal_goal) : null,
