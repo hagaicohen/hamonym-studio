@@ -134,8 +134,27 @@ exports.getEntityDonations = async (req, res) => {
     const entityId = req.params.id;
     const page     = parseInt(req.query.page  || '0', 10);
     const limit    = parseInt(req.query.limit || '25', 10);
-    const { status, campaignId, period, search, sortBy, sortDir } = req.query;
-    const result = await donationsService.getEntityDonations(entityId, { status, campaignId, period, search, sortBy, sortDir, page, limit });
+    const { status, campaignId, period, search, sortBy, sortDir, fromDate, toDate, rewardPurchases, donorKey, receipt, currency, ambassadorName, unassignedAmbassador } = req.query;
+    if (donorKey !== undefined && (typeof donorKey !== 'string' || !donorKey.trim() || donorKey.length > 320)) {
+      return res.status(400).json({ error: 'Invalid donor identity' });
+    }
+    const isDate = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+      && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
+    if ((fromDate !== undefined && !isDate(fromDate)) || (toDate !== undefined && !isDate(toDate))
+      || (fromDate && toDate && fromDate > toDate)) {
+      return res.status(400).json({ error: 'Invalid date range' });
+    }
+    if ((receipt !== undefined && !['issued', 'missing'].includes(receipt))
+      || (currency !== undefined && !['ILS', 'USD', 'EUR'].includes(currency))) {
+      return res.status(400).json({ error: 'Invalid transaction filter' });
+    }
+    if (ambassadorName !== undefined && (typeof ambassadorName !== 'string' || ambassadorName.length > 120)) {
+      return res.status(400).json({ error: 'Invalid ambassador filter' });
+    }
+    const result = await donationsService.getEntityDonations(entityId, {
+      status, campaignId, period, search, sortBy, sortDir, page, limit,
+      fromDate, toDate, donorKey, receipt, currency, ambassadorName, unassignedAmbassador: unassignedAmbassador === '1', rewardPurchases: rewardPurchases === '1',
+    });
     res.json(result);
   } catch (err) {
     console.error('[getEntityDonations] error:', err.message);
@@ -148,8 +167,11 @@ exports.getEntityDonors = async (req, res) => {
     const entityId = req.params.id;
     const page     = parseInt(req.query.page  || '0', 10);
     const limit    = parseInt(req.query.limit || '25', 10);
-    const { campaignId, search, sortBy, sortDir } = req.query;
-    const result = await donationsService.getEntityDonors(entityId, { campaignId, search, sortBy, sortDir, page, limit });
+    const { campaignId, search, sortBy, sortDir, ambassadorName } = req.query;
+    if (ambassadorName !== undefined && (typeof ambassadorName !== 'string' || ambassadorName.length > 120)) {
+      return res.status(400).json({ error: 'Invalid ambassador filter' });
+    }
+    const result = await donationsService.getEntityDonors(entityId, { campaignId, search, sortBy, sortDir, page, limit, ambassadorName, keepUnidentifiedSeparate: req.query.workspace === '1' });
     res.json(result);
   } catch (err) {
     console.error('[getEntityDonors] error:', err.message);

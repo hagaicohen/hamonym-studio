@@ -1065,7 +1065,17 @@ const SORT_COLUMNS = {
   completedAt: 'd.completed_at',
 };
 
-exports.getEntityDonations = async (entityId, { status, campaignId, period, search, sortBy, sortDir, page = 0, limit = 25 }) => {
+const AVAILABLE_RECEIPT_FOR_DONATION = `(
+  SELECT r.id
+  FROM receipts r
+  WHERE r.donation_id = d.id AND EXISTS (
+    SELECT 1 FROM receipt_documents rd
+    WHERE rd.receipt_id = r.id AND rd.document_status = 'available'
+  )
+  ORDER BY r.id LIMIT 1
+)`;
+
+exports.getEntityDonations = async (entityId, { status, campaignId, period, search, sortBy, sortDir, fromDate, toDate, donorKey, rewardPurchases, receipt, currency, ambassadorName, unassignedAmbassador, page = 0, limit = 25 }) => {
   // period/campaignId/search are legitimate scoping for the KPI summary too
   // (a manager filtering to one campaign or one month expects the summary to
   // match) -- only `status` is list-view-only, built separately below.
@@ -1085,9 +1095,44 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
     baseWhere.push(`d.created_at >= NOW() - INTERVAL '3 months'`);
   }
 
+  if (fromDate) {
+    baseWhere.push(`d.created_at >= ($${idx++}::date::timestamp AT TIME ZONE 'Asia/Jerusalem')`);
+    baseParams.push(fromDate);
+  }
+  if (toDate) {
+    baseWhere.push(`d.created_at < (($${idx++}::date + 1)::timestamp AT TIME ZONE 'Asia/Jerusalem')`);
+    baseParams.push(toDate);
+  }
+  if (rewardPurchases) {
+    baseWhere.push("CASE WHEN jsonb_typeof(d.rewards) = 'array' THEN jsonb_array_length(d.rewards) > 0 ELSE false END");
+  }
+
   if (campaignId) {
     baseWhere.push(`d.campaign_id = $${idx++}`);
     baseParams.push(campaignId);
+  }
+
+  if (donorKey) {
+    baseWhere.push(`COALESCE(NULLIF(d.donor_email, ''), NULLIF(d.donor_phone, ''), ('transaction:' || d.id::text)) = $${idx++}`);
+    baseParams.push(donorKey);
+  }
+
+  if (currency) {
+    baseWhere.push(`d.currency = $${idx++}`);
+    baseParams.push(currency);
+  }
+  if (receipt === 'issued' || receipt === 'missing') {
+    baseWhere.push(`${AVAILABLE_RECEIPT_FOR_DONATION} IS ${receipt === 'issued' ? 'NOT NULL' : 'NULL'}`);
+  }
+
+  if (unassignedAmbassador) {
+    baseWhere.push('d.ambassador_id IS NULL');
+  } else if (ambassadorName?.trim()) {
+    baseWhere.push(`EXISTS (
+      SELECT 1 FROM campaign_ambassadors a
+      WHERE a.id = d.ambassador_id AND a.campaign_id = d.campaign_id AND a.full_name ILIKE $${idx++}
+    )`);
+    baseParams.push(`%${ambassadorName.trim()}%`);
   }
 
   if (search) {
@@ -1120,14 +1165,17 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
 
   const [listRes, listTotalRes, summaryRes, campaignsRes] = await Promise.all([
     db.query(
-      `SELECT d.id, d.amount::float, d.currency, d.amount_ils::float, d.fx_status, d.donor_name, d.donor_email, d.donor_phone,
-              d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason, d.note, d.rewards,
-              (SELECT r.id FROM receipts r WHERE r.donation_id=d.id) AS receipt_id,
+      `SELECT d.id, d.amount::float, d.donor_name, d.donor_email, d.donor_phone,
+              d.status, d.completed_at, d.created_at, d.is_anonymous, d.failure_reason, d.note,
+              d.source, (d.recurring_instruction_id IS NOT NULL) AS is_recurring, d.currency, d.amount_ils::float, d.fx_status, d.rewards,
+              ${AVAILABLE_RECEIPT_FOR_DONATION} AS receipt_id,
+              d.campaign_id, d.ambassador_id, a.full_name AS ambassador_name,
               c.title AS campaign_title, c.slug AS campaign_slug
        FROM donations d
        JOIN campaigns c ON c.id = d.campaign_id
+       LEFT JOIN campaign_ambassadors a ON a.id = d.ambassador_id AND a.campaign_id = d.campaign_id
        WHERE ${listWhereStr}
-       ORDER BY ${sortCol} ${sortOrd}
+       ORDER BY ${sortCol} ${sortOrd}, d.id
        LIMIT $${idx} OFFSET $${idx + 1}`,
       [...listParams, limit, page * limit]
     ),
@@ -1138,6 +1186,9 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
     db.query(
       `SELECT
          COUNT(*) FILTER (WHERE d.status = 'paid')::int    AS paid_count,
+         COUNT(DISTINCT COALESCE(NULLIF(d.donor_email, ''), NULLIF(d.donor_phone, '')))
+           FILTER (WHERE d.status = 'paid')::int AS identified_donor_count,
+         COUNT(*) FILTER (WHERE d.status = 'paid' AND d.amount_ils IS NULL)::int AS unconverted_paid_count,
          COUNT(*) FILTER (WHERE d.status = 'failed')::int  AS failed_count,
          COUNT(*) FILTER (WHERE d.status = 'pending')::int AS pending_count,
          COALESCE(SUM(d.amount_ils) FILTER (WHERE d.status = 'paid'), 0)::float AS total_raised,
@@ -1159,6 +1210,8 @@ exports.getEntityDonations = async (entityId, { status, campaignId, period, sear
     kpi: {
       totalRaised:  summary.total_raised,
       paidCount:    summary.paid_count,
+      identifiedDonorCount: summary.identified_donor_count,
+      unconvertedPaidCount: summary.unconverted_paid_count,
       failedCount:  summary.failed_count,
       pendingCount: summary.pending_count,
       avgAmount:    summary.avg_amount,
@@ -1319,7 +1372,9 @@ const DONOR_SORT_COLUMNS = {
   last:  'last_donation_at',
 };
 
-exports.getEntityDonors = async (entityId, { campaignId, search, sortBy, sortDir, page = 0, limit = 25 }) => {
+exports.getEntityDonors = async (entityId, { campaignId, search, sortBy, sortDir, page = 0, limit = 25, ambassadorName, keepUnidentifiedSeparate }) => {
+  const fallbackKey = keepUnidentifiedSeparate ? "('transaction:' || d.id::text)" : 'd.donor_name';
+  const donorKey = `COALESCE(NULLIF(d.donor_email, ''), NULLIF(d.donor_phone, ''), ${fallbackKey})`;
   const where  = ['d.entity_id = $1', `d.status = 'paid'`];
   const params = [entityId];
   let idx = 2;
@@ -1335,6 +1390,14 @@ exports.getEntityDonors = async (entityId, { campaignId, search, sortBy, sortDir
     idx++;
   }
 
+  if (ambassadorName?.trim()) {
+    where.push(`EXISTS (
+      SELECT 1 FROM campaign_ambassadors a
+      WHERE a.id = d.ambassador_id AND a.campaign_id = d.campaign_id AND a.full_name ILIKE $${idx++}
+    )`);
+    params.push(`%${ambassadorName.trim()}%`);
+  }
+
   const whereStr = where.join(' AND ');
   const sortCol   = DONOR_SORT_COLUMNS[sortBy] || 'total_donated';
   const sortOrd   = sortDir === 'asc' ? 'ASC' : 'DESC';
@@ -1343,10 +1406,11 @@ exports.getEntityDonors = async (entityId, { campaignId, search, sortBy, sortDir
     db.query(
       `WITH base AS (
          SELECT
-           COALESCE(NULLIF(d.donor_email, ''), NULLIF(d.donor_phone, ''), d.donor_name) AS donor_key,
+           ${donorKey} AS donor_key,
            d.donor_name, d.donor_email, d.donor_phone, d.amount_ils AS amount, d.completed_at,
-           d.campaign_id, d.is_anonymous
+           d.campaign_id, d.is_anonymous, a.full_name AS ambassador_name
          FROM donations d
+         LEFT JOIN campaign_ambassadors a ON a.id = d.ambassador_id AND a.campaign_id = d.campaign_id
          WHERE ${whereStr}
        )
        SELECT
@@ -1359,16 +1423,17 @@ exports.getEntityDonors = async (entityId, { campaignId, search, sortBy, sortDir
          COUNT(*)::int                        AS donation_count,
          MIN(completed_at)                    AS first_donation_at,
          MAX(completed_at)                    AS last_donation_at,
-         COUNT(DISTINCT campaign_id)::int     AS campaigns_count
+         COUNT(DISTINCT campaign_id)::int     AS campaigns_count,
+         STRING_AGG(DISTINCT ambassador_name, ', ' ORDER BY ambassador_name) AS ambassador_names
        FROM base
        GROUP BY donor_key
-       ORDER BY ${sortCol} ${sortOrd}
+       ORDER BY ${sortCol} ${sortOrd}, donor_key
        LIMIT $${idx} OFFSET $${idx + 1}`,
       [...params, limit, page * limit]
     ),
     db.query(
       `SELECT
-         COUNT(DISTINCT COALESCE(NULLIF(d.donor_email, ''), NULLIF(d.donor_phone, ''), d.donor_name))::int AS donor_count,
+         COUNT(DISTINCT ${donorKey})::int AS donor_count,
          COALESCE(SUM(d.amount_ils), 0)::float AS total_raised
        FROM donations d
        WHERE ${whereStr}`,
