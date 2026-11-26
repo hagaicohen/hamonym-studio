@@ -1,6 +1,8 @@
 const svc = require('./ambassadors.service');
 
 function statusFor(err) {
+  // The database unique constraint is the final arbiter for concurrent registrations.
+  if (err.code === '23505' && err.constraint === 'campaign_ambassadors_unique_slug') return 409;
   switch (err.message) {
     case 'Unauthorized':        return 403;
     case 'Ambassador not found':
@@ -88,10 +90,11 @@ exports.getBySlug = async (req, res) => {
 
 exports.selfRegister = async (req, res) => {
   try {
-    const result = await svc.selfRegister(req.params.campaignSlug, req.body);
+    const result = await svc.selfRegister(req.params.campaignSlug, req.body, req.user?.id || null);
     res.status(201).json(result);
   } catch (e) {
-    res.status(statusFor(e)).json({ error: e.message });
+    const status = statusFor(e);
+    res.status(status).json({ error: status === 409 ? 'Slug taken' : e.message });
   }
 };
 
@@ -110,4 +113,9 @@ exports.checkSlugAvailable = async (req, res) => {
   } catch (e) {
     res.status(statusFor(e)).json({ error: e.message });
   }
+};
+
+exports.getEditable = async (req,res) => {
+  try { res.json({ambassador:await svc.getEditable(req.user.id,req.params.id)}); }
+  catch(e) { res.status(statusFor(e)).json({error:e.message}); }
 };

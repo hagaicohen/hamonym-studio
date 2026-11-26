@@ -18,6 +18,7 @@ router.get(
 // Public — self-register as ambassador (no auth required)
 router.post(
   '/campaigns/:campaignSlug/ambassadors/self-register',
+  (req,res,next) => req.headers.authorization ? requireAuth(req,res,next) : next(),
   ctrl.selfRegister
 );
 
@@ -53,6 +54,8 @@ router.post(
   requireAuth,
   ctrl.importBulk
 );
+
+router.get('/ambassadors/:id', requireAuth, ctrl.getEditable);
 
 router.patch(
   '/ambassadors/:id',

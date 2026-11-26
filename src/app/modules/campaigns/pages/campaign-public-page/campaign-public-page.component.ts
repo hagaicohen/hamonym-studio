@@ -98,7 +98,7 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
 
   editMyAmbassadorPage(): void {
     if (this.currentAmbassador?.campaignId) {
-      this.router.navigate(['/campaigns', this.currentAmbassador.campaignId, 'ambassador-studio']);
+      this.router.navigate(['/campaigns', this.currentAmbassador.campaignId, 'ambassador-studio'], { queryParams: { ambassadorId: this.currentAmbassador.id } });
     }
   }
 

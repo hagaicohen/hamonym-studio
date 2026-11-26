@@ -31,6 +31,7 @@ export class AmbassadorStudioPageComponent implements OnInit {
   readonly MessageIcon    = MessageSquare;
 
   campaignId    = '';
+  ambassadorId = '';
   campaign: any = null;
   ambassador    = signal<Ambassador | null>(null);
 
@@ -64,14 +65,17 @@ export class AmbassadorStudioPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.campaignId = this.route.snapshot.paramMap.get('id') ?? '';
+    this.ambassadorId = this.route.snapshot.queryParamMap.get('ambassadorId') || this.ambassadorId;
     const token = localStorage.getItem('token') ?? '';
 
     this.http.get<{ ambassador: any }>(
-      `${environment.apiUrl}/api/campaigns/${this.campaignId}/my-ambassador-record`,
+      this.ambassadorId ? `${environment.apiUrl}/api/ambassadors/${this.ambassadorId}` : `${environment.apiUrl}/api/campaigns/${this.campaignId}/my-ambassador-record`,
       { headers: { Authorization: `Bearer ${token}` } }
     ).subscribe({
       next: (res) => {
         const r = res.ambassador;
+        if (r.campaign_id !== this.campaignId) { this.errorMsg = 'השגרירות אינה שייכת לקמפיין שנבחר'; this.isLoading = false; this.loader.hide(); return; }
+        this.ambassadorId = r.id;
         this.campaign = r.campaign ?? null;
         const ambassador: Ambassador = {
           id:              r.id,
@@ -84,10 +88,10 @@ export class AmbassadorStudioPageComponent implements OnInit {
           personalTitle:   r.personal_title   ?? '',
           status:          r.status,
           slug:            r.slug,
-          raisedOnline:    0,
-          raisedManual:    0,
-          raisedTotal:     0,
-          donorCount:      0,
+          raisedOnline:    Number(r.raised_online) || 0,
+          raisedManual:    Number(r.raised_manual) || 0,
+          raisedTotal:     Number(r.raised_total) || 0,
+          donorCount:      Number(r.donor_count) || 0,
           createdAt:       r.created_at,
           deactivatedAt:   r.deactivated_at ?? null,
         };
@@ -131,7 +135,7 @@ export class AmbassadorStudioPageComponent implements OnInit {
     this.isSaving = true;
     const token = localStorage.getItem('token') ?? '';
     this.http.patch<{ ambassador: any }>(
-      `${environment.apiUrl}/api/campaigns/${this.campaignId}/my-ambassador-record`,
+      `${environment.apiUrl}/api/ambassadors/${this.ambassadorId}`,
       {
         full_name:        this.draft.fullName,
         phone:            this.draft.phone || null,
@@ -139,7 +143,8 @@ export class AmbassadorStudioPageComponent implements OnInit {
         personal_message: this.draft.personalMessage,
         personal_title:   this.draft.personalTitle || null,
         goal_amount:      this.draft.goalAmount,
-        slug:             this.draft.slug,
+        ...(this.draft.slug !== this.ambassador()?.slug ? {slug:this.draft.slug} : {}),
+
       },
       { headers: { Authorization: `Bearer ${token}` } }
     ).subscribe({
