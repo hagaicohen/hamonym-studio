@@ -12,6 +12,7 @@ function statusFor(err) {
     case 'Slug taken':          return 409;
     case 'Name required':
     case 'No fields supplied':
+    case 'Invalid ambassador photo URL':
     case 'Slug reserved':
     case 'Slug too short':
     case 'Amount must be positive': return 400;

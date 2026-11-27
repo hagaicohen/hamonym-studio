@@ -111,6 +111,17 @@ exports.checkSlugAvailable = async (campaignSlug, candidateSlug, excludeAmbassad
 
 // ─── Row mapper ──────────────────────────────────────────────────────────────
 
+function ambassadorPhotoUrl(raw) {
+  if (raw == null || raw === '') return null;
+  try {
+    const url = new URL(raw);
+    const storage = new URL(process.env.SUPABASE_URL);
+    if (url.origin === storage.origin && url.protocol === 'https:' && !url.username && !url.password
+        && url.pathname.startsWith('/storage/v1/object/public/media/campaigns/ambassadors/')) return url.href;
+  } catch {}
+  throw new Error('Invalid ambassador photo URL');
+}
+
 function mapRow(r) {
   return {
     id:               r.id,
@@ -120,6 +131,7 @@ function mapRow(r) {
     email:            r.email        ?? null,
     goal_amount:      r.goal_amount  != null ? Number(r.goal_amount) : null,
     status:           r.status,
+    photo_url:        r.photo_url ?? null,
     personal_message: r.personal_message ?? '',
     personal_title:   r.personal_title   ?? '',
     slug:             r.slug,
@@ -226,7 +238,7 @@ exports.list = async (userId, campaignId) => {
 
 exports.create = async (userId, campaignId, data) => {
   await verifyCampaignOwnership(userId, campaignId);
-  const { full_name, phone, email, goal_amount, personal_message, slug: requestedSlug } = data;
+  const { full_name, phone, email, goal_amount, personal_message, photo_url, slug: requestedSlug } = data;
   if (!full_name?.trim()) throw new Error('Name required');
 
   // An explicit personal link typed by the admin wins and is validated
@@ -238,10 +250,10 @@ exports.create = async (userId, campaignId, data) => {
 
   const { rows } = await db.query(
     `INSERT INTO campaign_ambassadors
-       (campaign_id, full_name, phone, email, goal_amount, personal_message, slug)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)
+       (campaign_id, full_name, phone, email, goal_amount, personal_message, slug, photo_url)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
      RETURNING *`,
-    [campaignId, full_name.trim(), phone||null, email||null, goal_amount||null, personal_message||'', slug]
+    [campaignId, full_name.trim(), phone||null, email||null, goal_amount||null, personal_message||'', slug, ambassadorPhotoUrl(photo_url)]
   );
   return mapRow({ ...rows[0], raised_online:0, raised_manual:0, raised_total:0, donor_count:0 });
 };
@@ -249,6 +261,8 @@ exports.create = async (userId, campaignId, data) => {
 exports.update = async (userId, id, data) => {
   const record = await editableRecord(userId, id);
   if (!record.can_manage && data.status !== undefined) throw new Error('Unauthorized');
+
+  if (data.photo_url !== undefined) data = { ...data, photo_url: ambassadorPhotoUrl(data.photo_url) };
 
   // Auto-record deactivation audit fields when status switches to inactive
   if (data.status === 'inactive') {
@@ -277,7 +291,7 @@ exports.update = async (userId, id, data) => {
   const fields = [];
   const vals   = [];
   let   i      = 1;
-  const allowed = ['full_name','phone','email','goal_amount','personal_message','personal_title','status','slug','deactivated_at','deactivated_by'];
+  const allowed = ['full_name','phone','email','goal_amount','personal_message','personal_title','status','slug','photo_url','deactivated_at','deactivated_by'];
   for (const key of allowed) {
     if (data[key] !== undefined) {
       fields.push(`${key} = $${i++}`);
@@ -389,7 +403,7 @@ exports.listPublic = async (campaignSlug) => {
   }));
 };
 
-exports.selfRegister = async (campaignSlug, { goal_amount, personal_message, slug: requestedSlug }, userId) => {
+exports.selfRegister = async (campaignSlug, { goal_amount, personal_message, photo_url, slug: requestedSlug }, userId) => {
   if (!userId) throw new Error('Unauthorized');
 
   const client = await db.connect();
@@ -426,10 +440,10 @@ exports.selfRegister = async (campaignSlug, { goal_amount, personal_message, slu
         : await uniqueSlug(campaign.id, nameToSlug(full_name), client);
       await client.query(
         `INSERT INTO campaign_ambassadors
-           (campaign_id, full_name, phone, email, goal_amount, personal_message, slug, user_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+           (campaign_id, full_name, phone, email, goal_amount, personal_message, slug, user_id, photo_url)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
         [campaign.id, full_name.trim(), phone || null, email || null, goal_amount || null,
-          typeof personal_message === 'string' ? personal_message.trim().slice(0, 500) : '', slug, userId]
+          typeof personal_message === 'string' ? personal_message.trim().slice(0, 500) : '', slug, userId, ambassadorPhotoUrl(photo_url)]
       );
     }
 
