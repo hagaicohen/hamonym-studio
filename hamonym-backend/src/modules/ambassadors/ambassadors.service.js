@@ -26,6 +26,7 @@ function normalizeSlug(raw) {
 }
 
 const MIN_SLUG_LENGTH = 2;
+const RESERVED_SLUGS = new Set(['view', 'success', 'edit', 'classic', 'studio', 'simple-studio', 'ambassador-studio', 'create']);
 
 // Canonical normalize + shape validation, with no DB access — the part of
 // the rule that every write path shares even when the conflict scope
@@ -33,6 +34,7 @@ const MIN_SLUG_LENGTH = 2;
 function normalizeSlugOrThrow(raw) {
   const normalized = normalizeSlug(raw);
   if (normalized.length < MIN_SLUG_LENGTH) throw new Error('Slug too short');
+  if (RESERVED_SLUGS.has(normalized)) throw new Error('Slug reserved');
   return normalized;
 }
 
@@ -49,7 +51,7 @@ async function uniqueSlug(campaignId, base, client = db) {
       'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2 AND deleted_at IS NULL',
       [campaignId, candidate]
     );
-    if (rows.length === 0) return candidate;
+    if (rows.length === 0 && !RESERVED_SLUGS.has(candidate)) return candidate;
     attempt++;
   }
 }
@@ -82,7 +84,7 @@ exports.validateAndReserveSlug = validateAndReserveSlug;
 // Public availability check — same precedence pattern as the existing
 // campaign-slug check (campaigns.controller#checkSlugAvailable): debounced
 // on the frontend, pure lookup here, no reservation or side effect.
-exports.checkSlugAvailable = async (campaignSlug, candidateSlug, excludeAmbassadorId) => {
+exports.checkSlugAvailable = async (campaignSlug, candidateSlug, excludeAmbassadorId, userId) => {
   const normalized = normalizeSlug(candidateSlug);
   const { rows: camps } = await db.query(
     `SELECT id FROM campaigns WHERE slug = $1 AND deleted_at IS NULL LIMIT 1`,
@@ -91,6 +93,12 @@ exports.checkSlugAvailable = async (campaignSlug, candidateSlug, excludeAmbassad
   if (!camps.length) throw new Error('Campaign not found');
   if (normalized.length < MIN_SLUG_LENGTH) {
     return { slug: normalized, available: false, reason: 'too_short' };
+  }
+  if (RESERVED_SLUGS.has(normalized)) return { slug: normalized, available: false, reason: 'reserved' };
+  if (excludeAmbassadorId) {
+    if (!userId) throw new Error('Unauthorized');
+    const record = await editableRecord(userId, excludeAmbassadorId);
+    if (String(record.campaign_id) !== String(camps[0].id)) throw new Error('Unauthorized');
   }
   const { rows } = await db.query(
     excludeAmbassadorId
@@ -291,7 +299,7 @@ exports.update = async (userId, id, data) => {
   return mapRow(withStats[0]);
 };
 
-exports.remove = async (userId, id) => {
+exports.remove = async (userId, id, { allowHistory = false } = {}) => {
   await verifyAmbassadorOwnership(userId, id);
 
   const client = await db.connect();
@@ -300,13 +308,12 @@ exports.remove = async (userId, id) => {
     const locked = await client.query('SELECT id FROM campaign_ambassadors WHERE id = $1 AND deleted_at IS NULL FOR UPDATE', [id]);
     if (!locked.rowCount) throw new Error('Ambassador not found');
 
-    // Keep ambassadors with financial history available for suspension.
     const { rows: [history] } = await client.query(
       `SELECT EXISTS (SELECT 1 FROM donations WHERE ambassador_id = $1)
            OR EXISTS (SELECT 1 FROM ambassador_adjustments WHERE ambassador_id = $1) AS has_history`,
       [id]
     );
-    if (history.has_history) throw new Error('Has ambassador history');
+    if (history.has_history && !allowHistory) throw new Error('Has ambassador history');
 
     await client.query(
       "UPDATE campaign_ambassadors SET status = 'inactive', deleted_at = NOW(), deleted_by = $2 WHERE id = $1",
@@ -382,12 +389,18 @@ exports.listPublic = async (campaignSlug) => {
   }));
 };
 
-exports.selfRegister = async (campaignSlug, { full_name, phone, email, goal_amount, personal_message, slug: requestedSlug }, userId = null) => {
-  if (!full_name?.trim()) throw new Error('Name required');
+exports.selfRegister = async (campaignSlug, { goal_amount, personal_message, slug: requestedSlug }, userId) => {
+  if (!userId) throw new Error('Unauthorized');
 
   const client = await db.connect();
   try {
     await client.query('BEGIN');
+    const { rows: [account] } = await client.query(
+      'SELECT full_name, phone, email FROM users WHERE id = $1', [userId]
+    );
+    if (!account) throw new Error('Unauthorized');
+    const { full_name, phone, email } = account;
+    if (!full_name?.trim()) throw new Error('Name required');
     // Serialize self-registration for a campaign so the same verified account
     // cannot submit two different slugs concurrently.
     const { rows: camps } = await client.query(

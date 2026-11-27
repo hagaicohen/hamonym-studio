@@ -15,10 +15,10 @@ router.get(
   ctrl.getBySlug
 );
 
-// Public — self-register as ambassador (no auth required)
+// Public campaign — register the authenticated account as an ambassador
 router.post(
   '/campaigns/:campaignSlug/ambassadors/self-register',
-  (req,res,next) => req.headers.authorization ? requireAuth(req,res,next) : next(),
+  requireAuth,
   ctrl.selfRegister
 );
 
@@ -26,6 +26,7 @@ router.post(
 // as self-register above.
 router.get(
   '/campaigns/:campaignSlug/ambassadors/check-slug/:candidateSlug',
+  (req, res, next) => req.query.excludeAmbassadorId ? requireAuth(req, res, next) : next(),
   ctrl.checkSlugAvailable
 );
 

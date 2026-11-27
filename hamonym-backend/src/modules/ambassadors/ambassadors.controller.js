@@ -12,6 +12,7 @@ function statusFor(err) {
     case 'Slug taken':          return 409;
     case 'Name required':
     case 'No fields supplied':
+    case 'Slug reserved':
     case 'Slug too short':
     case 'Amount must be positive': return 400;
     default:                    return 500;
@@ -44,7 +45,10 @@ exports.lifecycle = async (req, res) => {
   if (action !== 'archive' || typeof reason !== 'string' || !reason.trim()) {
     return res.status(400).json({ error: 'Removal reason required' });
   }
-  return exports.remove(req, res);
+  try {
+    await svc.remove(req.user.id, req.params.id, { allowHistory: true });
+    res.status(204).end();
+  } catch (e) { res.status(statusFor(e)).json({ error: e.message }); }
 };
 
 exports.remove = async (req, res) => {
@@ -117,6 +121,7 @@ exports.checkSlugAvailable = async (req, res) => {
       req.params.campaignSlug,
       req.params.candidateSlug,
       req.query.excludeAmbassadorId || undefined,
+      req.user?.id,
     );
     res.json(result);
   } catch (e) {
