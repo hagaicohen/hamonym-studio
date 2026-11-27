@@ -129,7 +129,7 @@ exports.getDashboardData = async (entityId, { from, to } = {}) => {
       FROM campaign_ambassadors a
       JOIN campaigns c ON c.id = a.campaign_id
       LEFT JOIN donations d ON d.ambassador_id = a.id AND d.status = 'paid'
-      WHERE c.entity_id = $1
+      WHERE c.entity_id = $1 AND a.deleted_at IS NULL
       GROUP BY a.id, a.full_name, a.slug, c.title, c.slug
       ORDER BY raised_total DESC
       LIMIT 5

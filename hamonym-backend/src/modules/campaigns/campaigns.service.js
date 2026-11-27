@@ -1386,7 +1386,7 @@ exports.publishRequestedCampaigns = async (entityId, client = db) => {
 
 // Compatibility entry point: resolve an authenticated membership, never an email match.
 async function myAmbassadorId(userId, campaignId) {
-  const {rows}=await db.query('SELECT id FROM campaign_ambassadors WHERE campaign_id=$1 AND user_id::text=$2::text',[campaignId,userId]);
+  const {rows}=await db.query('SELECT id FROM campaign_ambassadors WHERE campaign_id=$1 AND user_id::text=$2::text AND deleted_at IS NULL',[campaignId,userId]);
   if(rows.length!==1) throw new Error('Ambassador not found');
   return rows[0].id;
 }
@@ -1402,7 +1402,7 @@ exports.myAmbassadorCampaigns = async (userId) => {
             a.goal_amount AS personal_goal
      FROM campaign_ambassadors a
      JOIN campaigns c ON c.id = a.campaign_id
-     WHERE a.user_id::text = $1::text AND c.deleted_at IS NULL
+     WHERE a.user_id::text = $1::text AND a.deleted_at IS NULL AND c.deleted_at IS NULL
      ORDER BY c.title`,
     [userId]
   );

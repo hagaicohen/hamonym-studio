@@ -46,7 +46,7 @@ async function uniqueSlug(campaignId, base, client = db) {
   while (true) {
     const candidate = attempt === 0 ? slug : `${slug}-${attempt}`;
     const { rows } = await client.query(
-      'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2',
+      'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2 AND deleted_at IS NULL',
       [campaignId, candidate]
     );
     if (rows.length === 0) return candidate;
@@ -67,8 +67,8 @@ async function validateAndReserveSlug(campaignId, requestedSlug, excludeAmbassad
   const normalized = normalizeSlugOrThrow(requestedSlug);
   const { rows } = await client.query(
     excludeAmbassadorId
-      ? 'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2 AND id != $3'
-      : 'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2',
+      ? 'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2 AND deleted_at IS NULL AND id != $3'
+      : 'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2 AND deleted_at IS NULL',
     excludeAmbassadorId ? [campaignId, normalized, excludeAmbassadorId] : [campaignId, normalized]
   );
   if (rows.length > 0) throw new Error('Slug taken');
@@ -94,8 +94,8 @@ exports.checkSlugAvailable = async (campaignSlug, candidateSlug, excludeAmbassad
   }
   const { rows } = await db.query(
     excludeAmbassadorId
-      ? 'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2 AND id != $3'
-      : 'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2',
+      ? 'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2 AND deleted_at IS NULL AND id != $3'
+      : 'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2 AND deleted_at IS NULL',
     excludeAmbassadorId ? [camps[0].id, normalized, excludeAmbassadorId] : [camps[0].id, normalized]
   );
   return { slug: normalized, available: rows.length === 0 };
@@ -132,7 +132,7 @@ async function verifyCampaignOwnership(userId, campaignId) {
     `SELECT 1
      FROM campaigns c
      JOIN user_entities ue ON ue.entity_id = c.entity_id
-     WHERE c.id = $1 AND ue.user_id = $2
+     WHERE c.id = $1 AND ue.user_id = $2 AND a.deleted_at IS NULL
      LIMIT 1`,
     [campaignId, userId]
   );
@@ -145,7 +145,7 @@ async function verifyAmbassadorOwnership(userId, ambassadorId) {
      FROM campaign_ambassadors a
      JOIN campaigns c ON c.id = a.campaign_id
      JOIN user_entities ue ON ue.entity_id = c.entity_id
-     WHERE a.id = $1 AND ue.user_id = $2
+     WHERE a.id = $1 AND ue.user_id = $2 AND a.deleted_at IS NULL
      LIMIT 1`,
     [ambassadorId, userId]
   );
@@ -158,7 +158,7 @@ async function editableRecord(userId, id) {
             c.target_amount AS campaign_target_amount, ${STATS_SQL},
             EXISTS(SELECT 1 FROM user_entities ue WHERE ue.entity_id=c.entity_id AND ue.user_id=$2) AS can_manage
      FROM campaign_ambassadors a JOIN campaigns c ON c.id=a.campaign_id
-     WHERE a.id=$1`, [id, userId]);
+     WHERE a.id=$1 AND a.deleted_at IS NULL`, [id, userId]);
   const row = rows[0];
   if (!row) throw new Error('Ambassador not found');
   if (!row.can_manage && String(row.user_id || '') !== String(userId)) throw new Error('Unauthorized');
@@ -209,7 +209,7 @@ exports.list = async (userId, campaignId) => {
   const { rows } = await db.query(
     `SELECT a.*, ${STATS_SQL}
      FROM campaign_ambassadors a
-     WHERE a.campaign_id = $1
+     WHERE a.campaign_id = $1 AND a.deleted_at IS NULL
      ORDER BY a.created_at DESC`,
     [campaignId]
   );
@@ -297,11 +297,10 @@ exports.remove = async (userId, id) => {
   const client = await db.connect();
   try {
     await client.query('BEGIN');
-    const locked = await client.query('SELECT id FROM campaign_ambassadors WHERE id = $1 FOR UPDATE', [id]);
+    const locked = await client.query('SELECT id FROM campaign_ambassadors WHERE id = $1 AND deleted_at IS NULL FOR UPDATE', [id]);
     if (!locked.rowCount) throw new Error('Ambassador not found');
 
-    // Both relationships can be lost by the schema's delete actions. Check
-    // them under the row lock before removing an unused ambassador record.
+    // Keep ambassadors with financial history available for suspension.
     const { rows: [history] } = await client.query(
       `SELECT EXISTS (SELECT 1 FROM donations WHERE ambassador_id = $1)
            OR EXISTS (SELECT 1 FROM ambassador_adjustments WHERE ambassador_id = $1) AS has_history`,
@@ -309,7 +308,10 @@ exports.remove = async (userId, id) => {
     );
     if (history.has_history) throw new Error('Has ambassador history');
 
-    await client.query('DELETE FROM campaign_ambassadors WHERE id = $1', [id]);
+    await client.query(
+      "UPDATE campaign_ambassadors SET status = 'inactive', deleted_at = NOW(), deleted_by = $2 WHERE id = $1",
+      [id, userId]
+    );
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');
@@ -400,7 +402,7 @@ exports.selfRegister = async (campaignSlug, { full_name, phone, email, goal_amou
     const campaign = camps[0];
     const { rows: existing } = userId ? await client.query(
       `SELECT slug FROM campaign_ambassadors
-       WHERE campaign_id = $1 AND user_id::text = $2::text
+       WHERE campaign_id = $1 AND user_id::text = $2::text AND deleted_at IS NULL
        ORDER BY created_at, id LIMIT 1`, [campaign.id, userId]
     ) : { rows: [] };
 
@@ -522,7 +524,7 @@ exports.getEntityAmbassadorsList = async (entityId, { limit = 25, page = 0 } = {
     `SELECT a.*, c.title AS campaign_title, c.slug AS campaign_slug, ${STATS_SQL}
      FROM campaign_ambassadors a
      JOIN campaigns c ON c.id = a.campaign_id
-     WHERE c.entity_id = $1
+     WHERE c.entity_id = $1 AND a.deleted_at IS NULL
      ORDER BY raised_total DESC
      LIMIT $2 OFFSET $3`,
     [entityId, limit, page * limit]
@@ -542,7 +544,7 @@ exports.getBySlug = async (campaignSlug, ambassadorSlug) => {
      JOIN campaigns c ON c.id = a.campaign_id
      JOIN entities  e ON e.id = c.entity_id
      LEFT JOIN users u ON u.id::text = a.user_id::text
-     WHERE c.slug = $1 AND a.slug = $2
+     WHERE c.slug = $1 AND a.slug = $2 AND a.deleted_at IS NULL
        AND c.is_hidden = false AND e.is_hidden = false AND c.deleted_at IS NULL
      LIMIT 1`,
     [campaignSlug, ambassadorSlug]
