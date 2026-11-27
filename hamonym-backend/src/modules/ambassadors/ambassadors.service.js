@@ -132,7 +132,7 @@ async function verifyCampaignOwnership(userId, campaignId) {
     `SELECT 1
      FROM campaigns c
      JOIN user_entities ue ON ue.entity_id = c.entity_id
-     WHERE c.id = $1 AND ue.user_id = $2 AND a.deleted_at IS NULL
+     WHERE c.id = $1 AND ue.user_id = $2
      LIMIT 1`,
     [campaignId, userId]
   );
