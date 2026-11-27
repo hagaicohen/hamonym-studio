@@ -56,6 +56,7 @@ router.post(
 );
 
 router.get('/ambassadors/:id', requireAuth, ctrl.getEditable);
+router.post('/ambassadors/:id/lifecycle', requireAuth, ctrl.lifecycle);
 
 router.patch(
   '/ambassadors/:id',

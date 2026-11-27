@@ -294,19 +294,29 @@ exports.update = async (userId, id, data) => {
 exports.remove = async (userId, id) => {
   await verifyAmbassadorOwnership(userId, id);
 
-  const { rows: donationCheck } = await db.query(
-    'SELECT 1 FROM donations WHERE ambassador_id = $1 LIMIT 1',
-    [id]
-  );
-  if (donationCheck.length > 0) {
-    throw new Error('Has donations');
-  }
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const locked = await client.query('SELECT id FROM campaign_ambassadors WHERE id = $1 FOR UPDATE', [id]);
+    if (!locked.rowCount) throw new Error('Ambassador not found');
 
-  const { rowCount } = await db.query(
-    'DELETE FROM campaign_ambassadors WHERE id = $1',
-    [id]
-  );
-  if (rowCount === 0) throw new Error('Ambassador not found');
+    // Both relationships can be lost by the schema's delete actions. Check
+    // them under the row lock before removing an unused ambassador record.
+    const { rows: [history] } = await client.query(
+      `SELECT EXISTS (SELECT 1 FROM donations WHERE ambassador_id = $1)
+           OR EXISTS (SELECT 1 FROM ambassador_adjustments WHERE ambassador_id = $1) AS has_history`,
+      [id]
+    );
+    if (history.has_history) throw new Error('Has ambassador history');
+
+    await client.query('DELETE FROM campaign_ambassadors WHERE id = $1', [id]);
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 exports.importBulk = async (userId, campaignId, rows) => {

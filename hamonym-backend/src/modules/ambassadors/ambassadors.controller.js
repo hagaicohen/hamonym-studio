@@ -7,6 +7,7 @@ function statusFor(err) {
     case 'Unauthorized':        return 403;
     case 'Ambassador not found':
     case 'Campaign not found':  return 404;
+    case 'Has ambassador history':
     case 'Has donations':
     case 'Slug taken':          return 409;
     case 'Name required':
@@ -36,6 +37,14 @@ exports.update = async (req, res) => {
     const ambassador = await svc.update(req.user.id, req.params.id, req.body);
     res.json({ ambassador });
   } catch (e) { res.status(statusFor(e)).json({ error: e.message }); }
+};
+
+exports.lifecycle = async (req, res) => {
+  const { action, reason } = req.body || {};
+  if (action !== 'archive' || typeof reason !== 'string' || !reason.trim()) {
+    return res.status(400).json({ error: 'Removal reason required' });
+  }
+  return exports.remove(req, res);
 };
 
 exports.remove = async (req, res) => {
