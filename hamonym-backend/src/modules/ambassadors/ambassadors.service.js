@@ -40,12 +40,12 @@ function nameToSlug(name) {
   return normalizeSlug(name);
 }
 
-async function uniqueSlug(campaignId, base) {
+async function uniqueSlug(campaignId, base, client = db) {
   let slug = base || 'ambassador';
   let attempt = 0;
   while (true) {
     const candidate = attempt === 0 ? slug : `${slug}-${attempt}`;
-    const { rows } = await db.query(
+    const { rows } = await client.query(
       'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2',
       [campaignId, candidate]
     );
@@ -63,9 +63,9 @@ async function uniqueSlug(campaignId, base) {
 // campaign_ambassadors_unique_slug constraint — per campaign, never global.
 // excludeAmbassadorId gives an ambassador self-exclusion when re-saving
 // their own current slug.
-async function validateAndReserveSlug(campaignId, requestedSlug, excludeAmbassadorId) {
+async function validateAndReserveSlug(campaignId, requestedSlug, excludeAmbassadorId, client = db) {
   const normalized = normalizeSlugOrThrow(requestedSlug);
-  const { rows } = await db.query(
+  const { rows } = await client.query(
     excludeAmbassadorId
       ? 'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2 AND id != $3'
       : 'SELECT 1 FROM campaign_ambassadors WHERE campaign_id=$1 AND slug=$2',
@@ -353,54 +353,70 @@ exports.listPublic = async (campaignSlug) => {
   // transient one.
   const { rows } = await db.query(
     `SELECT a.id, a.full_name, a.slug, a.goal_amount, a.personal_message,
+            to_jsonb(a)->>'photo_url' AS photo_url, u.picture AS account_photo_url,
             ${STATS_SQL}
      FROM campaign_ambassadors a
      JOIN campaigns c ON c.id = a.campaign_id
      JOIN entities  e ON e.id = c.entity_id
+     LEFT JOIN users u ON u.id::text = a.user_id::text
      WHERE c.slug = $1 AND a.status = 'active'
        AND c.status = 'published' AND e.status = 'active'
        AND c.is_hidden = false AND e.is_hidden = false AND c.deleted_at IS NULL
      ORDER BY raised_total DESC`,
     [campaignSlug]
   );
-  return rows.map(mapRow);
+  return rows.map(row => ({
+    ...mapRow(row), photo_url: row.photo_url, account_photo_url: row.account_photo_url,
+  }));
 };
 
-exports.selfRegister = async (campaignSlug, { full_name, phone, email, goal_amount, slug: requestedSlug }, userId = null) => {
+exports.selfRegister = async (campaignSlug, { full_name, phone, email, goal_amount, personal_message, slug: requestedSlug }, userId = null) => {
   if (!full_name?.trim()) throw new Error('Name required');
 
-  const { rows: camps } = await db.query(
-    `SELECT c.id FROM campaigns c
-     JOIN entities e ON e.id = c.entity_id
-     WHERE c.slug = $1 AND c.status = 'published' AND c.deleted_at IS NULL
-       AND c.is_hidden = false AND e.is_hidden = false
-     LIMIT 1`,
-    [campaignSlug]
-  );
-  if (!camps.length) throw new Error('Campaign not found');
-  const campaignId = camps[0].id;
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    // Serialize self-registration for a campaign so the same verified account
+    // cannot submit two different slugs concurrently.
+    const { rows: camps } = await client.query(
+      `SELECT c.id, c.slug FROM campaigns c
+       JOIN entities e ON e.id = c.entity_id
+       WHERE c.slug = $1 AND c.status = 'published' AND c.deleted_at IS NULL
+         AND c.is_hidden = false AND e.is_hidden = false
+       LIMIT 1 FOR UPDATE OF c`,
+      [campaignSlug]
+    );
+    if (!camps.length) throw new Error('Campaign not found');
+    const campaign = camps[0];
+    const { rows: existing } = userId ? await client.query(
+      `SELECT slug FROM campaign_ambassadors
+       WHERE campaign_id = $1 AND user_id::text = $2::text
+       ORDER BY created_at, id LIMIT 1`, [campaign.id, userId]
+    ) : { rows: [] };
 
-  // An explicit link the ambassador chose before submitting is always
-  // re-validated here — the debounced client-side availability check is
-  // never trusted on its own, since a second registrant could have taken
-  // the slug in between. No explicit slug falls back to the original
-  // auto-generate-and-dedupe behavior unchanged.
-  const slug = requestedSlug
-    ? await validateAndReserveSlug(campaignId, requestedSlug)
-    : await uniqueSlug(campaignId, nameToSlug(full_name));
+    let slug = existing[0]?.slug;
+    if (!slug) {
+      slug = requestedSlug
+        ? await validateAndReserveSlug(campaign.id, requestedSlug, undefined, client)
+        : await uniqueSlug(campaign.id, nameToSlug(full_name), client);
+      await client.query(
+        `INSERT INTO campaign_ambassadors
+           (campaign_id, full_name, phone, email, goal_amount, personal_message, slug, user_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [campaign.id, full_name.trim(), phone || null, email || null, goal_amount || null,
+          typeof personal_message === 'string' ? personal_message.trim().slice(0, 500) : '', slug, userId]
+      );
+    }
 
-  const { rows } = await db.query(
-    `INSERT INTO campaign_ambassadors
-       (campaign_id, full_name, phone, email, goal_amount, personal_message, slug, user_id)
-     VALUES ($1,$2,$3,$4,$5,'', $6, $7)
-     RETURNING id, slug`,
-    [campaignId, full_name.trim(), phone||null, email||null, goal_amount||null, slug, userId]
-  );
-  const appUrl = process.env.APP_URL || 'https://app.hamonym.com';
-  return {
-    slug: rows[0].slug,
-    shareUrl: `${appUrl}/campaigns/${campaignSlug}/${rows[0].slug}`,
-  };
+    await client.query('COMMIT');
+    const appUrl = process.env.APP_URL || 'https://app.hamonym.com';
+    return { slug, shareUrl: `${appUrl}/campaigns/${encodeURIComponent(campaign.slug)}/${encodeURIComponent(slug)}` };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 // ─── Entity-wide list (Ambassadors admin page) ────────────────────────────────
@@ -511,15 +527,21 @@ exports.getEntityAmbassadorsList = async (entityId, { limit = 25, page = 0 } = {
 
 exports.getBySlug = async (campaignSlug, ambassadorSlug) => {
   const { rows } = await db.query(
-    `SELECT a.*, ${STATS_SQL}
+    `SELECT a.*, to_jsonb(a)->>'photo_url' AS photo_url, u.picture AS account_photo_url, ${STATS_SQL}
      FROM campaign_ambassadors a
      JOIN campaigns c ON c.id = a.campaign_id
      JOIN entities  e ON e.id = c.entity_id
+     LEFT JOIN users u ON u.id::text = a.user_id::text
      WHERE c.slug = $1 AND a.slug = $2
        AND c.is_hidden = false AND e.is_hidden = false AND c.deleted_at IS NULL
      LIMIT 1`,
     [campaignSlug, ambassadorSlug]
   );
   if (rows.length === 0) return null;
-  return mapRow(rows[0]);
+  const row = rows[0];
+  return {
+    ...mapRow({ ...row, email: null, phone: null, deactivated_by: null }),
+    photo_url: row.photo_url,
+    account_photo_url: row.account_photo_url,
+  };
 };

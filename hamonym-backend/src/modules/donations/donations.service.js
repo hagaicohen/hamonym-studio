@@ -994,10 +994,12 @@ exports.getCampaignDonors = async (slug, period) => {
     db.query(
       `WITH camp AS (
          SELECT d.id, d.donor_name, d.donor_email, d.donor_phone, d.amount::float AS amount, d.currency,
-                d.completed_at, d.is_anonymous, d.note
+                d.completed_at, d.is_anonymous, d.note,
+                CASE WHEN d.is_anonymous = false THEN a.full_name END AS ambassador_name
          FROM donations d
          JOIN campaigns c ON c.id = d.campaign_id
          JOIN entities  e ON e.id = c.entity_id
+         LEFT JOIN campaign_ambassadors a ON a.id = d.ambassador_id AND a.campaign_id = c.id AND a.status = 'active'
          WHERE c.slug = $1 AND d.status = 'paid'
            AND c.is_hidden = false AND e.is_hidden = false AND c.deleted_at IS NULL
        ),
@@ -1013,6 +1015,7 @@ exports.getCampaignDonors = async (slug, period) => {
          camp.completed_at,
          camp.is_anonymous,
          camp.note,
+         camp.ambassador_name,
          (camp.id IN (SELECT id FROM first_ids)) AS is_first
        FROM camp
        WHERE TRUE ${periodClause}
