@@ -1,72 +1,93 @@
-<div class="dp-shell">
-  <p class="dp-loading" *ngIf="loading">טוען…</p>
-
-  <ng-container *ngIf="!loading && draft as d">
-    <div class="dp-main">
-      <button type="button" class="dp-back" (click)="back()">→ חזרה לסקירה כללית</button>
-      <h1 class="dp-title"><app-icon name="card" /> טופס תרומה</h1>
-      <p class="dp-subtitle">{{ d.title }}</p>
-      <p class="dp-save-error" *ngIf="saveError">{{ saveError }}</p>
-
-      <div class="dp-panel">
-        <div class="dp-section">
-          <div class="dp-section-title">סכומי תרומה מוצעים</div>
-          <div class="dp-toggle-row">
-            <span>הצג סכומים מוצעים</span>
-            <button type="button" class="dp-toggle" [class.dp-toggle--on]="d.enableSuggestedAmounts"
-              (click)="patchDraft({ enableSuggestedAmounts: !d.enableSuggestedAmounts })">
-              {{ d.enableSuggestedAmounts ? 'מופעל' : 'כבוי' }}
-            </button>
+@if (loading) { <p role="status">טוען…</p> }
+@if (!loading && draft; as d) {
+  <section class="cm-v7">
+    <header class="cm-heading">
+      <div><h1>טופס תרומה</h1><p class="cm-description">הגדרת סכומים מוצעים ואפשרויות התרומה בדף הקמפיין</p></div>
+      <span class="save-state" role="status">{{ saving ? 'שומר…' : dirty ? 'שינויים שלא נשמרו' : saved ? 'השינויים נשמרו' : 'הגדרות הטופס' }}</span>
+    </header>
+    <div class="don-layout">
+      <fieldset class="don-config" [disabled]="saving">
+        <section class="visibility-panel">
+          <header class="visibility-title"><span class="vis-icon"><app-icon name="card" /></span>
+            <div><h2>תרומה חד־פעמית</h2><p>סכומים לבחירה בתרומה אחת</p></div>
+          </header>
+          <label class="vis-row"><input type="checkbox" [checked]="d.enableSuggestedAmounts" (change)="patchDraft({ enableSuggestedAmounts: !d.enableSuggestedAmounts })">
+            <span class="vis-copy"><b>הצגת סכומים מוצעים</b><small>הצגת כפתורי סכום לבחירה מהירה</small></span>
+          </label>
+          @if (d.enableSuggestedAmounts) {
+            <ng-container *ngTemplateOutlet="amountEditor; context: { $implicit: d.suggestedAmounts, monthly: false }" />
+          }
+          <label class="vis-row"><input type="checkbox" [checked]="d.allowCustomAmount" (change)="patchDraft({ allowCustomAmount: !d.allowCustomAmount })">
+            <span class="vis-copy"><b>אפשר סכום חופשי</b><small>התורם יכול להזין סכום בעצמו</small></span>
+          </label>
+        </section>
+        <section class="visibility-panel">
+          <header class="visibility-title"><span class="vis-icon"><app-icon name="calendar" /></span>
+            <div><h2>תרומה חודשית</h2><p>סכום קבוע לתרומה חוזרת</p></div>
+          </header>
+          <label class="vis-row"><input type="checkbox" [checked]="d.allowMonthlyDonation" (change)="patchDraft({ allowMonthlyDonation: !d.allowMonthlyDonation })">
+            <span class="vis-copy"><b>אפשר תרומה חודשית</b><small>הצגת האפשרות לתרומה קבועה מדי חודש</small></span>
+          </label>
+          @if (d.allowMonthlyDonation) {
+            <ng-container *ngTemplateOutlet="amountEditor; context: { $implicit: d.monthlyAmounts, monthly: true }" />
+          }
+        </section>
+      </fieldset>
+      <section class="visibility-panel preview-panel">
+        <header class="visibility-title"><span class="vis-icon"><app-icon name="eye" /></span>
+          <div><h2>תצוגה מקדימה</h2><p>המחשת אפשרויות הבחירה לתורם</p></div>
+        </header>
+        <div class="preview-card">
+          <h2>בחירת סכום תרומה</h2>
+          <div class="preview-tabs" role="group" aria-label="תדירות תרומה">
+            <button type="button" class="cm-button" [class.chosen]="previewMode === 'once'" [attr.aria-pressed]="previewMode === 'once'" (click)="selectPreviewMode('once')">חד־פעמית</button>
+            <button type="button" class="cm-button" [disabled]="!d.allowMonthlyDonation" [class.chosen]="previewMode === 'monthly'" [attr.aria-pressed]="previewMode === 'monthly'" (click)="selectPreviewMode('monthly')">חודשית</button>
           </div>
-
-          <div class="dp-amounts" *ngIf="d.enableSuggestedAmounts">
-            <div class="dp-amount-chip" *ngFor="let a of d.suggestedAmounts; let i = index">
-              <span>₪</span>
-              <input type="text" inputmode="numeric" [value]="a.toLocaleString('he-IL')"
-                (keydown)="allowDigitsOnly($event)" (input)="reformatAmountInput($event)"
-                (change)="updateAmount(i, parsedAmount($any($event.target)))">
-              <button type="button" *ngIf="d.suggestedAmounts.length > 1" (click)="removeAmount(i)">✕</button>
-            </div>
-            <button type="button" class="dp-amount-add" *ngIf="d.suggestedAmounts.length < 6" (click)="addAmount()">+ הוסף</button>
+          <div class="preview-amounts">
+            @for (amount of previewAmounts; track $index) {
+              <button type="button" class="cm-button" [class.chosen]="previewAmount === amount" [attr.aria-pressed]="previewAmount === amount" (click)="previewAmount = amount"><bdi>{{ amount | currency:'ILS':'symbol':'1.0-2' }}</bdi></button>
+            }
           </div>
-
-          <div class="dp-toggle-row">
-            <span>אפשר סכום חופשי</span>
-            <button type="button" class="dp-toggle" [class.dp-toggle--on]="d.allowCustomAmount"
-              (click)="patchDraft({ allowCustomAmount: !d.allowCustomAmount })">
-              {{ d.allowCustomAmount ? 'מופעל' : 'כבוי' }}
-            </button>
-          </div>
+          @if (d.allowCustomAmount) {
+            <label class="free-preview">סכום אחר (₪)
+              <input class="cm-input" type="text" appMoneyInput min="1" [(ngModel)]="previewAmount">
+            </label>
+          }
+          <div class="preview-total"><span>הסכום שנבחר</span><bdi>{{ previewAmount === null ? '—' : (previewAmount | currency:'ILS':'symbol':'1.0-2') }}</bdi></div>
+          <button class="cm-button cm-primary preview-cta" type="button" disabled>המשך לתרומה</button>
+          <small class="preview-note">תצוגה מקדימה בלבד</small>
         </div>
-
-        <div class="dp-section">
-          <div class="dp-section-title">תרומה חודשית</div>
-          <div class="dp-toggle-row">
-            <span>אפשר תרומה חודשית</span>
-            <button type="button" class="dp-toggle" [class.dp-toggle--on]="d.allowMonthlyDonation"
-              (click)="patchDraft({ allowMonthlyDonation: !d.allowMonthlyDonation })">
-              {{ d.allowMonthlyDonation ? 'מופעל' : 'כבוי' }}
-            </button>
-          </div>
-
-          <div class="dp-amounts" *ngIf="d.allowMonthlyDonation">
-            <div class="dp-amount-chip" *ngFor="let a of d.monthlyAmounts; let i = index">
-              <span>₪</span>
-              <input type="text" inputmode="numeric" [value]="a.toLocaleString('he-IL')"
-                (keydown)="allowDigitsOnly($event)" (input)="reformatAmountInput($event)"
-                (change)="updateMonthlyAmount(i, parsedAmount($any($event.target)))">
-              <button type="button" *ngIf="d.monthlyAmounts.length > 1" (click)="removeMonthlyAmount(i)">✕</button>
-            </div>
-            <button type="button" class="dp-amount-add" *ngIf="d.monthlyAmounts.length < 6" (click)="addMonthlyAmount()">+ הוסף</button>
-          </div>
-        </div>
-
-        <!-- Optional donor fields (address/postal code/ID number) are
-             intentionally NOT configurable here for v1 -- see
-             campaign-donation-step.component.html for why: nothing in the
-             save path ever persists a toggle here, so this control looked
-             real but silently did nothing. -->
-      </div>
+      </section>
     </div>
-  </ng-container>
-</div>
+    <div class="vis-help"><app-icon name="info" /> השינויים חלים על אפשרויות הבחירה בטופס התרומה. תרומות והוראות קבע קיימות נשמרות.</div>
+    <footer class="vis-footer">
+      <small role="alert">{{ saveError }}</small>
+      <div class="save-actions">
+        <button class="cm-button" type="button" [disabled]="!dirty || saving" (click)="cancel()">ביטול שינויים</button>
+        <button class="cm-button cm-primary" type="button" [disabled]="!dirty || saving" (click)="save()">שמירת הגדרות</button>
+      </div>
+    </footer>
+  </section>
+}
+
+<ng-template #amountEditor let-amounts let-monthly="monthly">
+  <div class="amount-area">
+    <div class="amount-heading">
+      <b>{{ monthly ? 'סכומים מוצעים לחודש (₪)' : 'סכומים מוצעים (₪)' }}</b>
+      <button class="cm-button add" type="button" [disabled]="amounts.length >= 6" (click)="monthly ? addMonthlyAmount() : addAmount()">+ הוסף סכום</button>
+    </div>
+    <div class="amount-grid">
+      @for (amount of amounts; track $index; let i = $index) {
+        <div class="amount-field">
+          <label [for]="(monthly ? 'monthly-' : 'once-') + i">סכום {{ i + 1 }}</label>
+          <div class="amount-control">
+            <span>₪</span>
+            <input [id]="(monthly ? 'monthly-' : 'once-') + i" type="text" appMoneyInput min="1" [ngModel]="amount" [ngModelOptions]="{ updateOn: 'blur' }"
+              (ngModelChange)="monthly ? updateMonthlyAmount(i, $event) : updateAmount(i, $event)">
+            <button type="button" [attr.aria-label]="'הסרת סכום ' + (i + 1)" [disabled]="amounts.length <= 1" (click)="monthly ? removeMonthlyAmount(i) : removeAmount(i)"><app-icon name="x" /></button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</ng-template>

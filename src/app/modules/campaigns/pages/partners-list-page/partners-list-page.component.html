@@ -1,16 +1,63 @@
-<div class="pl-page">
+<div class="pl-page cm-v7 org-v1">
   <div class="pl-return-banner" *ngIf="returnCampaignId">
     ↩ הקמפיין שלך נשמר. צרו את השותף כאן — בסיום, כפתור בעמוד העריכה שלו יחזיר אתכם לקמפיין עם השותף כבר מקושר לתשורה.
   </div>
   <div class="pl-header">
     <div class="pl-header-text">
-      <h1 class="pl-title">שותפים</h1>
-      <p class="pl-description">נהל את השותפים העסקיים שלך</p>
+      <h1 class="pl-title">שותפים וחסויות</h1>
+      <p class="pl-description">ניהול מאגר העסקים של העמותה ומעקב אחר חסויות בקמפיינים</p>
     </div>
-    <div class="pl-header-actions">
-      <button class="pl-new-btn" type="button" (click)="createMode = createMode ? null : 'choose'">+ שותף חדש</button>
+    <div class="pl-header-actions" *ngIf="activeTab === 'partners'">
+      <button class="cm-button cm-primary" type="button" (click)="createMode = createMode ? null : 'choose'">+ שותף חדש</button>
     </div>
   </div>
+
+  <div class="cm-summary org-partner-metrics">
+    <div><small>שותפים במאגר</small><strong class="kpi-value">{{ loading || partnersError ? '—' : (partners.length | number) }}</strong></div>
+    <div><small>חסויות בקמפיינים</small><strong class="kpi-value">{{ sponsorsLoading || sponsorsError ? '—' : (sponsorCount | number) }}</strong></div>
+    <div><small>קמפיינים עם חסויות</small><strong class="kpi-value">{{ sponsorsLoading || sponsorsError ? '—' : (sponsorCampaigns.length | number) }}</strong></div>
+    <div><small>סכום חסויות רשום</small><strong class="kpi-value" title="הנתון אינו זמין במידע הקיים">—</strong></div>
+  </div>
+
+  <section class="cm-ledger partner-ledger" aria-label="מאגר שותפים וחסויות">
+  <nav class="cm-tabs" aria-label="שותפים וחסויות">
+    <button type="button" [attr.aria-pressed]="activeTab === 'partners'" (click)="activeTab = 'partners'">מאגר שותפים</button>
+    <button type="button" [attr.aria-pressed]="activeTab === 'sponsors'" (click)="openSponsors()">כלל החסויות</button>
+  </nav>
+  @if (activeTab === 'sponsors') {
+    <div class="cm-filters partner-filters">
+      <input class="cm-input" type="search" aria-label="חיפוש חסות" placeholder="חיפוש לפי חסות או קמפיין"
+             [(ngModel)]="sponsorQuery" (ngModelChange)="sponsorPage = 0">
+      <app-dropdown label="סינון חסויות לפי קמפיין" [(ngModel)]="sponsorCampaignFilter" (ngModelChange)="sponsorPage = 0">
+        <app-dropdown-option value="">כל הקמפיינים</app-dropdown-option>
+        @for (campaign of sponsorCampaigns; track campaign.id) {
+          <app-dropdown-option [value]="campaign.id">{{ campaign.title }}</app-dropdown-option>
+        }
+      </app-dropdown>
+    </div>
+    @if (sponsorsLoading) { <p class="partner-empty" role="status">טוען חסויות…</p> }
+    @else if (sponsorsError) { <p class="partner-empty" role="alert">טעינת החסויות נכשלה</p> }
+    @else if (matchingSponsors.length) {
+      <table class="partner-table">
+        <thead><tr><th scope="col">חסות</th><th scope="col">קמפיין</th><th scope="col">פעולות</th></tr></thead>
+        <tbody>
+          @for (entry of (matchingSponsors | slice:sponsorPage * listPageSize:(sponsorPage + 1) * listPageSize); track entry.campaignId + ':' + entry.sponsor.id) {
+            <tr>
+              <td><span class="partner-identity">@if (entry.sponsor.logoUrl) { <img [src]="entry.sponsor.logoUrl" alt=""> }<strong>{{ entry.sponsor.name }}</strong></span></td>
+              <td data-label="קמפיין">{{ entry.campaign }}</td>
+              <td><a class="cm-button" [routerLink]="['/campaigns', entry.campaignId, 'sponsors']">ניהול בקמפיין</a></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <app-management-pagination [page]="sponsorPage" [total]="matchingSponsors.length" [pageSize]="listPageSize" (pageChange)="sponsorPage = $event" />
+    } @else { <p class="partner-empty" role="status">לא נמצאו חסויות</p> }
+  }
+  <div [hidden]="activeTab !== 'partners'">
+    <div class="cm-filters partner-filters">
+      <input class="cm-input" type="search" aria-label="חיפוש שותף" placeholder="חיפוש לפי שם עסק"
+             [(ngModel)]="partnerQuery" (ngModelChange)="partnerPage = 0">
+    </div>
 
   <!-- Three ways to create a Partner, deliberately no more. -->
   <div class="pl-create-panel pl-create-panel--choose" *ngIf="createMode === 'choose'">
@@ -30,13 +77,13 @@
 
   <div class="pl-create-panel" *ngIf="createMode === 'duplicate-pick'">
     <label class="pl-label">שכפול מ:</label>
-    <select class="pl-input" [(ngModel)]="duplicateSourceId">
-      <option value="" disabled selected>בחרו שותף</option>
-      <option *ngFor="let p of partners" [value]="p.id">{{ p.display_name }}</option>
-    </select>
+    <app-dropdown [(ngModel)]="duplicateSourceId">
+      <app-dropdown-option value="" disabled selected>בחרו שותף</app-dropdown-option>
+      <app-dropdown-option *ngFor="let p of partners" [value]="p.id">{{ p.display_name }}</app-dropdown-option>
+    </app-dropdown>
     <div class="pl-create-panel-actions">
       <button class="pl-card-btn" type="button" (click)="createMode = 'choose'">חזרה</button>
-      <button class="pl-new-btn" type="button" [disabled]="!duplicateSourceId" (click)="pickDuplicateSource()">המשך</button>
+      <button class="cm-button cm-primary" type="button" [disabled]="!duplicateSourceId" (click)="pickDuplicateSource()">המשך</button>
     </div>
   </div>
 
@@ -59,7 +106,7 @@
     </div>
     <div class="pl-create-panel-actions">
       <button class="pl-card-btn" type="button" (click)="createMode = 'choose'">חזרה</button>
-      <button class="pl-new-btn" type="button" [disabled]="!newPartner.display_name.trim() || creating" (click)="createPartner()">
+      <button class="cm-button cm-primary" type="button" [disabled]="!newPartner.display_name.trim() || creating" (click)="createPartner()">
         {{ creating ? 'יוצר...' : 'יצירת שותף' }}
       </button>
     </div>
@@ -70,10 +117,10 @@
        finished page. -->
   <div class="pl-create-panel" *ngIf="createMode === 'clone'">
     <label class="pl-label">לאיזה קמפיין מחברים את השותף? (רשות)</label>
-    <select class="pl-input" [(ngModel)]="cloneCampaignId" [disabled]="cloning || loadingCampaigns">
-      <option value="">בלי קמפיין כרגע</option>
-      <option *ngFor="let c of myCampaigns" [value]="c.id">{{ c.title }}</option>
-    </select>
+    <app-dropdown [(ngModel)]="cloneCampaignId" [disabled]="cloning || loadingCampaigns">
+      <app-dropdown-option value="">בלי קמפיין כרגע</app-dropdown-option>
+      <app-dropdown-option *ngFor="let c of myCampaigns" [value]="c.id">{{ c.title }}</app-dropdown-option>
+    </app-dropdown>
     <p class="pl-hint">בלי בחירה, כפתורי "לתרומה"/"חזרה לקמפיין" באתר המקור לא יקושרו לשום מקום עד שתחברו ידנית.</p>
     <label class="pl-label" style="margin-top:10px">כתובת אתר העסק</label>
     <input class="pl-input" type="text" [(ngModel)]="cloneUrl" placeholder="https://..." [disabled]="cloning">
@@ -81,48 +128,58 @@
     <input class="pl-input" type="text" [(ngModel)]="cloneDisplayName" placeholder="קפה לנדוור" [disabled]="cloning">
     <div class="pl-create-panel-actions">
       <button class="pl-card-btn" type="button" [disabled]="cloning" (click)="createMode = 'choose'">חזרה</button>
-      <button class="pl-new-btn" type="button" [disabled]="!cloneUrl.trim() || cloning" (click)="cloneFromUrl()">
+      <button class="cm-button cm-primary" type="button" [disabled]="!cloneUrl.trim() || cloning" (click)="cloneFromUrl()">
         {{ cloning ? 'בונה את הדף...' : 'בניית הדף' }}
       </button>
     </div>
     <p class="pl-error" *ngIf="cloneError"><app-icon name="alert" /> {{ cloneError }}</p>
   </div>
 
-  <p class="pl-loading" *ngIf="loading">טוען...</p>
-
-  <div class="pl-grid" *ngIf="!loading">
-    <div class="pl-card" *ngFor="let p of partners">
-      <img *ngIf="p.logo_url" [src]="p.logo_url" class="pl-card-logo" alt="">
-      <div class="pl-card-logo pl-card-logo--empty" *ngIf="!p.logo_url"><app-icon name="building" /></div>
-      <div class="pl-card-name">{{ p.display_name }}</div>
-      <div class="pl-card-actions">
-        <a class="pl-icon-btn" [routerLink]="['/partners', p.id, 'details']" title="פרטי שותף (שם, טלפון, מייל, לוגו)">
-          <lucide-icon [img]="CircleUserRound" [size]="15"></lucide-icon>
-        </a>
-        <a class="pl-icon-btn" [routerLink]="['/partners', p.id, 'view']" target="_blank" rel="noopener" title="צפייה בדף הציבורי">
-          <lucide-icon [img]="Eye" [size]="15"></lucide-icon>
-        </a>
-        <a class="pl-icon-btn" [routerLink]="['/partners', p.id, 'builder']" [queryParams]="returnQueryParams" title="עריכה">
-          <lucide-icon [img]="Pencil" [size]="15"></lucide-icon>
-        </a>
-        <button class="pl-icon-btn" type="button" (click)="openDuplicateModal(p)" title="שכפול">
-          <lucide-icon [img]="Copy" [size]="15"></lucide-icon>
-        </button>
-      </div>
-      <!-- Delete pulled out of the row entirely — a destructive action
-           deserves visual separation, not another circle competing for
-           space in the same row. -->
-      <button class="pl-delete-corner" type="button" (click)="openDeleteModal(p)" title="מחיקה">
-        <lucide-icon [img]="Trash2" [size]="15"></lucide-icon>
-      </button>
+  @if (loading) { <p class="partner-empty" role="status">טוען שותפים…</p> }
+  @else if (partnersError) { <p class="partner-empty" role="alert">טעינת מאגר השותפים נכשלה</p> }
+  @else if (filteredPartners.length) {
+    <table class="partner-table">
+      <thead><tr><th scope="col">שם העסק</th><th scope="col">אתר</th><th scope="col">פעולות</th></tr></thead>
+      <tbody>
+        @for (p of (filteredPartners | slice:partnerPage * listPageSize:(partnerPage + 1) * listPageSize); track p.id) {
+          <tr>
+            <td><span class="partner-identity">
+              @if (p.logo_url) { <img [src]="p.logo_url" alt=""> }
+              @else { <app-icon name="building" /> }
+              <strong>{{ p.display_name }}</strong>
+            </span></td>
+            <td data-label="אתר"><bdi>{{ p.website || '—' }}</bdi></td>
+            <td>
+              <div class="pl-card-actions">
+                <a class="pl-icon-btn" [routerLink]="['/partners', p.id, 'details']" title="פרטי שותף (שם, טלפון, מייל, לוגו)">
+                  <lucide-icon [img]="CircleUserRound" [size]="15"></lucide-icon>
+                </a>
+                <a class="pl-icon-btn" [routerLink]="['/partners', p.id, 'view']" target="_blank" rel="noopener" title="צפייה בדף הציבורי">
+                  <lucide-icon [img]="Eye" [size]="15"></lucide-icon>
+                </a>
+                <a class="pl-icon-btn" [routerLink]="['/partners', p.id, 'builder']" [queryParams]="returnQueryParams" title="עריכה">
+                  <lucide-icon [img]="Pencil" [size]="15"></lucide-icon>
+                </a>
+                <button class="pl-icon-btn" type="button" (click)="openDuplicateModal(p)" title="שכפול">
+                  <lucide-icon [img]="Copy" [size]="15"></lucide-icon>
+                </button>
+                <button class="pl-icon-btn pl-row-delete" type="button" (click)="openDeleteModal(p)" title="מחיקה">
+                <lucide-icon [img]="Trash2" [size]="15"></lucide-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <app-management-pagination [page]="partnerPage" [total]="filteredPartners.length" [pageSize]="listPageSize" (pageChange)="partnerPage = $event" />
+  } @else {
+    <div class="partner-empty" role="status">
+      {{ partners.length ? 'לא נמצאו שותפים' : 'אין שותפים עדיין' }}
     </div>
-
+  }
   </div>
-
-  <hm-empty-state *ngIf="!loading && partners.length === 0" [icon]="Handshake" title="אין שותפים עדיין">
-    <button class="pl-new-btn" type="button" (click)="createMode = 'choose'">+ שותף חדש</button>
-  </hm-empty-state>
-</div>
+  </section>
 
 <!-- Duplicate Partner — copies the Profile (blocks/layout) as a starting
      point for a new one, contact fields left blank on purpose. -->
@@ -135,7 +192,7 @@
     <p class="pl-error" *ngIf="duplicateError"><app-icon name="alert" /> {{ duplicateError }}</p>
     <div class="pl-delete-actions">
       <button type="button" class="pl-card-btn" (click)="closeDuplicateModal()">ביטול</button>
-      <button type="button" class="pl-new-btn" [disabled]="!duplicateName.trim() || duplicating" (click)="confirmDuplicate()">
+      <button type="button" class="cm-button cm-primary" [disabled]="!duplicateName.trim() || duplicating" (click)="confirmDuplicate()">
         {{ duplicating ? 'משכפל...' : 'שכפול ומעבר לעריכה' }}
       </button>
     </div>
@@ -156,5 +213,6 @@
         {{ isDeleting ? 'מוחק...' : 'מחק לצמיתות' }}
       </button>
     </div>
+  </div>
   </div>
 </div>

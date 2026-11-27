@@ -30,10 +30,12 @@ export class TrendsReportComponent {
   @Input() campaignId?: string;
 
   thisMonth: Period = { total: 0, count: 0, avg: 0 };
-  lastMonth: Period = { total: 0, count: 0, avg: 0 };
+  lastMonth: Period | null = { total: 0, count: 0, avg: 0 };
   pctChange: PctChange = { total: null, count: null, avg: null };
   thisYear = 0;
   lastYear = 0;
+
+  get allTime(): boolean { return !!this.campaignId && this.analyticsRange.activeRange().preset === 'all'; }
 
   chartLabels = MONTH_LABELS;
   chartDatasets: ReportChartDataset[] = [];
@@ -59,7 +61,8 @@ export class TrendsReportComponent {
 
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
     const range = this.analyticsRange.activeRange();
-    let params = new HttpParams().set('from', range.from).set('to', range.to);
+    let params = new HttpParams();
+    if (range.from && range.to) params = params.set('from', range.from).set('to', range.to);
     if (this.campaignId) params = params.set('campaignId', this.campaignId);
 
     this.http.get<any>(`${environment.apiUrl}/api/reports/entity/${entity.id}/trends`, { headers, params })
@@ -72,7 +75,7 @@ export class TrendsReportComponent {
           this.lastYear  = res.yearOverYear.lastYear;
           this.chartDatasets = [
             { label: String(this.lastYear), data: res.yearOverYear.lastYearSeries, color: '#2a78d6' },
-            { label: String(this.thisYear), data: res.yearOverYear.thisYearSeries, color: '#583cd6' },
+            { label: String(this.thisYear), data: res.yearOverYear.thisYearSeries, color: 'var(--hm-chart-series-violet)' },
           ];
           this.loading = false;
         },

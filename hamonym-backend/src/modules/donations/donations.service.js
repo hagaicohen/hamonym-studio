@@ -1065,6 +1065,20 @@ const SORT_COLUMNS = {
   completedAt: 'd.completed_at',
 };
 
+exports.getCampaignRewardClaims = async (entityId, campaignId) => {
+  const { rows } = await db.query(
+    `SELECT item->>'id' AS id, COUNT(*)::int AS claimed
+     FROM donations d
+     CROSS JOIN LATERAL jsonb_array_elements(
+       CASE WHEN jsonb_typeof(d.rewards) = 'array' THEN d.rewards ELSE '[]'::jsonb END
+     ) AS item
+     WHERE d.entity_id = $1 AND d.campaign_id = $2 AND d.status = 'paid' AND item->>'id' IS NOT NULL
+     GROUP BY item->>'id'`,
+    [entityId, campaignId],
+  );
+  return rows;
+};
+
 const AVAILABLE_RECEIPT_FOR_DONATION = `(
   SELECT r.id
   FROM receipts r

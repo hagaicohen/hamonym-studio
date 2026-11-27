@@ -23,3 +23,20 @@ summary{cursor:pointer;min-height:32px}
   .organization-primary-action{width:100%;white-space:normal;text-align:center}
   .organization-recommendations summary{font-size:12px;line-height:1.7;padding-block:6px}
 }
+
+.organization-card { border: 0; margin: 14px 0 0; padding: 14px 0 0; border-top: 1px solid #e0e5eb; border-radius: 0; }
+.organization-card-heading { flex-direction: row; justify-content: flex-start; align-items: center; gap: 12px; }
+.organization-card-heading > div { flex: 0 1 auto; }
+.organization-card-heading .organization-name { color: #283249; font: 700 14px Arial, sans-serif; margin: 0; }
+.organization-card-heading .organization-status { margin: 3px 0; color: #687589; font: 13px Arial, sans-serif; }
+.organization-logo { width: 40px; height: 40px; flex: none; object-fit: contain; border: 1px solid #e0e5eb; border-radius: 6px; }
+.organization-initial { display: grid; place-items: center; color: var(--hm-admin-primary); background: var(--hm-admin-primary-subtle); }
+.organization-badge { color: #475569; background: #f1f5f9; border-radius: 5px; padding: 4px 8px; font-size: 12px; }
+.organization-badge.is-active { color: #246b4d; background: #e5f3eb; }
+.organization-primary-action { width: auto; min-height: 36px; padding: 7px; margin-inline-start: auto; background: transparent; color: var(--hm-admin-primary); font: inherit; }
+.organization-primary-action:hover { background: transparent; color: var(--hm-admin-primary-hover); text-decoration: underline; }
+.organization-primary-action:focus-visible, summary:focus-visible { outline: 2px solid var(--hm-admin-focus-ring); outline-offset: 2px; }
+@media (max-width: 700px) {
+  .organization-card-heading { flex-wrap: wrap; }
+  .organization-primary-action { width: 100%; justify-content: flex-start; margin-inline-start: 0; }
+}

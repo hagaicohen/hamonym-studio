@@ -7,17 +7,20 @@ import { AfterViewInit, Component, ElementRef, EventEmitter, HostListener, Input
     <section #panel class="drawer" role="dialog" aria-modal="true" [attr.aria-label]="heading" tabindex="-1" dir="rtl">
       <header><h2>{{ heading }}</h2><button #closeButton type="button" [disabled]="closeDisabled" aria-label="סגירת פרטים" (click)="requestClose()">✕</button></header>
       <div class="drawer-content"><ng-content /></div>
+      <footer><ng-content select="[drawerActions]" /></footer>
     </section>`,
   styles: [`
     :host { position: fixed; inset: 0; z-index: 1200; }
     * { box-sizing: border-box; }
     .drawer-backdrop { position: absolute; inset: 0; background: #0f172a66; }
-    .drawer { position: absolute; inset-block: 0; inset-inline-end: 0; width: min(540px, 100%); background: #fff; color: #1e293b; box-shadow: 0 0 32px #0f172a22; display: flex; flex-direction: column; }
+    .drawer { position: absolute; inset-block: 0; inset-inline-end: 0; width: min(440px, 100%); background: #fff; color: #1e293b; box-shadow: 0 0 32px #0f172a22; display: flex; flex-direction: column; }
     header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 20px; border-bottom: 1px solid #e2e8f0; }
-    h2 { font-size: 20px; margin: 0; overflow-wrap: anywhere; }
-    button { border: 1px solid #e2e8f0; background: #fff; color: #583cd6; border-radius: 8px; width: 36px; height: 36px; flex-shrink: 0; cursor: pointer; }
-    button:focus-visible { outline: 3px solid #b8a7f4; outline-offset: 2px; }
-    .drawer-content { padding: 20px; overflow: auto; flex: 1; }
+    h2 { font-size: 16px; margin: 0; overflow-wrap: anywhere; }
+    button { border: 1px solid #e2e8f0; background: #fff; color: var(--hm-admin-primary); border-radius: 8px; width: 36px; height: 36px; flex-shrink: 0; cursor: pointer; }
+    button:focus-visible { outline: 2px solid var(--hm-admin-focus-ring); outline-offset: 2px; }
+    .drawer-content { padding: 20px; overflow: auto; flex: 1; min-height: 0; }
+    footer:not(:empty) { flex: none; padding: 14px 20px max(14px, env(safe-area-inset-bottom)); border-top: 1px solid #e2e8f0; }
+    @media(max-width: 700px) { header, .drawer-content { padding: 14px; } }
   `],
 })
 export class AdminDetailsDrawerComponent implements AfterViewInit, OnDestroy {

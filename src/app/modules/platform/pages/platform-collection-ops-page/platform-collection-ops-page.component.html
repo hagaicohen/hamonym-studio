@@ -20,28 +20,74 @@
     </div>
   }
 </dialog>
-<div class="col-page">
-  <h1 class="col-title">ניהול גבייה</h1>
+<div class="col-page sa-v1 cm-v7">
+  <header class="sa-heading sa-period-heading">
+    <h1 class="col-title">עמלות וגבייה</h1>
+    @if (tab === 'overview') { <app-date-range-picker class="sa-header-period" [campaign]="true" [showRange]="true" /> }
+  </header>
 
-  <div class="col-tabs">
-    <button class="col-tab" [class.col-tab-active]="tab === 'overview'" (click)="setTab('overview')">סקירה ופעולות</button>
-    <button class="col-tab" [class.col-tab-active]="tab === 'history'" (click)="setTab('history')">היסטוריה</button>
-    <button class="col-tab" [class.col-tab-active]="tab === 'reports'" (click)="setTab('reports')">דוחות</button>
-  </div>
+  <nav class="cm-tabs" aria-label="עמלות וגבייה">
+    <button type="button" [attr.aria-pressed]="tab === 'overview'" (click)="setTab('overview')">סקירה ופעולות</button>
+    <button type="button" [attr.aria-pressed]="tab === 'history'" (click)="setTab('history')">היסטוריה</button>
+    <button type="button" [attr.aria-pressed]="tab === 'reports'" (click)="setTab('reports')">דוחות</button>
+  </nav>
 
   @if (tab === 'overview') {
     @if (clockStatus) {
       <div class="col-clock-status" [class.col-clock-status-sim]="clockStatus.overrideActive">{{ businessTimeStatusLabel }}</div>
     }
 
+    <section class="cm-ledger sa-ledger" aria-labelledby="period-review-heading">
+      <h2 id="period-review-heading">סקירה לפי תקופה</h2>
+      <p>נתוני חיובים ממחזורי חיוב החופפים לטווח שנבחר.</p>
+      @if (periodReview$ | async; as review) {
+        @if (review.loading) { <p role="status">טוען נתוני גבייה…</p> }
+        @else if (review.error) { <p role="alert">טעינת סקירת התקופה נכשלה.</p> }
+        @else if (review.rows.length) {
+          <div class="sa-table-wrap"><table class="sa-table">
+            <thead><tr><th>עמותה</th><th>מחזור חיוב</th><th>חיובים שהופקו</th><th>נגבה</th><th>יתרה</th></tr></thead>
+            <tbody>@for (row of review.rows; track $index) {
+              <tr><td>{{ row.entityName }} @if (row.isDraft) { <small>· טיוטה</small> }</td><td><bdi>{{ row.periodStart | date:'dd/MM/yyyy' }}</bdi></td>
+                <td>{{ row.billed | currency:'ILS' }}</td><td>{{ row.collected | currency:'ILS' }}</td><td>{{ row.outstanding | currency:'ILS' }}</td></tr>
+            }</tbody>
+          </table></div>
+        } @else { <p class="sa-empty">אין חיובים במחזורים החופפים לתקופה.</p> }
+      }
+    </section>
+
     <div class="col-month-nav">
+      <strong>מחזור חיוב לפעולות ולמדדים חודשיים</strong>
+      <app-date-range-picker [billingMonth]="monthPickerValue" [billingMonthLabel]="selectedMonthLabel"
+        [billingMonthPresets]="billingMonthPresets" [billingMonthRangeText]="billingMonthRangeText"
+        (billingMonthChange)="onMonthPicked($event)" />
       <button type="button" class="col-month-chevron" (click)="prevMonth()" aria-label="חודש קודם">‹</button>
-      <div class="col-month-label-wrap">
-        <label class="col-month-label" for="monthPicker">{{ selectedMonthLabel }}</label>
-        <input id="monthPicker" type="month" class="col-month-picker-input" [value]="monthPickerValue" (change)="onMonthPicked($any($event.target).value)" />
-      </div>
       <button type="button" class="col-month-chevron" (click)="nextMonth()" aria-label="חודש הבא">›</button>
     </div>
+
+    @if (overview) {
+    <div class="col-metrics sa-summary cm-summary" aria-label="סיכום גבייה חודשי">
+      <div class="col-metric">
+        <div class="col-metric-label kpi-label">סך התרומות</div>
+        <div class="col-metric-value kpi-value">₪{{ fmtMoney(overview.periodDonations.grossRaised) }}</div>
+        <div class="col-metric-sub">{{ overview.periodDonations.donationCount }} תרומות</div>
+      </div>
+      <div class="col-metric">
+        <div class="col-metric-label kpi-label">עמלות לחיוב</div>
+        <div class="col-metric-value kpi-value">₪{{ fmtMoney(overview.hasStatements ? overview.totalBilled : overview.accrued.accruedTotal) }}</div>
+        <div class="col-metric-sub">{{ overview.hasStatements ? 'כולל מע״מ' : 'כולל מע״מ · הערכה, טרם חויב' }}</div>
+      </div>
+      <div class="col-metric">
+        <div class="col-metric-label kpi-label">נגבה בפועל</div>
+        <div class="col-metric-value kpi-value col-metric-paid">{{ overview.paidConfirmed == null ? '—' : '₪' + fmtMoney(overview.paidConfirmed) }}</div>
+        <div class="col-metric-sub">{{ collectionPercentage === null ? 'אין חיוב מאושר לחישוב אחוז גבייה' : (collectionPercentage | number:'1.0-1') + '% מהחיוב המאושר' }}</div>
+      </div>
+      <div class="col-metric">
+        <div class="col-metric-label kpi-label">יתרה לגבייה</div>
+        <div class="col-metric-value kpi-value" [class.col-metric-open]="overview.cardCollectionFailed" [class.col-metric-process]="!overview.cardCollectionFailed && remainingCollectionBalance > 0">{{ overview.hasStatements ? '₪' + fmtMoney(remainingCollectionBalance) : '—' }}</div>
+        <div class="col-metric-sub">{{ overview.hasStatements ? 'כולל סכומים בתהליך' : 'טרם נוצר חוב מאושר' }}</div>
+      </div>
+    </div>
+    }
 
     <!-- A. תמונת מצב כספית -->
     <section class="col-section">
@@ -55,28 +101,6 @@
              gently dimmed, until the new ones arrive (2026-10 UX fix). -->
         <div class="col-overview-content" [class.col-overview-dimmed]="overviewLoading">
 
-          <div class="col-metrics" aria-label="סיכום גבייה חודשי">
-            <div class="col-metric">
-              <div class="col-metric-label">סך התרומות</div>
-              <div class="col-metric-value">₪{{ fmtMoney(overview.periodDonations.grossRaised) }}</div>
-              <div class="col-metric-sub">{{ overview.periodDonations.donationCount }} תרומות</div>
-            </div>
-            <div class="col-metric">
-              <div class="col-metric-label">עמלות לחיוב</div>
-              <div class="col-metric-value">₪{{ fmtMoney(overview.hasStatements ? overview.totalBilled : overview.accrued.accruedTotal) }}</div>
-              <div class="col-metric-sub">{{ overview.hasStatements ? 'כולל מע״מ' : 'כולל מע״מ · הערכה, טרם חויב' }}</div>
-            </div>
-            <div class="col-metric">
-              <div class="col-metric-label">נגבה בפועל</div>
-              <div class="col-metric-value col-metric-paid">₪{{ fmtMoney(overview.hasStatements ? overview.paidConfirmed : 0) }}</div>
-              <div class="col-metric-sub">{{ collectionPercentage === null ? 'אין חיוב מאושר לחישוב אחוז גבייה' : (collectionPercentage | number:'1.0-1') + '% מהחיוב המאושר' }}</div>
-            </div>
-            <div class="col-metric">
-              <div class="col-metric-label">יתרה לגבייה</div>
-              <div class="col-metric-value" [class.col-metric-open]="overview.cardCollectionFailed" [class.col-metric-process]="!overview.cardCollectionFailed && remainingCollectionBalance > 0">{{ overview.hasStatements ? '₪' + fmtMoney(remainingCollectionBalance) : '—' }}</div>
-              <div class="col-metric-sub">{{ overview.hasStatements ? 'כולל סכומים בתהליך' : 'טרם נוצר חוב מאושר' }}</div>
-            </div>
-          </div>
           <div class="col-secondary-summary" aria-label="פירוט גבייה משני">
             @if (overview.cardCollected > 0) { <span class="col-metric-paid">נגבה באשראי <strong>₪{{ fmtMoney(overview.cardCollected) }}</strong></span> }
             @if (overview.masavCollected === undefined) { <span>נגבה במס״ב <strong>נתון לא זמין</strong></span> }
@@ -109,13 +133,13 @@
       <h2 class="col-section-title">מצב הגבייה מעמותות</h2>
       <div class="col-filter-row">
         <app-entity-combobox [entities]="entityOptions" [(selectedId)]="overviewEntityId"></app-entity-combobox>
-        <select [(ngModel)]="statusFilter">
-          <option value="">כל הסטטוסים</option>
-          <option value="draft">טיוטה (לא מאושר)</option>
-          <option value="approved">מאושר</option>
-          <option value="open">פתוח</option>
-          <option value="paid">שולם</option>
-        </select>
+        <app-dropdown [(ngModel)]="statusFilter">
+          <app-dropdown-option value="">כל הסטטוסים</app-dropdown-option>
+          <app-dropdown-option value="draft">טיוטה (לא מאושר)</app-dropdown-option>
+          <app-dropdown-option value="approved">מאושר</app-dropdown-option>
+          <app-dropdown-option value="open">פתוח</app-dropdown-option>
+          <app-dropdown-option value="paid">שולם</app-dropdown-option>
+        </app-dropdown>
       </div>
       @if (statementsLoading) {
         <div class="col-empty">טוען...</div>
@@ -157,7 +181,7 @@
 
     <!-- B. דורש טיפולך -->
     <section class="col-section">
-      <h2 id="collection-attention" class="col-section-title">דורש טיפולך</h2>
+      <h2 id="collection-attention" class="col-section-title">דורש טיפולך <small>· מצב נוכחי, כל התקופות</small></h2>
       @if (manualRetryResult) { <p class="col-note" role="status">{{ manualRetryResult }}</p> }
       @if (needsAttentionLoading) {
         <div class="col-empty">טוען...</div>
@@ -212,11 +236,11 @@
                     </div>
                     <div class="col-action-block">
                       <h4>תעד הכרעה</h4>
-                      <select [(ngModel)]="resolutionType">
-                        <option value="resolve_no_overpayment">אינה גביית-יתר אמיתית</option>
-                        <option value="resolve_credit">יזוכה לעמותה</option>
-                        <option value="resolve_refund">יוחזר לתורם</option>
-                      </select>
+                      <app-dropdown [(ngModel)]="resolutionType">
+                        <app-dropdown-option value="resolve_no_overpayment">אינה גביית-יתר אמיתית</app-dropdown-option>
+                        <app-dropdown-option value="resolve_credit">יזוכה לעמותה</app-dropdown-option>
+                        <app-dropdown-option value="resolve_refund">יוחזר לתורם</app-dropdown-option>
+                      </app-dropdown>
                       <textarea [(ngModel)]="resolveReason" placeholder="הערה המסבירה את ההחלטה"></textarea>
                       <textarea [(ngModel)]="resolveEvidenceNotes" placeholder="פרטי ראיה (אופציונלי)"></textarea>
                       @if (attentionActionError) { <div class="col-error">{{ attentionActionError }}</div> }
@@ -395,13 +419,13 @@
         </div>
         <div class="col-filter-field">
           <label for="histStatus">סטטוס</label>
-          <select id="histStatus" [(ngModel)]="historyFilters.status">
-            <option value="">כל הסטטוסים</option>
-            <option value="draft">טיוטה</option>
-            <option value="approved">מאושר</option>
-            <option value="open">פתוח</option>
-            <option value="paid">שולם</option>
-          </select>
+          <app-dropdown inputId="histStatus" [(ngModel)]="historyFilters.status">
+            <app-dropdown-option value="">כל הסטטוסים</app-dropdown-option>
+            <app-dropdown-option value="draft">טיוטה</app-dropdown-option>
+            <app-dropdown-option value="approved">מאושר</app-dropdown-option>
+            <app-dropdown-option value="open">פתוח</app-dropdown-option>
+            <app-dropdown-option value="paid">שולם</app-dropdown-option>
+          </app-dropdown>
         </div>
         <div class="col-filter-field col-filter-buttons">
           <label class="col-filter-label-spacer" aria-hidden="true">&nbsp;</label>
@@ -439,21 +463,21 @@
       <div class="col-filter-grid">
         <div class="col-filter-field">
           <label>טווח</label>
-          <select [(ngModel)]="reportPeriodMode" (ngModelChange)="runReportPreview()">
-            <option value="period">תקופת חיוב (חודש/שנה)</option>
-            <option value="range">טווח תאריכים חופשי</option>
-            <option value="all">כל התקופות</option>
-          </select>
+          <app-dropdown [(ngModel)]="reportPeriodMode" (ngModelChange)="runReportPreview()">
+            <app-dropdown-option value="period">תקופת חיוב (חודש/שנה)</app-dropdown-option>
+            <app-dropdown-option value="range">טווח תאריכים חופשי</app-dropdown-option>
+            <app-dropdown-option value="all">כל התקופות</app-dropdown-option>
+          </app-dropdown>
         </div>
 
         @if (reportPeriodMode === 'period') {
           <div class="col-filter-field">
             <label for="reportPeriodSelect">תקופת חיוב</label>
-            <select id="reportPeriodSelect" [(ngModel)]="selectedPeriodId" (ngModelChange)="runReportPreview()">
+            <app-dropdown inputId="reportPeriodSelect" [(ngModel)]="selectedPeriodId" (ngModelChange)="runReportPreview()">
               @for (p of periods; track p.id) {
-                <option [value]="p.id">{{ fmtPeriodLabel(p) }}</option>
+                <app-dropdown-option [value]="p.id">{{ fmtPeriodLabel(p) }}</app-dropdown-option>
               }
-            </select>
+            </app-dropdown>
           </div>
         }
         @if (reportPeriodMode === 'range') {

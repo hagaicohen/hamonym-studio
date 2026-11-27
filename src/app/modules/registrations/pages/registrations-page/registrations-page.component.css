@@ -11,13 +11,7 @@
    sits alongside the page, same shell shape as the other Workspace pages
    (campaign-ambassadors-page's .amb-shell etc.) instead of the plain
    full-bleed layout the entity-wide /registrations page uses. */
-.reg-shell--scoped {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-  padding: 24px 20px 60px;
-  direction: rtl;
-}
+.reg-shell--scoped { display: block; direction: rtl; min-width: 0; }
 .reg-shell--scoped .reg-page {
   flex: 1;
   min-width: 0;

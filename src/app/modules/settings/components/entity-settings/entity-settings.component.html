@@ -2,198 +2,105 @@
 @if (loadError) { <p role="alert">{{ loadError }}</p> }
 @if (!loadingEntity && !loadError && draftEntity) {
 
-<div class="settings-page">
-  <!-- HERO -->
-
-  <div class="settings-hero">
-    <div class="hero-top-row">
-      <div>
-        <div class="page-title-row">
-          <div class="hero-icon-frame">
-            <lucide-icon [img]="Building2" class="hero-title-icon"></lucide-icon>
-          </div>
-          <div class="page-title">
-            ניהול
-            {{ draftEntity?.entity_type === "association" ? "עמותה" : "יישות" }}
-          </div>
-        </div>
-
-        <div class="page-description">
-          {{ entityName }}
-        </div>
-      </div>
-
-      <!--
-      <div class="header-actions">
-        @if (!editMode) {
-          <button class="edit-btn" (click)="startEdit()">עריכה</button>
-        }
-
-        @if (editMode && !editingSection) {
-          <button class="cancel-btn" (click)="cancelEdit()">ביטול</button>
-
-          <button
-            class="save-btn"
-            (click)="saveAll()"
-            [disabled]="!draftEntity?.campaign_types?.length"
-          >
-            שמירת שינויים
-          </button>
-        }
-      </div>-->
+<div class="workspace cm-v7" dir="rtl">
+  <header class="heading">
+    <div>
+      <h1>ניהול {{ entityTypeLabel }}</h1>
+      <p>הגדרות ופרטי הארגון</p>
     </div>
-
-    <!-- META -->
-
-    <div class="hero-meta-row">
-      <div class="meta-item">
-        <span class="meta-label"> מספר רישום </span>
-
-        <span class="meta-value">
-          {{ draftEntity?.registration_number }}
-        </span>
-      </div>
-
-      <div class="meta-separator">•</div>
-
-      <div class="meta-item">
-        <span class="meta-label"> סטטוס </span>
-
-        <span
-          class="status-text"
-          [class.pending]="draftEntity?.status === 'pending_review'"
-          [class.active]="draftEntity?.status === 'active'"
-        >
-          {{
-            draftEntity?.status === "pending_review"
-              ? "ממתינה לאישור"
-              : draftEntity?.status === "active"
-                ? "פעילה"
-                : "טיוטה"
-          }}
-        </span>
-      </div>
+    <a class="back-link" routerLink="/entities">חזרה לארגונים</a>
+  </header>
+  <div class="org-identity">
+    @if (draftEntity.logo_url) {
+      <img [src]="draftEntity.logo_url" alt="">
+    } @else {
+      <div class="org-logo-placeholder"><lucide-icon [img]="Building2" [size]="24" aria-hidden="true"></lucide-icon></div>
+    }
+    <div class="org-name">
+      <h2>{{ entityName }}</h2>
+      <p>{{ entityTypeLabel }} @if (draftEntity.registration_number) { · <bdi>{{ draftEntity.registration_number }}</bdi> }</p>
     </div>
+    @if (organizationStatusLabel) {
+      <span class="org-status" [class.active]="draftEntity.status === 'active'" [class.pending]="draftEntity.status === 'pending_review' || draftEntity.status === 'changes_requested'">
+        {{ organizationStatusLabel }}
+      </span>
+    }
   </div>
 
-  <app-approval-status-card *ngIf="draftEntity?.id" [entityId]="draftEntity!.id" [refreshKey]="draftEntity.status + ':' + draftEntity.updated_at" [canSubmit]="!editMode && !saveState.isSaving && !saveError && dirtySections.size === 0" (entityUpdated)="onReviewSubmitted($event)"></app-approval-status-card>
 
   <!-- INTERNAL NAVIGATION -->
 
-  <div class="entity-sections-nav">
-    <button
-      type="button"
-      (click)="
-        profileSection.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start'
-        })
-      "
-    >
-      פרופיל
-    </button>
+  <nav class="cm-tabs" aria-label="ניהול עמותה">
+    <button type="button" [attr.aria-pressed]="activeTab === 'profile'" (click)="activeTab = 'profile'">פרופיל</button>
+    <button type="button" [attr.aria-pressed]="activeTab === 'goals'" (click)="activeTab = 'goals'">יעדים</button>
+    <button type="button" [attr.aria-pressed]="activeTab === 'payment'" (click)="activeTab = 'payment'">סליקת תרומות</button>
+    <button type="button" [attr.aria-pressed]="activeTab === 'billing'" (click)="activeTab = 'billing'">אמצעי חיוב</button>
+    <button type="button" [attr.aria-pressed]="activeTab === 'visibility'" (click)="activeTab = 'visibility'">נראות ומחיקה</button>
+  </nav>
 
-    <button
-      type="button"
-      (click)="
-        goalsSection.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start'
-        })
-      "
-    >
-      יעדים
-    </button>
+  <section class="profile-panel" [hidden]="activeTab !== 'profile'">
+    <!-- BASIC INFO -->
 
-    <button
-      type="button"
-      (click)="
-        paymentSection.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start'
-        })
-      "
-    >
-      סליקת תרומות
-    </button>
-
-    <button
-      type="button"
-      (click)="
-        billingSection.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start'
-        })
-      "
-    >
-      אמצעי חיוב
-    </button>
-  </div>
-
-  <!-- BASIC INFO -->
-
-  <div #basicInfoSection>
-    @if (!editMode || editingSection !== "basic-info") {
-      <div class="unsaved-card-wrap" [class.has-unsaved]="dirtySections.has('basic-info')">
-        <app-entity-basic-info-section-view
+    <div #basicInfoSection>
+      @if (!editMode || editingSection !== "basic-info") {
+        <div class="unsaved-card-wrap" [class.has-unsaved]="dirtySections.has('basic-info')">
+          <app-entity-basic-info-section-view
+            [entity]="draftEntity"
+            [hasUnsavedChanges]="dirtySections.has('basic-info')"
+            (edit)="startEdit('basic-info')"
+            (save)="saveAll()"
+            (cancel)="cancelEdit()"
+          >
+          </app-entity-basic-info-section-view>
+        </div>
+      } @else {
+        <app-entity-basic-info-section-edit
           [entity]="draftEntity"
-          [hasUnsavedChanges]="dirtySections.has('basic-info')"
-          (edit)="startEdit('basic-info')"
+          (entityChange)="onEntityChange($event)"
+          [editMode]="true"
+          [saveState]="saveState"
+          [saveError]="saveError"
+          [showInlineError]="showInlineError"
           (save)="saveAll()"
           (cancel)="cancelEdit()"
         >
-        </app-entity-basic-info-section-view>
-      </div>
-    } @else {
-      <app-entity-basic-info-section-edit
-        [entity]="draftEntity"
-        (entityChange)="onEntityChange($event)"
-        [editMode]="true"
-        [saveState]="saveState"
-        [saveError]="saveError"
-        [showInlineError]="showInlineError"
-        (save)="saveAll()"
-        (cancel)="cancelEdit()"
-      >
-      </app-entity-basic-info-section-edit>
-    }
-  </div>
+        </app-entity-basic-info-section-edit>
+      }
+    </div>
 
-  <br />
 
-  <!-- PROFILE -->
+    <!-- PROFILE -->
 
-  <div #profileSection>
-    @if (!editMode || editingSection !== "profile") {
-      <div class="unsaved-card-wrap" [class.has-unsaved]="dirtySections.has('profile')">
-        <app-entity-profile-section-view
+    <div #profileSection>
+      @if (!editMode || editingSection !== "profile") {
+        <div class="unsaved-card-wrap" [class.has-unsaved]="dirtySections.has('profile')">
+          <app-entity-profile-section-view
+            [entity]="draftEntity"
+            [entityTypeLabel]="entityTypeLabel"
+            [campaignTypes]="campaignTypes"
+            [hasUnsavedChanges]="dirtySections.has('profile')"
+            (edit)="startEdit('profile')"
+            (save)="saveAll()"
+            (cancel)="cancelEdit()"
+          >
+          </app-entity-profile-section-view>
+        </div>
+      } @else {
+        <app-entity-profile-section-edit
           [entity]="draftEntity"
           [entityTypeLabel]="entityTypeLabel"
           [campaignTypes]="campaignTypes"
-          [hasUnsavedChanges]="dirtySections.has('profile')"
-          (edit)="startEdit('profile')"
+          [saveState]="saveState"
+          (entityChange)="onEntityChange($event)"
           (save)="saveAll()"
           (cancel)="cancelEdit()"
         >
-        </app-entity-profile-section-view>
-      </div>
-    } @else {
-      <app-entity-profile-section-edit
-        [entity]="draftEntity"
-        [entityTypeLabel]="entityTypeLabel"
-        [campaignTypes]="campaignTypes"
-        [saveState]="saveState"
-        (entityChange)="onEntityChange($event)"
-        (save)="saveAll()"
-        (cancel)="cancelEdit()"
-      >
-      </app-entity-profile-section-edit>
-    }
-  </div>
+        </app-entity-profile-section-edit>
+      }
+    </div>
+  </section>
 
-  <br />
-
-  <div #goalsSection>
+  <div #goalsSection [hidden]="activeTab !== 'goals'">
     @if (!editMode || editingSection !== "goals") {
       <div class="unsaved-card-wrap" [class.has-unsaved]="dirtySections.has('goals')">
         <app-entity-goals-section-view
@@ -217,8 +124,7 @@
     }
   </div>
 
-  <br />
-  <div #paymentSection>
+  <div #paymentSection [hidden]="activeTab !== 'payment'">
     @if (!editMode || editingSection !== "payment") {
       <div class="unsaved-card-wrap" [class.has-unsaved]="dirtySections.has('payment')">
         <app-entity-payment-section-view
@@ -245,11 +151,10 @@
     }
   </div>
 
-  <br />
 
   <!-- BILLING -->
 
-  <div #billingSection>
+  <div #billingSection [hidden]="activeTab !== 'billing'">
     @if (!editMode || editingSection !== "billing") {
       <div class="unsaved-card-wrap" [class.has-unsaved]="dirtySections.has('billing')">
         <app-entity-billing-section-view
@@ -276,76 +181,60 @@
     }
   </div>
 
-  <br />
 
-  <!-- VISIBILITY -->
-
-  <div class="visibility-zone">
-    @if (draftEntity?.is_hidden) {
-      <div class="visibility-zone-title">העמותה מוסתרת</div>
-      <div class="visibility-zone-desc">
-        העמותה וכל הקמפיינים שלה מוסתרים כרגע מהציבור. ניתן להציג אותם מחדש בכל עת.
+  <section class="visibility-panel" [hidden]="activeTab !== 'visibility'">
+    <header>
+      <h2>נראות ומחיקת העמותה</h2>
+      <p>פעולות המשפיעות על כלל הקמפיינים של העמותה</p>
+    </header>
+    <div class="risk">
+      <div>
+        <strong>{{ draftEntity.is_hidden ? 'העמותה מוסתרת' : 'הסתרת העמותה' }}</strong>
+        <p>{{ draftEntity.is_hidden ? 'העמותה וכל הקמפיינים שלה מוסתרים כרגע מהציבור. ניתן להציג אותם מחדש בכל עת.' : 'הסתרת העמותה וכל הקמפיינים שלה מהציבור. ניתן לבטל בכל עת.' }}</p>
       </div>
-      <button type="button" class="visibility-btn" [disabled]="isTogglingVisibility" (click)="toggleEntityVisibility()">
-        {{ isTogglingVisibility ? "מעדכן..." : "הצגת העמותה מחדש" }}
+      <button type="button" class="cm-button" (click)="openVisibilityDrawer()">
+        {{ draftEntity.is_hidden ? 'הצגת העמותה מחדש' : 'הסתרת העמותה' }}
       </button>
-    } @else {
-      <div class="visibility-zone-title">נראות העמותה</div>
-      <div class="visibility-zone-desc">
-        הסתרת העמותה מסתירה גם את כל הקמפיינים שלה מהציבור באופן מיידי. ניתן לבטל בכל עת.
-      </div>
-      <button type="button" class="visibility-btn" [disabled]="isTogglingVisibility" (click)="toggleEntityVisibility()">
-        {{ isTogglingVisibility ? "מעדכן..." : "הסתרת העמותה" }}
-      </button>
-    }
-    @if (visibilityError) {
-      <div class="modal-error">{{ visibilityError }}</div>
-    }
-  </div>
-
-  <br />
-
-  <!-- DANGER ZONE -->
-
-  <div class="danger-zone">
-    <div class="danger-zone-title">מחיקת עמותה</div>
-    <div class="danger-zone-desc">
-      מחיקת העמותה תסתיר אותה ואת כל הקמפיינים שלה מהציבור באופן מיידי. הפעולה ניתנת לביטול רק על ידי צוות המונים.
     </div>
-    <button type="button" class="danger-btn" (click)="openDeleteEntityModal()">מחיקת העמותה</button>
-  </div>
+    <div class="risk">
+      <div><strong>מחיקת העמותה</strong><p>ניתנת לביטול רק על ידי צוות המונים.</p></div>
+      <button type="button" class="cm-button danger" (click)="openDeleteEntityModal()">מחיקת העמותה</button>
+    </div>
+  </section>
+  <app-approval-status-card *ngIf="draftEntity?.id" [entityId]="draftEntity!.id" [refreshKey]="draftEntity.status + ':' + draftEntity.updated_at" [canSubmit]="!editMode && !saveState.isSaving && !saveError && dirtySections.size === 0" (entityUpdated)="onReviewSubmitted($event)"></app-approval-status-card>
 </div>
 
-<!-- DELETE CONFIRM MODAL -->
-@if (deleteConfirmOpen) {
-  <div class="modal-backdrop" (click)="closeDeleteEntityModal()">
-    <div class="modal-box" (click)="$event.stopPropagation()">
-      <h2 class="modal-title">מחיקת "{{ entityName }}"</h2>
-      <p class="modal-desc">
-        פעולה זו תסתיר את העמותה ואת כל הקמפיינים שלה מהציבור באופן מיידי.
-        כדי לאשר, הקלידו את שם העמותה במדויק:
-      </p>
-      <input
-        type="text"
-        class="danger-confirm-input"
-        [(ngModel)]="deleteConfirmText"
-        [placeholder]="entityName"
-      />
-      @if (deleteError) {
-        <p class="modal-error">{{ deleteError }}</p>
+@if (deleteConfirmOpen || visibilityConfirmOpen) {
+  <div class="drawer-shade" aria-hidden="true" (click)="closeActionDrawer()"></div>
+  <section class="action-drawer cm-drawer" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="entity-action-title" (keydown.escape)="closeActionDrawer()">
+    <header class="heading">
+      <h2 id="entity-action-title">
+        @if (deleteConfirmOpen) { מחיקת ״{{ entityName }}״ }
+        @else { {{ draftEntity.is_hidden ? 'הצגת העמותה מחדש' : 'הסתרת העמותה' }} }
+      </h2>
+      <button type="button" class="cm-button" aria-label="סגירה" (click)="closeActionDrawer()">×</button>
+    </header>
+    <div class="drawer-body">
+      @if (deleteConfirmOpen) {
+        <p>פעולה זו תסתיר את העמותה ואת כל הקמפיינים שלה מהציבור באופן מיידי.</p>
+        <label for="entity-delete-confirm">כדי לאשר, הקלידו את שם העמותה במדויק</label>
+        <input id="entity-delete-confirm" [(ngModel)]="deleteConfirmText" [placeholder]="entityName">
+        @if (deleteError) { <p class="danger" role="alert">{{ deleteError }}</p> }
+      } @else {
+        <p>{{ entityName }}</p>
+        @if (visibilityError) { <p class="danger" role="alert">{{ visibilityError }}</p> }
       }
-      <div class="modal-actions">
-        <button class="modal-btn-cancel" [disabled]="isDeletingEntity" (click)="closeDeleteEntityModal()">ביטול</button>
-        <button
-          class="modal-btn-delete"
-          [disabled]="!deleteConfirmValid || isDeletingEntity"
-          (click)="confirmDeleteEntity()"
-        >
-          {{ isDeletingEntity ? "מוחק..." : "מחיקת העמותה" }}
-        </button>
-      </div>
     </div>
-  </div>
+    <footer class="drawer-footer">
+      <button type="button" class="cm-button" [disabled]="isDeletingEntity || isTogglingVisibility" (click)="closeActionDrawer()">ביטול</button>
+      @if (deleteConfirmOpen) {
+        <button type="button" class="cm-button cm-primary" [disabled]="!deleteConfirmValid || isDeletingEntity" (click)="confirmDeleteEntity()">
+          {{ isDeletingEntity ? 'מוחק…' : 'מחיקת העמותה' }}
+        </button>
+      } @else {
+        <button type="button" class="cm-button cm-primary" [disabled]="isTogglingVisibility" (click)="toggleEntityVisibility()">אישור</button>
+      }
+    </footer>
+  </section>
 }
-
 }

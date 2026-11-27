@@ -1,3 +1,67 @@
+@if (billingMonth !== null) {
+  <div class="campaign-range" (keydown.escape)="periodOpen = false; monthTrigger.focus()">
+    <button #monthTrigger type="button" class="range-trigger" [attr.aria-expanded]="periodOpen" (click)="periodOpen = !periodOpen">
+      <svg class="range-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+      <span>{{ billingMonthLabel || billingMonth }}</span>
+      <svg class="range-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+    </button>
+    @if (billingMonthRangeText) {
+      <div class="campaign-range-display"><bdi dir="ltr">{{ billingMonthRangeText }}</bdi></div>
+    }
+    @if (periodOpen) {
+      <div class="campaign-range-panel billing-month-panel">
+        @if (billingMonthPresets.length) {
+          <div class="campaign-presets">
+            @for (preset of billingMonthPresets; track preset.key) {
+              <button type="button" class="range-option" [attr.aria-pressed]="billingMonth === preset.key"
+                (click)="setBillingMonth(preset.key); monthTrigger.focus()">{{ preset.label }}</button>
+            }
+          </div>
+        }
+        <label>{{ billingMonthPresets.length ? 'בחירת חודש חיוב' : 'חודש חיוב' }} <input type="month" [value]="billingMonth" (change)="setBillingMonth($any($event.target).value)"></label>
+      </div>
+    }
+  </div>
+} @else if (fixedOptions) {
+  <app-dropdown label="בחירת תקופה" [value]="fixedValue" (selectionChange)="fixedValueChange.emit($event)">
+    @for (option of fixedOptions; track option.key) { <app-dropdown-option [value]="option.key">{{ option.label }}</app-dropdown-option> }
+  </app-dropdown>
+  @if (fixedRangeText) { <div class="campaign-range-display"><bdi dir="ltr">{{ fixedRangeText }}</bdi></div> }
+} @else if (campaign) {
+  <div class="campaign-range" (keydown.escape)="periodOpen = false; trigger.focus()">
+    <button #trigger type="button" class="range-trigger" [attr.aria-expanded]="periodOpen" (click)="toggleCampaignPicker()">
+      <svg class="range-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+      <span>{{ campaignLabel() }}</span>
+      <svg class="range-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+    </button>
+    @if (showRange) {
+      <div class="campaign-range-display"><bdi dir="ltr">{{ displayRange() }}</bdi></div>
+    }
+    @if (periodOpen) {
+      <div class="campaign-range-panel" role="group" aria-label="בחירת טווח תאריכים">
+        <h3>בחירת טווח תאריכים</h3>
+        <div class="campaign-presets">
+          @for (preset of presets; track preset) {
+            <button type="button" class="range-option" [attr.aria-pressed]="range.activeRange().preset === preset" (click)="select(preset); trigger.focus()">{{ campaignLabels[preset] }}</button>
+          }
+        </div>
+        <span>תקופה יחסית</span>
+        <div class="campaign-relative">
+          <input aria-label="מספר יחידות" type="number" min="1" [max]="rollingUnit === 'days' ? 3660 : 120" [(ngModel)]="rollingCount">
+          <app-dropdown label="יחידת זמן" [(ngModel)]="rollingUnit"><app-dropdown-option value="days">ימים אחרונים</app-dropdown-option><app-dropdown-option value="months">חודשים אחרונים</app-dropdown-option></app-dropdown>
+          <button type="button" class="range-option" (click)="applyRolling(); !periodOpen && trigger.focus()">החל</button>
+        </div>
+        <span>טווח מותאם אישית</span>
+        <div class="campaign-dates">
+          <label>מתאריך<input type="date" [(ngModel)]="customFrom"></label>
+          <label>עד תאריך<input type="date" [(ngModel)]="customTo"></label>
+        </div>
+        @if (customError) { <p class="range-error" role="alert">{{ customError }}</p> }
+        <button type="button" class="range-option range-apply" (click)="applyCustom(); !periodOpen && trigger.focus()">החל טווח</button>
+      </div>
+    }
+  </div>
+} @else {
 <div class="range-picker-wrap">
   <div class="range-picker" role="group" aria-label="בחירת טווח תאריכים">
     @for (p of presets; track p) {
@@ -33,8 +97,10 @@
         עד תאריך
         <input type="date" [(ngModel)]="customTo" />
       </label>
+      @if (customError) { <p class="range-error" role="alert">{{ customError }}</p> }
       <button class="custom-apply" (click)="applyCustom()">החל</button>
       <button class="custom-cancel" (click)="cancelCustom()">ביטול</button>
     </div>
   }
 </div>
+}

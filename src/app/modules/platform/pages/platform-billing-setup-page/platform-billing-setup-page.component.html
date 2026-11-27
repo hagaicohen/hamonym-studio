@@ -1,19 +1,16 @@
-<div class="plat-page">
-  <a class="bs-back" [routerLink]="['/platform/billing-ops']">→ חזרה לתפעול חיוב</a>
-
-  <div class="plat-header">
-    <h1 class="plat-title">הגדרות חיוב — {{ displayName || 'עמותה' }}</h1>
-  </div>
+<div class="plat-page sa-v1 cm-v7">
+  <header class="sa-heading">
+    <div><h1>הגדרות חיוב לעמותה</h1><p class="sa-description">{{ displayName || 'עמותה' }}</p></div>
+    <a class="cm-button" routerLink="/platform/collection-ops">חזרה לעמלות וגבייה</a>
+  </header>
 
   @if (entityId) {
-    <div class="plat-card">
-      <app-billing-entity-setup
+    <app-billing-entity-setup
         [entityId]="entityId"
         [displayNameHint]="displayName"
         [donationCountHint]="donationCount"
         [grossAmountHint]="grossAmount"
-      ></app-billing-entity-setup>
-    </div>
+    ></app-billing-entity-setup>
   } @else {
     <div class="plat-card"><div class="plat-error">לא צוינה עמותה להגדרת חיוב</div></div>
   }

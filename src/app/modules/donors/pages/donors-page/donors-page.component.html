@@ -1,15 +1,16 @@
 <div class="don-shell" [class.don-shell--scoped]="campaignScoped">
-  <div class="don-page">
+  <div [class.don-page]="!campaignScoped" [class.org-v1]="!campaignScoped" class="cm-v7">
 
   @if (error) {
     <div class="don-error">{{ error }}</div>
   } @else {
 
-  <button type="button" class="don-back" *ngIf="campaignScoped" (click)="back()">→ חזרה לסקירה כללית</button>
 
   <!-- ══ HEADER ══ -->
-  <div class="don-header">
-    <h1 class="don-title">תורמים{{ campaignScoped && campaignTitle ? ' — ' + campaignTitle : '' }}</h1>
+  <div [class.don-header]="!campaignScoped" [class.cm-heading]="campaignScoped">
+    <div>    <h1 class="don-title">תורמים</h1>
+      <p class="cm-description">{{ campaignScoped ? 'מידע על התורמים והיסטוריית התרומות בקמפיין' : 'ניהול מאגר התורמים והיסטוריית התרומות בכל הקמפיינים' }}</p>
+    </div>
   </div>
 
   @if (campaignId && !campaignScoped) {
@@ -20,13 +21,13 @@
   }
 
   <!-- ══ KPI ROW ══ -->
-  <div class="don-kpi-row">
+  <div class="don-kpi-row cm-summary">
     <div class="don-kpi-card">
       <div class="kpi-label">סך גיוס</div>
       <div class="kpi-value primary">{{ fmtMoney(kpi.totalRaised) }}</div>
     </div>
     <div class="don-kpi-card">
-      <div class="kpi-label">מספר תורמים</div>
+      <div class="kpi-label">{{ campaignScoped ? 'רשומות תורמים' : 'מספר תורמים' }}</div>
       <div class="kpi-value">{{ kpi.donorCount | number }}</div>
     </div>
     <div class="don-kpi-card">
@@ -36,7 +37,9 @@
   </div>
 
   <!-- ══ FILTERS ══ -->
-  <div class="don-filters">
+  <section class="cm-ledger" aria-label="רשימת תורמים">
+  <h2 class="cm-panel-title">רשימת תורמים</h2>
+  <div class="don-filters cm-filters">
     <input
       class="don-search"
       type="search"
@@ -44,6 +47,14 @@
       [(ngModel)]="searchQuery"
       (input)="onSearch()"
     />
+    @if (!campaignScoped) {
+      <app-dropdown class="don-select" label="סינון לפי קמפיין" [ngModel]="campaignId" (ngModelChange)="applyCampaignFilter($event)">
+        <app-dropdown-option value="">כל הקמפיינים</app-dropdown-option>
+        @for (campaign of donorCampaigns; track campaign.id) { <app-dropdown-option [value]="campaign.id">{{ campaign.title }}</app-dropdown-option> }
+      </app-dropdown>
+      <input class="don-search" type="search" placeholder="חיפוש לפי שגריר" aria-label="חיפוש לפי שגריר"
+        maxlength="120" [(ngModel)]="ambassadorQuery" (input)="onSearch()">
+    }
     <button class="don-export-btn" (click)="exportCsv()" [disabled]="exporting">
       <app-icon name="download" /> {{ exporting ? 'מייצא...' : 'ייצוא CSV' }}
     </button>
@@ -54,10 +65,12 @@
         <div class="don-col-backdrop" (click)="closeColumnsMenu()"></div>
         <div class="don-col-panel">
           @for (col of columnDefs; track col.key) {
+            @if (!campaignScoped || col.key !== 'campaigns') {
             <label class="don-col-item">
               <span>{{ col.label }}</span>
               <input type="checkbox" [checked]="isColVisible(col.key)" (change)="toggleColumn(col.key)" />
             </label>
+            }
           }
         </div>
       }
@@ -88,26 +101,32 @@
                   תרומות<span class="sort-arrow">{{ sortField === 'count' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
                 </th>
               }
-              @if (isColVisible('campaigns')) { <th class="col-secondary">קמפיינים</th> }
+              @if (!campaignScoped && isColVisible('campaigns')) { <th class="col-secondary">קמפיינים</th> }
               @if (isColVisible('last')) {
                 <th class="sortable" [class.active]="sortField === 'last'" (click)="sortBy('last')">
                   תרומה אחרונה<span class="sort-arrow">{{ sortField === 'last' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
                 </th>
               }
+              @if (!campaignScoped) { <th scope="col">שגרירים</th> }
+              @if (campaignScoped) { <th scope="col">פרטים</th> }
             </tr>
           </thead>
           <tbody>
             @for (d of donors; track d.donor_key) {
               <tr class="don-row" (click)="openDrawer(d)">
                 <td class="don-name">
-                  {{ d.display_name }}
+                  <button type="button" class="cm-row-link" (click)="$event.stopPropagation(); openDrawer(d)">{{ d.display_name }}</button>
                 </td>
-                @if (isColVisible('email')) { <td class="don-campaign ltr-col col-secondary">{{ d.email || '—' }}</td> }
-                @if (isColVisible('phone')) { <td class="don-campaign ltr-col col-secondary">{{ d.phone || '—' }}</td> }
-                <td class="don-amount">{{ fmtMoney(d.total_donated) }}</td>
-                @if (isColVisible('count'))     { <td class="don-date col-secondary">{{ d.donation_count | number }}</td> }
-                @if (isColVisible('campaigns')) { <td class="don-date col-secondary">{{ d.campaigns_count | number }}</td> }
-                @if (isColVisible('last'))      { <td class="don-date ltr-col">{{ fmtDate(d.last_donation_at) }}</td> }
+                @if (isColVisible('email')) { <td class="don-campaign ltr-col col-secondary" data-label="פרטי קשר">{{ d.email || '—' }}</td> }
+                @if (isColVisible('phone')) { <td class="don-campaign ltr-col col-secondary" data-label="פרטי קשר">{{ d.phone || '—' }}</td> }
+                <td class="don-amount" data-label="סכום">{{ fmtMoney(d.total_donated) }}</td>
+                @if (isColVisible('count'))     { <td class="don-date col-secondary" data-label="תרומות">{{ d.donation_count | number }}</td> }
+                @if (!campaignScoped && isColVisible('campaigns')) { <td class="don-date col-secondary" data-label="תרומות">{{ d.campaigns_count | number }}</td> }
+                @if (isColVisible('last'))      { <td class="don-date ltr-col" data-label="תרומה אחרונה">{{ fmtDate(d.last_donation_at) }}</td> }
+                @if (!campaignScoped) { <td data-label="שגרירים">{{ d.ambassador_names || '—' }}</td> }
+                @if (campaignScoped) {
+                  <td class="cm-details-cell"><button class="cm-button" type="button" (click)="$event.stopPropagation(); openDrawer(d)">פרטים</button></td>
+                }
               </tr>
             }
           </tbody>
@@ -115,22 +134,22 @@
       </div>
 
       <!-- Pagination -->
+      @if (campaignScoped) {
       <div class="don-pagination">
-        <label class="pag-limit">
-          שורות בעמוד:
-          <select [(ngModel)]="limit" (change)="onLimitChange()">
-            <option [ngValue]="10">10</option>
-            <option [ngValue]="25">25</option>
-            <option [ngValue]="50">50</option>
-          </select>
-        </label>
         <button class="pag-btn" (click)="prevPage()" [disabled]="page === 0">הקודם</button>
-        <span class="pag-info">עמוד {{ page + 1 }} מתוך {{ totalPages }}</span>
+        <span class="pag-info">
+          @if (campaignScoped) { {{ page * limit + 1 }}–{{ page * limit + donors.length }} מתוך {{ total }} }
+          @else { עמוד {{ page + 1 }} מתוך {{ totalPages }} }
+        </span>
         <button class="pag-btn" (click)="nextPage()" [disabled]="page >= totalPages - 1">הבא</button>
       </div>
+      } @else {
+      <app-management-pagination [page]="page" [total]="total" [pageSize]="limit" (pageChange)="page = $event; load()" />
+      }
     }
   </div>
 
+  </section>
   }
   </div>
 </div>
@@ -138,13 +157,37 @@
 <!-- ══ DRAWER ══ -->
 @if (selected) {
   <div class="don-overlay" (click)="closeDrawer()"></div>
-  <div class="don-drawer">
+  <div class="don-drawer" [class.cm-drawer]="campaignScoped" role="dialog" aria-modal="true" aria-labelledby="cm-detail-title" (keydown.escape)="closeDrawer()">
     <div class="drawer-header">
-      <button class="drawer-close" (click)="closeDrawer()">✕</button>
-      <h2 class="drawer-title">פרטי תורם</h2>
+      <button aria-label="סגירה" class="drawer-close" (click)="closeDrawer()">✕</button>
+      <h2 class="drawer-title" id="cm-detail-title">פרטי תורם</h2>
     </div>
 
     <div class="drawer-body">
+      @if (selected) {
+        <section class="drawer-section">
+          <h3>{{ campaignId ? 'תרומות מאושרות בקמפיין' : 'תרומות מאושרות בארגון' }}</h3>
+          @if (historyLoading) { <p role="status">טוען היסטוריה…</p> }
+          @else if (historyError) { <p role="alert">{{ historyError }}</p> }
+          @else {
+            @for (transaction of historyRows; track transaction.id) {
+              <div class="drawer-row">
+                <span>{{ fmtDate(transaction.completed_at || transaction.created_at) }}</span>
+                <span>{{ historyAmount(transaction) }}</span>
+                @if (transaction.ambassador_name) { <span>{{ transaction.ambassador_name }}</span> }
+              </div>
+            } @empty { <p>אין תרומות מאושרות להצגה</p> }
+            @if (historyTotal > historyLimit) {
+              <div class="drawer-row">
+                <button type="button" [disabled]="historyPage === 0" (click)="loadHistory(historyPage - 1)">הקודם</button>
+                <span>{{ historyTotal }} תרומות</span>
+                <button type="button" [disabled]="(historyPage + 1) * historyLimit >= historyTotal" (click)="loadHistory(historyPage + 1)">הבא</button>
+              </div>
+            }
+          }
+        </section>
+        <div class="drawer-divider"></div>
+      }
 
       <div class="drawer-section">
         <div class="drawer-row">
@@ -176,7 +219,7 @@
           <span class="dr-label">מספר תרומות</span>
           <span class="dr-value">{{ selected.donation_count | number }}</span>
         </div>
-        <div class="drawer-row">
+        <div class="drawer-row" *ngIf="!campaignScoped">
           <span class="dr-label">קמפיינים</span>
           <span class="dr-value">{{ selected.campaigns_count | number }}</span>
         </div>
@@ -196,5 +239,10 @@
       </div>
 
     </div>
+    @if (campaignScoped) {
+      <footer class="cm-drawer-foot">
+        <button class="cm-button" type="button" (click)="closeDrawer()">סגור</button>
+      </footer>
+    }
   </div>
 }

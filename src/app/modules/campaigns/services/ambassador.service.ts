@@ -20,6 +20,8 @@ export interface Ambassador {
   donorCount: number;
   createdAt: string;
   deactivatedAt: string | null;
+  photoUrl?: string | null;
+  accountPhotoUrl?: string | null;
 }
 
 export interface AmbassadorFormData {
@@ -34,6 +36,7 @@ export interface AmbassadorFormData {
   // Sent only when the ambassador/admin explicitly typed/edited it (see
   // AmbassadorSlugFieldComponent).
   slug?: string;
+  photoUrl?: string | null;
 }
 
 export interface ImportRow {
@@ -138,11 +141,21 @@ export class AmbassadorService {
     );
   }
 
-  setStatus(id: string, status: 'active' | 'inactive'): Observable<Ambassador> {
+  getManagementCapabilities(id: string): Observable<{ photoSupported: boolean }> {
+    return this.http.get<{ ambassador: { photo_supported?: boolean } }>(
+      `${this.apiBase}/ambassadors/${id}`, { headers: this.headers() },
+    ).pipe(map(response => ({ photoSupported: response.ambassador?.photo_supported === true })));
+  }
+
+  archive(id: string, reason: string): Observable<unknown> {
+    return this.http.post(`${this.apiBase}/ambassadors/${id}/lifecycle`, { action: 'archive', reason }, { headers: this.headers() });
+  }
+
+  setStatus(id: string, status: 'active' | 'inactive', reason?: string): Observable<Ambassador> {
     return this.http
       .patch<{ ambassador: any }>(
         `${this.apiBase}/ambassadors/${id}`,
-        { status },
+        { status, ...(reason ? { reason } : {}) },
         { headers: this.headers() }
       )
       .pipe(map(r => this.fromSnake(r.ambassador)));
@@ -293,6 +306,8 @@ export class AmbassadorService {
       donorCount:      a.donor_count     ?? 0,
       createdAt:       a.created_at,
       deactivatedAt:   a.deactivated_at  ?? null,
+      photoUrl:        a.photo_url ?? null,
+      accountPhotoUrl: a.account_photo_url ?? null,
     };
   }
 
@@ -304,6 +319,7 @@ export class AmbassadorService {
     if (data.goalAmount       !== undefined) r['goal_amount']      = data.goalAmount;
     if (data.personalMessage  !== undefined) r['personal_message'] = data.personalMessage;
     if (data.personalTitle    !== undefined) r['personal_title']   = data.personalTitle;
+    if (data.photoUrl !== undefined) r['photo_url'] = data.photoUrl;
     if (data.slug             !== undefined) r['slug']             = data.slug;
     return r;
   }

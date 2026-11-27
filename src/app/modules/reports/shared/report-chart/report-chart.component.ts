@@ -52,7 +52,13 @@ export class ReportChartComponent implements OnChanges, AfterViewInit, OnDestroy
     if (this.chart) { this.chart.destroy(); this.chart = null; }
     if (this.labels.length === 0) return;
 
-    const ctx = this.canvasRef.nativeElement.getContext('2d')!;
+    const canvas = this.canvasRef.nativeElement;
+    const ctx = canvas.getContext('2d')!;
+    const palette = getComputedStyle(canvas);
+    const resolveColor = (color: string): string => {
+      const token = /^var\((--[\w-]+)\)$/.exec(color)?.[1];
+      return token ? palette.getPropertyValue(token).trim() : color;
+    };
     const formatCompact = (n: number) => {
       if (!this.moneyFormat) return String(n);
       if (n >= 1_000_000) return `₪${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
@@ -67,7 +73,7 @@ export class ReportChartComponent implements OnChanges, AfterViewInit, OnDestroy
         datasets: this.datasets.map((ds) => ({
           label: ds.label,
           data: ds.data,
-          backgroundColor: ds.color,
+          backgroundColor: Array.isArray(ds.color) ? ds.color.map(resolveColor) : resolveColor(ds.color),
           borderRadius: 4,
           maxBarThickness: 36,
         })),

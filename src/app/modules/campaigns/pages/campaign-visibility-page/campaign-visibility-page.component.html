@@ -1,83 +1,76 @@
-<div class="cvp-shell">
-  <p class="cvp-loading" *ngIf="loading">טוען…</p>
-
-  <ng-container *ngIf="!loading && draft as d">
-    <div class="cvp-main">
-      <button type="button" class="cvp-back" (click)="back()">→ חזרה לסקירה כללית</button>
-      <div class="cvp-title-row">
-        <h1 class="cvp-title"><app-icon name="eye" /> נראות לציבור</h1>
-        <span class="cvp-status" *ngIf="saving">שומר...</span>
-        <span class="cvp-status cvp-status--saved" *ngIf="saved && !saving">✓ נשמר</span>
-        <span class="cvp-status cvp-status--error" *ngIf="saveError && !saving">{{ saveError }}</span>
-      </div>
-      <p class="cvp-subtitle">מה מהקמפיין מוצג בפועל בדף הציבורי · כל שינוי נשמר אוטומטית</p>
-
-      <div class="cvp-panel">
-        <div class="cvp-row cvp-row--primary">
-          <span class="cvp-label">הצג את הקמפיין</span>
-          <div class="cvp-switch-group">
-            <span class="cvp-switch-state">{{ d.isHidden ? 'מוסתר' : 'גלוי' }}</span>
-            <button type="button" class="cvp-switch" role="switch" [attr.aria-checked]="!d.isHidden" [class.cvp-switch--on]="!d.isHidden" (click)="toggleHidden()">
-              <span class="cvp-switch-thumb"></span>
-            </button>
-          </div>
-        </div>
-
-        <div class="cvp-group">
-          <div class="cvp-row">
-            <span class="cvp-label"><app-icon name="gift" /> תשורות</span>
-            <div class="cvp-switch-group">
-              <span class="cvp-switch-state">{{ d.offeringsEnabled ? 'מוצג' : 'מוסתר' }}</span>
-              <button type="button" class="cvp-switch" role="switch" [attr.aria-checked]="d.offeringsEnabled" [class.cvp-switch--on]="d.offeringsEnabled" (click)="toggleOfferings()">
-                <span class="cvp-switch-thumb"></span>
-              </button>
-            </div>
-          </div>
-
-          <div class="cvp-row" *ngIf="blockVisible('sponsors') !== null">
-            <span class="cvp-label"><app-icon name="handshake" /> חסויות</span>
-            <div class="cvp-switch-group">
-              <span class="cvp-switch-state">{{ blockVisible('sponsors') ? 'מוצג' : 'מוסתר' }}</span>
-              <button type="button" class="cvp-switch" role="switch" [attr.aria-checked]="blockVisible('sponsors')" [class.cvp-switch--on]="blockVisible('sponsors')" (click)="toggleBlockVisible('sponsors')">
-                <span class="cvp-switch-thumb"></span>
-              </button>
-            </div>
-          </div>
-
-          <div class="cvp-row" *ngIf="blockVisible('ambassadors') !== null">
-            <span class="cvp-label"><app-icon name="star" /> שגרירים</span>
-            <div class="cvp-switch-group">
-              <span class="cvp-switch-state">{{ blockVisible('ambassadors') ? 'מוצג' : 'מוסתר' }}</span>
-              <button type="button" class="cvp-switch" role="switch" [attr.aria-checked]="blockVisible('ambassadors')" [class.cvp-switch--on]="blockVisible('ambassadors')" (click)="toggleBlockVisible('ambassadors')">
-                <span class="cvp-switch-thumb"></span>
-              </button>
-            </div>
-          </div>
-
-          <div class="cvp-row" *ngIf="blockVisible('updates') !== null">
-            <span class="cvp-label"><app-icon name="megaphone" /> עדכונים</span>
-            <div class="cvp-switch-group">
-              <span class="cvp-switch-state">{{ blockVisible('updates') ? 'מוצג' : 'מוסתר' }}</span>
-              <button type="button" class="cvp-switch" role="switch" [attr.aria-checked]="blockVisible('updates')" [class.cvp-switch--on]="blockVisible('updates')" (click)="toggleBlockVisible('updates')">
-                <span class="cvp-switch-thumb"></span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="cvp-group" *ngIf="statItems.length">
-          <span class="cvp-group-label">פס נתונים (בלוק בעמוד)</span>
-          <div class="cvp-row" *ngFor="let item of statItems">
-            <span class="cvp-label">{{ statLabels[item.key] }}</span>
-            <div class="cvp-switch-group">
-              <span class="cvp-switch-state">{{ item.visible ? 'מוצג' : 'מוסתר' }}</span>
-              <button type="button" class="cvp-switch" role="switch" [attr.aria-checked]="item.visible" [class.cvp-switch--on]="item.visible" (click)="toggleStatItem(item.key)">
-                <span class="cvp-switch-thumb"></span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </ng-container>
-</div>
+﻿@if (loading) { <p role="status">טוען…</p> }
+@if (!loading && draft; as d) {
+  <section class="cm-v7">
+    <header class="cm-heading">
+      <div><h1>נראות לציבור</h1><p class="cm-description">בחירת המידע והרכיבים שיופיעו בדף הקמפיין</p></div>
+      <span class="save-state" role="status"><app-icon name="check" /> {{ saving ? 'שומר…' : saved ? 'נשמר' : 'נשמר אוטומטית' }}</span>
+    </header>
+    @if (saveError) { <p role="alert">{{ saveError }}</p> }
+    <fieldset class="visibility-layout" [disabled]="saving">
+      <section class="visibility-panel full-panel">
+        <header class="visibility-title"><span class="vis-icon"><app-icon name="eye" /></span>
+          <div><h2>חשיפת הקמפיין</h2><p>שליטה בנראות הדף הציבורי</p></div>
+        </header>
+        <label class="vis-row">
+          <input type="checkbox" [checked]="!d.isHidden" (change)="toggleHidden()">
+          <span class="vis-copy"><b>הצגת הקמפיין</b><small>הצגת דף הקמפיין לציבור, בכפוף למצב הפרסום הקיים.</small></span>
+          <span class="vis-state" [class.on]="!d.isHidden">{{ d.isHidden ? 'מוסתר' : 'מוצג' }}</span>
+        </label>
+        @if (d.isHidden) { <div class="hidden-note show">הקמפיין מוסתר. הגדרות התוכן נשמרות גם כשהדף מוסתר.</div> }
+      </section>
+      <section class="visibility-panel">
+        <header class="visibility-title"><span class="vis-icon"><app-icon name="list" /></span>
+          <div><h2>רכיבי תוכן</h2><p>הרכיבים הזמינים בתבנית הקמפיין</p></div>
+        </header>
+        <label class="vis-row">
+          <input type="checkbox" [checked]="d.offeringsEnabled" (change)="toggleOfferings()">
+          <span class="vis-copy"><b>תשורות</b><small>הצגת קטלוג התשורות</small></span>
+          <span class="vis-state" [class.on]="d.offeringsEnabled">{{ d.offeringsEnabled ? 'מוצג' : 'מוסתר' }}</span>
+        </label>
+        @for (option of contentOptions; track option.key) {
+          @let visible = blockVisible(option.key);
+          @if (visible !== null) {
+            <label class="vis-row">
+              <input type="checkbox" [checked]="visible" (change)="toggleBlockVisible(option.key)">
+              <span class="vis-copy"><b>{{ option.label }}</b><small>{{ option.description }}</small></span>
+              <span class="vis-state" [class.on]="visible">{{ visible ? 'מוצג' : 'מוסתר' }}</span>
+            </label>
+          }
+        }
+      </section>
+      @if (fundraisingItems.length) {
+        <section class="visibility-panel">
+          <header class="visibility-title"><span class="vis-icon"><app-icon name="chart" /></span>
+            <div><h2>נתוני גיוס</h2><p>המידע המוצג בפס הנתונים</p></div>
+          </header>
+          @for (item of fundraisingItems; track item.key) {
+            <label class="vis-row">
+              <input type="checkbox" [checked]="item.visible" (change)="toggleStatItem(item.key)">
+              <span class="vis-copy"><b>{{ statLabels[item.key] }}</b></span>
+              <span class="vis-state" [class.on]="item.visible">{{ item.visible ? 'מוצג' : 'מוסתר' }}</span>
+            </label>
+          }
+        </section>
+      }
+      @if (dateItems.length) {
+        <section class="visibility-panel full-panel">
+          <header class="visibility-title"><span class="vis-icon"><app-icon name="calendar" /></span>
+            <div><h2>מועדים</h2><p>תאריכי הפעילות ומידע על סיום הקמפיין</p></div>
+          </header>
+          @for (item of dateItems; track item.key) {
+            @let unavailable = isOngoing && item.key !== 'start_date';
+            <label class="vis-row">
+              <input type="checkbox" [disabled]="unavailable" [checked]="!unavailable && item.visible" (change)="toggleStatItem(item.key)">
+              <span class="vis-copy"><b>{{ statLabels[item.key] }}</b>@if (unavailable) { <small>לא זמין בקמפיין מתמשך</small> }</span>
+              <span class="vis-state" [class.on]="!unavailable && item.visible">{{ unavailable ? 'לא רלוונטי' : item.visible ? 'מוצג' : 'מוסתר' }}</span>
+            </label>
+          }
+        </section>
+      }
+    </fieldset>
+    <div class="vis-help"><app-icon name="info" /> הסתרת רכיב שומרת על התוכן שלו. הגדרות הנראות כפופות למצב הפרסום ולהרשאות הקמפיין.</div>
+    <footer class="vis-footer">
+      @if (d.slug) { <a class="cm-button" [routerLink]="['/campaigns', d.slug, 'view']" target="_blank" rel="noopener"><app-icon name="eye" /> צפייה בקמפיין</a> }
+    </footer>
+  </section>
+}

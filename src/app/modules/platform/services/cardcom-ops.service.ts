@@ -83,6 +83,9 @@ export interface ReconciliationFinding {
 // decision) — deliberately excludes donor_email/donor_phone/provider data,
 // see donations.service.js#getPlatformDonations's own comment on why.
 export interface PlatformDonation {
+  ambassador_name?: string | null;
+  receipt_id?: string | null;
+  currency?: string;
   id: string;
   amount: number;
   donor_name: string | null;

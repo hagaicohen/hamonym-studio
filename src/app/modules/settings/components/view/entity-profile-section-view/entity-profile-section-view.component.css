@@ -53,7 +53,7 @@
 
   font-weight: 800;
 
-  color: #6D5DF6;
+  color: var(--hm-admin-primary);
 
   line-height: 1.2;
 }
@@ -330,7 +330,7 @@
 }
 
 .html-content a {
-  color: #6D5DF6;
+  color: var(--hm-admin-primary);
 
   text-decoration: none;
 }

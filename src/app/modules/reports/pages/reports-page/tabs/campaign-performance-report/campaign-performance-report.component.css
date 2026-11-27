@@ -21,8 +21,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ede9fe;
-  color: #583cd6;
+  background: var(--hm-admin-primary-soft);
+  color: var(--hm-admin-primary);
   font-weight: 700;
   font-size: 13px;
 }

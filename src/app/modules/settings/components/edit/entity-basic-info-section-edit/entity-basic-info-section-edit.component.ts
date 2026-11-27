@@ -1,3 +1,4 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../../shared/ui/dropdown/dropdown.component';
 // entity-basic-info-section-edit.component.ts
 
 import {
@@ -33,11 +34,11 @@ import { RegistrationIdentityCheckComponent, IdentityCheckState } from '../../..
 
   standalone: true,
 
-  imports: [CommonModule, FormsModule, LucideAngularModule, RegistrationIdentityCheckComponent, CategorySelectorComponent, CategorySuggestComponent],
+  imports: [DropdownComponent, DropdownOptionComponent, CommonModule, FormsModule, LucideAngularModule, RegistrationIdentityCheckComponent, CategorySelectorComponent, CategorySuggestComponent],
 
   templateUrl: './entity-basic-info-section-edit.component.html',
 
-  styleUrl: './entity-basic-info-section-edit.component.css',
+  styleUrls: ['./entity-basic-info-section-edit.component.css', '../../entity-settings/entity-settings-section.css'],
 })
 export class EntityBasicInfoSectionEditComponent implements OnChanges {
   identityCheck:IdentityCheckState={status:'idle'};

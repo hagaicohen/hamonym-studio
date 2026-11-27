@@ -78,11 +78,11 @@
         <div class="field-block">
           <label> בחר ספק </label>
 
-          <select [(ngModel)]="provider" class="base-input">
-            <option value="cardcom">קארדקום</option>
+          <app-dropdown [(ngModel)]="provider">
+            <app-dropdown-option value="cardcom">קארדקום</app-dropdown-option>
 
-            <option value="tranzila">טרנזילה</option>
-          </select>
+            <app-dropdown-option value="tranzila">טרנזילה</app-dropdown-option>
+          </app-dropdown>
         </div>
       </div>
 

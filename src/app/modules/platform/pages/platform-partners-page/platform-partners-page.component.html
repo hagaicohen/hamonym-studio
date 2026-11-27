@@ -1,5 +1,20 @@
-<main class="plat-page" dir="rtl">
-  <header class="plat-header"><div><h1 class="plat-title">שותפים</h1><p class="plat-subtitle">שותפים המשויכים לקמפיינים, מנהלים ונראות</p></div><span class="cell-secondary">{{ total | number }} שותפים</span></header>
+<main class="plat-page sa-v1 cm-v7" dir="rtl">
+  <header class="plat-header"><div><h1 class="plat-title">שותפים וחסויות</h1><p class="plat-subtitle">שותפים המשויכים לקמפיינים, מנהלים ונראות</p></div><span class="cell-secondary">{{ total | number }} שותפים</span></header>
+<div class="cm-summary sa-summary" aria-label="מדדים מרכזיים">
+  <div><small>שותפים במערכת</small><strong>{{ directoryCounts[0] == null ? '—' : (directoryCounts[0] | number) }}</strong></div>
+  <div><small>שותפים המשויכים לקמפיינים</small><strong>{{ directoryCounts[1] == null ? '—' : (directoryCounts[1] | number) }}</strong></div>
+  <div><small>שותפים חדשים השבוע</small><strong>{{ directoryCounts[2] == null ? '—' : (directoryCounts[2] | number) }}</strong></div>
+  <div><small>מוסתרים מגילוי ציבורי</small><strong>{{ directoryCounts[3] == null ? '—' : (directoryCounts[3] | number) }}</strong></div>
+</div>
+<section class="cm-ledger sa-ledger">
+<nav class="cm-tabs" aria-label="שותפים וחסויות">
+  <button type="button" [attr.aria-pressed]="activeTab === 'partners'" (click)="activeTab = 'partners'">כלל השותפים</button>
+  <button type="button" [attr.aria-pressed]="activeTab === 'sponsors'" (click)="activeTab = 'sponsors'">כלל החסויות</button>
+</nav>
+@if (activeTab === 'sponsors') {
+  <p class="sa-empty">נתוני חסויות רוחביים אינם זמינים בממשק הפלטפורמה הקיים.</p>
+} @else {
+
   <div class="plat-filters"><label class="sr-only" for="partner-search">חיפוש שותפים</label><input id="partner-search" class="plat-search" type="search" placeholder="חיפוש לפי שם שותף" [(ngModel)]="searchQuery" (input)="onSearch()" /><app-column-picker [columns]="columns" storageKey="platformColumns_partners" (visibleChange)="onVisibleColumnsChange($event)"></app-column-picker></div>
   <nav class="plat-chips" aria-label="סינון שותפים">
     <button class="plat-chip" [class.active]="!activeChip" [attr.aria-pressed]="!activeChip" (click)="activeChip = null; page = 0; load()">הכול</button>
@@ -36,11 +51,14 @@
           </tr> }
         </tbody></table>
       </div>
-      <footer class="plat-footer"><span>{{ total | number }} שותפים</span><nav class="plat-pager" aria-label="דפדוף שותפים"><button (click)="prevPage()" [disabled]="page === 0 || refreshing" aria-label="עמוד קודם">→</button><span>{{ page + 1 }} מתוך {{ totalPages }}</span><button (click)="nextPage()" [disabled]="page >= totalPages - 1 || refreshing" aria-label="עמוד הבא">←</button></nav></footer>
+      @if (total > 0) { <app-management-pagination [page]="page" [total]="total" [pageSize]="limit" (pageChange)="page = $event; load()" /> }
     }
   </section>
   @if (selectedPartner; as partner) { <app-admin-details-drawer [heading]="partnerName(partner)" (closed)="selectedPartner = null">
     <dl class="detail-grid"><dt>סוג שיוך</dt><dd>שותף בקמפיינים</dd><dt>מנהל</dt><dd>{{ partner.owner_name || '—' }}</dd><dt>אימייל מנהל</dt><dd dir="ltr">{{ partner.owner_email || '—' }}</dd><dt>קמפיינים משויכים</dt><dd>{{ partner.campaigns_count }}</dd><dt>נראות</dt><dd>{{ partner.is_hidden ? 'מוסתר מגילוי ציבורי' : 'גלוי' }}</dd><dt>הצטרפות</dt><dd dir="ltr">{{ fmtDate(partner.created_at) }}</dd><dt>עדכון פרטים אחרון</dt><dd dir="ltr">{{ fmtDate(partner.updated_at) }}</dd></dl>
     @if (partnerLink(partner); as link) { <div class="detail-section"><a [href]="link" target="_blank" rel="noopener">פתח קמפיין משויך ↗</a></div> }
   </app-admin-details-drawer> }
+
+}
+</section>
 </main>

@@ -1,57 +1,22 @@
-:host { display: block; }
-
-.ckp-card {
-  padding: 22px 24px; background: linear-gradient(155deg, #f5f3ff 0%, #ffffff 55%);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
-  border-radius: 14px; font-family: 'Heebo', sans-serif; direction: rtl;
-  display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
-}
-
-.ckp-primary { display: flex; flex-direction: column; gap: 6px; flex: 2 1 260px; min-width: 220px; }
-.ckp-amount { font-size: 32px; font-weight: 900; color: #583cd6; line-height: 1.1; }
-.ckp-of { font-size: 13px; color: #64748b; font-weight: 700; }
-
-.ckp-progress { width: 100%; height: 14px; border-radius: 999px; background: #ede9fe; overflow: hidden; margin-top: 4px; }
-.ckp-progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7c3aed, #583cd6); }
-
-.ckp-progress-row { display: flex; align-items: center; gap: 10px; }
-.ckp-pct { font-size: 12px; color: #7c3aed; font-weight: 800; }
-.ckp-remaining { font-size: 12px; color: #94a3b8; }
-
-.ckp-divider { width: 1px; align-self: stretch; background: #eef2f7; }
-
-/* margin-right:auto pins this group to the card's physical left edge —
-   the container is dir:rtl so ckp-primary/divider pack to the right by
-   default, leaving this as the only item that needs pushing. */
-.ckp-stats { display: flex; align-items: center; gap: 30px; flex-wrap: wrap; margin-right: auto; }
-.ckp-stat { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 76px; }
-.ckp-stat-icon { width: 26px; height: 26px; color: #583cd6; }
-.ckp-stat-icon--lg { width: 30px; height: 30px; }
-.ckp-stat strong { font-size: 22px; font-weight: 800; color: #0f172a; }
-.ckp-stat span { font-size: 12px; color: #64748b; font-weight: 700; }
-
+.fund { display:grid; grid-template-columns:1.1fr 1fr; border:1px solid var(--campaign-border); border-radius:9px; background:#fbfcfc; padding:20px; gap:24px; }
+.fund-main small,.metrics small { color:var(--campaign-muted); font-size:12px; }
+.money { font-size:38px; font-weight:700; color:var(--campaign-green); text-align:right; margin:5px 0; font-variant-numeric:tabular-nums; }
+.target { color:var(--campaign-muted); font-size:13px; }
+.track { height:7px; background:#e1e9e5; border-radius:10px; margin:13px 0 7px; }
+.track span { display:block; width:0; height:100%; background:var(--campaign-green); }
+.progress-label { display:flex; justify-content:space-between; gap:8px; font-size:12px; color:var(--campaign-muted); }
+.progress-label b { color:var(--campaign-green); }
+.metrics { border-right:1px solid var(--campaign-border); padding-right:24px; display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.metrics div { display:flex; flex-direction:column; gap:6px; justify-content:center; }
+.metrics strong { font-size:25px; }
+:host { display: block; min-width: 0; }
+.track { overflow: hidden; }
+.campaign-metadata { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--campaign-muted); }
 @media (max-width: 700px) {
-  .ckp-card { flex-direction: column; align-items: stretch; }
-  .ckp-divider { display: none; }
-  .ckp-primary { min-width: 0; }
-  /* CSS Grid instead of flex-wrap+space-between+percentage-basis -- that
-     combination distributes leftover space per wrapped line rather than
-     across the whole area, so pairs of stats end up spaced inconsistently
-     from row to row. Grid gives every cell an equal, predictable column
-     width regardless of how many stats are shown (3 or 4, ongoing vs not).
-     Same auto-fit pattern already used for .cdmg-grid on this page. */
-  .ckp-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-    gap: 14px;
-    margin-right: 0;
-    width: 100%;
-  }
-  .ckp-stat { min-width: 0; }
-}
-
-@media (max-width: 420px) {
-  .ckp-card { padding: 18px 16px; gap: 16px; }
-  .ckp-amount { font-size: 26px; }
-  .ckp-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .fund { grid-template-columns:1fr; gap:14px; padding:14px; }
+  .money { font-size:34px; }
+  .progress-label { font-size:11px; flex-wrap:wrap; }
+  .metrics { border-right:0; border-top:1px solid var(--campaign-border); padding:13px 0 0; gap:12px; }
+  .metrics strong { font-size:22px; }
+  .metrics small { font-size:11px; }
 }

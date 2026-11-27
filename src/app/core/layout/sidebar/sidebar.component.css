@@ -55,17 +55,17 @@
 }
 
 .sidebar-item:hover {
-  background: #eef0ff;
-  color: #583cd6;
+  background: var(--hm-admin-primary-soft);
+  color: var(--hm-admin-primary);
 }
 
 .sidebar-item.active {
-  background: #583cd6;
+  background: var(--hm-admin-primary);
   color: white;
 }
 
 .sidebar-item.active:hover {
-  background: #4b2fc0;
+  background: var(--hm-admin-primary-hover);
   color: white;
 }
 
@@ -82,7 +82,7 @@
 
 .sidebar-item:hover .sidebar-svg-icon,
 .sidebar-item:hover .menu-svg {
-  stroke: #583cd6;
+  stroke: var(--hm-admin-primary);
 }
 
 .sidebar-item.active .sidebar-svg-icon,

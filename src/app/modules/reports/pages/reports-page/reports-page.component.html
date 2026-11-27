@@ -1,28 +1,29 @@
 <div class="don-shell" [class.don-shell--scoped]="campaignScoped">
-  <div class="don-page">
+  <div [class.don-page]="!campaignScoped" [class.org-v1]="!campaignScoped" class="cm-v7">
 
-  <button type="button" class="don-back" *ngIf="campaignScoped" (click)="back()">→ חזרה לסקירה כללית</button>
 
-  <div class="don-header">
-    <h1 class="don-title">דוחות{{ campaignScoped && campaignTitle ? ' — ' + campaignTitle : '' }}</h1>
-    <app-date-range-picker></app-date-range-picker>
+  <div class="cm-heading">
+    <div><h1 class="don-title">דוחות</h1>
+      <p class="cm-description">{{ campaignScoped ? 'ניתוח ביצועי הקמפיין' : 'ניתוח ביצועי כלל הקמפיינים, מקורות גיוס ותוצאות סליקה' }}</p>
+    </div>
+    <app-date-range-picker [campaign]="true" [allowAll]="campaignScoped" [showRange]="!campaignScoped" />
   </div>
 
-  <div class="rep-tabs">
-    <button class="rep-tab" [class.active]="activeTab() === 'campaigns'" (click)="setTab('campaigns')">
-      <lucide-angular [img]="ChartColumnIcon" [size]="17"></lucide-angular>
+  <div class="cm-tabs" role="group" aria-label="דוחות">
+    <button [attr.aria-pressed]="activeTab() === 'campaigns'" (click)="setTab('campaigns')">
+      <lucide-angular [img]="ChartColumnIcon" [size]="16"></lucide-angular>
       <span>{{ campaignId ? 'ביצועי קמפיין' : 'ביצועי קמפיינים' }}</span>
     </button>
-    <button class="rep-tab" [class.active]="activeTab() === 'marketing'" (click)="setTab('marketing')">
-      <lucide-angular [img]="MegaphoneIcon" [size]="17"></lucide-angular>
+    <button [attr.aria-pressed]="activeTab() === 'marketing'" (click)="setTab('marketing')">
+      <lucide-angular [img]="MegaphoneIcon" [size]="16"></lucide-angular>
       <span>שיווק ומקורות תנועה</span>
     </button>
-    <button class="rep-tab" [class.active]="activeTab() === 'trends'" (click)="setTab('trends')">
-      <lucide-angular [img]="TrendingUpIcon" [size]="17"></lucide-angular>
+    <button [attr.aria-pressed]="activeTab() === 'trends'" (click)="setTab('trends')">
+      <lucide-angular [img]="TrendingUpIcon" [size]="16"></lucide-angular>
       <span>מגמות והשוואות</span>
     </button>
-    <button class="rep-tab" [class.active]="activeTab() === 'failures'" (click)="setTab('failures')">
-      <lucide-angular [img]="TriangleAlertIcon" [size]="17"></lucide-angular>
+    <button [attr.aria-pressed]="activeTab() === 'failures'" (click)="setTab('failures')">
+      <lucide-angular [img]="TriangleAlertIcon" [size]="16"></lucide-angular>
       <span>תקלות וסליקה</span>
     </button>
   </div>

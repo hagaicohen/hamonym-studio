@@ -4,21 +4,21 @@
   <div class="don-card"><div class="don-loading"><div class="don-spinner"></div></div></div>
 } @else {
 
-  <div class="don-kpi-row don-kpi-row--3">
+  <div class="don-kpi-row don-kpi-row--3" [class.cm-summary]="true">
     <div class="don-kpi-card">
-      <div class="kpi-label">סה"כ בתקופה (מול התקופה הקודמת)</div>
+      <div class="kpi-label">{{ allTime ? 'סך הגיוס · כל הזמנים' : 'סך הגיוס בתקופה (מול התקופה הקודמת)' }}</div>
       <div class="kpi-value primary">{{ fmtMoney(thisMonth.total) }}</div>
-      <div class="kpi-change" [class]="changeClass(pctChange.total)">{{ changeLabel(pctChange.total) }}</div>
+      @if (!allTime) { <div class="kpi-change" [class]="changeClass(pctChange.total)">{{ changeLabel(pctChange.total) }}</div> }
     </div>
     <div class="don-kpi-card">
       <div class="kpi-label">מספר תרומות בתקופה</div>
       <div class="kpi-value">{{ thisMonth.count | number }}</div>
-      <div class="kpi-change" [class]="changeClass(pctChange.count)">{{ changeLabel(pctChange.count) }}</div>
+      @if (!allTime) { <div class="kpi-change" [class]="changeClass(pctChange.count)">{{ changeLabel(pctChange.count) }}</div> }
     </div>
     <div class="don-kpi-card">
       <div class="kpi-label">תרומה ממוצעת בתקופה</div>
       <div class="kpi-value">{{ fmtMoney(thisMonth.avg) }}</div>
-      <div class="kpi-change" [class]="changeClass(pctChange.avg)">{{ changeLabel(pctChange.avg) }}</div>
+      @if (!allTime) { <div class="kpi-change" [class]="changeClass(pctChange.avg)">{{ changeLabel(pctChange.avg) }}</div> }
     </div>
   </div>
 

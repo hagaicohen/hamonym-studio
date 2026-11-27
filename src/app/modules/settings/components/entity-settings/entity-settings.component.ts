@@ -1,3 +1,4 @@
+import { RouterLink } from '@angular/router';
 // entity-settings.component.ts
 
 import { Component, OnInit, OnDestroy, inject, ViewChild } from '@angular/core';
@@ -57,6 +58,7 @@ import { LoadingOverlayComponent } from '../../../../shared/components/loading-o
   standalone: true,
 
   imports: [
+    RouterLink,
     CommonModule,
     FormsModule,
     LucideAngularModule,
@@ -159,6 +161,7 @@ export class EntitySettingsComponent implements OnInit, OnDestroy {
       this.dirtySections.clear();
       this.saveError = this.loadError = this.visibilityError = this.deleteError = '';
       this.deleteConfirmOpen = false;
+      this.visibilityConfirmOpen = false;
       this.isDeletingEntity = this.isTogglingVisibility = this.isCheckingBillingConnection = false;
       this.saveState = {isSaving: false, saveCompleted: false, saveFailed: false};
       const id = params.get('id') || this.currentEntityService.currentEntity()?.id;
@@ -231,7 +234,11 @@ export class EntitySettingsComponent implements OnInit, OnDestroy {
     this.saveState = {isSaving:false, saveCompleted:false, saveFailed:true};
   }
 
+  activeTab: 'profile' | 'goals' | 'payment' | 'billing' | 'visibility' = 'profile';
+
   startEdit(section?: string): void {
+    if (section === 'goals' || section === 'payment' || section === 'billing') this.activeTab = section;
+    else if (section === 'profile' || section === 'basic-info') this.activeTab = 'profile';
     if (!this.entity || this.loadingEntity) return;
     this.saveError = '';
 
@@ -649,6 +656,18 @@ export class EntitySettingsComponent implements OnInit, OnDestroy {
   // ── HIDE / UNHIDE ENTITY ──
   isTogglingVisibility = false;
   visibilityError = '';
+  visibilityConfirmOpen = false;
+
+  openVisibilityDrawer(): void {
+    this.visibilityError = '';
+    this.visibilityConfirmOpen = true;
+  }
+
+  closeActionDrawer(): void {
+    if (this.isTogglingVisibility || this.isDeletingEntity) return;
+    this.visibilityConfirmOpen = false;
+    this.closeDeleteEntityModal();
+  }
 
   toggleEntityVisibility(): void {
     if (this.isTogglingVisibility || !this.draftEntity?.id) return;
@@ -662,6 +681,7 @@ export class EntitySettingsComponent implements OnInit, OnDestroy {
       next: () => {
         if (version !== this.scopeVersion) return;
         this.isTogglingVisibility = false;
+        this.visibilityConfirmOpen = false;
         this.draftEntity = { ...this.draftEntity, is_hidden: nextHidden };
         this.entity = { ...this.entity, is_hidden: nextHidden };
         this.syncActiveEntity(this.entity);
@@ -687,6 +707,18 @@ export class EntitySettingsComponent implements OnInit, OnDestroy {
   // display_name is only filled in step 2 of the registration wizard — an
   // entity that only completed step 1 would otherwise show a blank name
   // (and, worse, let the delete-confirmation input pass while empty).
+  get organizationStatusLabel(): string {
+    const labels: Record<string, string> = {
+      active: 'פעילה',
+      draft: 'טיוטה',
+      pending_review: 'ממתינה לאישור',
+      changes_requested: 'נדרשת השלמה',
+      rejected: 'נדחתה',
+      suspended: 'מושעית',
+    };
+    return labels[this.draftEntity?.status] || '';
+  }
+
   get entityName(): string {
     return this.draftEntity?.display_name || this.draftEntity?.legal_name || 'ללא שם';
   }

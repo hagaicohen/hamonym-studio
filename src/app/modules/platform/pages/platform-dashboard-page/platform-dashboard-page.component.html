@@ -1,7 +1,8 @@
-<main class="plat-page" dir="rtl" [attr.inert]="donorsOpen ? '' : null" [attr.aria-busy]="loading">
+<main class="plat-page sa-v1 cm-v7" dir="rtl" [attr.inert]="donorsOpen ? '' : null" [attr.aria-busy]="loading">
   <header class="plat-header">
-    <div><p class="eyebrow">ניהול הפלטפורמה</p><h1>תמונת מצב</h1><p class="page-subtitle">הפעילות החשובה והנושאים שממתינים לטיפולך</p></div>
+    <div><h1>לוח הבקרה</h1><p class="page-subtitle">הפעילות החשובה והנושאים שממתינים לטיפולך</p></div>
     @if (data) { <span class="updated-at">עודכן <time [attr.datetime]="data.generatedAt" dir="ltr">{{ fmtDate(data.generatedAt, true) }}</time></span> }
+    @if (context.isSuperAdmin()) { <app-date-range-picker class="sa-header-period" [campaign]="true" [includeCalendarMonths]="true" [showRange]="true" /> }
   </header>
 
   @if (error) {
@@ -17,55 +18,69 @@
     <section class="kpi-row" aria-label="מדדים מרכזיים">
       @if (context.hasPlatformSection('organizations')) {
         <a class="kpi-card" routerLink="/platform/organizations" [queryParams]="{ status: 'active' }">
-          <span class="kpi-label">עמותות פעילות</span><strong>{{ overview.kpis.activeEntities | number }}</strong><span class="kpi-foot">לעמותות הפעילות <span aria-hidden="true">←</span></span>
+          <span class="kpi-label">עמותות פעילות</span><strong>{{ overview.kpis.activeEntities | number }}</strong><span class="kpi-foot">מצב נוכחי <span aria-hidden="true">←</span></span>
         </a>
       }
       @if (context.hasPlatformSection('campaigns')) {
         <a class="kpi-card" routerLink="/platform/campaigns" [queryParams]="{ status: 'published' }">
-          <span class="kpi-label">קמפיינים פעילים</span><strong>{{ overview.kpis.activeCampaigns | number }}</strong><span class="kpi-foot">לקמפיינים הפעילים <span aria-hidden="true">←</span></span>
+          <span class="kpi-label">קמפיינים פעילים</span><strong>{{ overview.kpis.activeCampaigns | number }}</strong><span class="kpi-foot">מצב נוכחי <span aria-hidden="true">←</span></span>
         </a>
       }
       @if (context.isSuperAdmin()) {
-        <a class="kpi-card" routerLink="/platform/donations" [queryParams]="{ status: 'paid', period: 'this_month_israel' }">
-          <span class="kpi-label">תרומות החודש</span><strong class="collected">{{ fmtMoney(overview.kpis.donationsMonth) }}</strong><span class="kpi-foot">תרומות ששולמו בלבד <span aria-hidden="true">←</span></span>
-        </a>
+        @if (period === 'month' && !loading && !error) {
+          <a class="kpi-card" routerLink="/platform/donations" [queryParams]="{ status: 'paid', period: 'this_month_israel' }">
+            <span class="kpi-label">תרומות בתקופה</span><strong class="collected">{{ fmtMoney(overview.kpis.donationsMonth) }}</strong><span class="kpi-foot">תרומות ששולמו בלבד <span aria-hidden="true">←</span></span>
+          </a>
+        } @else {
+          <div class="kpi-card"><span class="kpi-label">תרומות בתקופה</span><strong class="collected">{{ fmtMoney(donationTotal) }}</strong><span class="kpi-foot">תרומות ששולמו בלבד</span></div>
+        }
+        @if (periodDonors; as donors) {
         <button #donorTrigger type="button" class="kpi-card" (click)="openDonors(donorTrigger)" aria-haspopup="dialog" [attr.aria-expanded]="donorsOpen">
-          <span class="kpi-label">תורמים חדשים</span><strong>{{ overview.kpis.newDonorsThisMonth | number }}</strong><span class="kpi-foot">תרומה ראשונה החודש <span aria-hidden="true">←</span></span>
+          <span class="kpi-label">תורמים חדשים</span><strong>{{ donors.length | number }}</strong><span class="kpi-foot">תרומה ראשונה בתקופה <span aria-hidden="true">←</span></span>
         </button>
+        } @else {
+          <div class="kpi-card"><span class="kpi-label">תורמים חדשים</span><strong>—</strong><span class="kpi-foot">אין כיסוי מלא של תורמים חדשים לתקופה</span></div>
+        }
         <a class="kpi-card" routerLink="/platform/collection-ops" [queryParams]="{ tab: 'reports', scope: 'all' }">
           <span class="kpi-label">עמלות לגבייה</span><strong [class.attention-value]="(overview.kpis.feesOutstanding ?? 0) > 0">{{ fmtMoney(overview.kpis.feesOutstanding) }}</strong><span class="kpi-foot">יתרת חיובים מאושרים · כל התקופות <span aria-hidden="true">←</span></span>
         </a>
       }
       @if (context.hasPlatformSection('organizations')) {
         <a class="kpi-card attention-kpi" routerLink="/platform/organizations" [queryParams]="{ status: 'pending_review' }">
-          <span class="kpi-label">פריטים הדורשים טיפול</span><strong [class.attention-value]="overview.kpis.attentionCount > 0">{{ overview.kpis.attentionCount | number }}</strong><span class="kpi-foot">לתור העמותות הממתינות <span aria-hidden="true">←</span></span>
+          <span class="kpi-label">פריטים הדורשים טיפול</span><strong [class.attention-value]="overview.kpis.attentionCount > 0">{{ overview.kpis.attentionCount | number }}</strong><span class="kpi-foot">מצב נוכחי <span aria-hidden="true">←</span></span>
         </a>
       } @else {
         <button type="button" class="kpi-card attention-kpi" (click)="focusAttention(attentionSection)">
-          <span class="kpi-label">פריטים הדורשים טיפול</span><strong [class.attention-value]="overview.kpis.attentionCount > 0">{{ overview.kpis.attentionCount | number }}</strong><span class="kpi-foot">למרכז הטיפול <span aria-hidden="true">←</span></span>
+          <span class="kpi-label">פריטים הדורשים טיפול</span><strong [class.attention-value]="overview.kpis.attentionCount > 0">{{ overview.kpis.attentionCount | number }}</strong><span class="kpi-foot">מצב נוכחי <span aria-hidden="true">←</span></span>
         </button>
       }
     </section>
 
     <div class="dashboard-grid">
-      @if (overview.trend; as trend) {
+      @if (period === 'custom' && !loading && !error && !seriesAvailable) {
+        <section class="panel chart-panel"><h2>מגמת התרומות</h2><p>מקור הנתונים אינו תומך בטווח שנבחר.</p></section>
+      } @else if (!loading && !error && overview.trend) {
         <section class="panel chart-panel" [attr.aria-busy]="loading" aria-labelledby="trend-title">
-          <div class="section-header"><div><h2 id="trend-title">מגמת התרומות</h2><p>תרומות ששולמו בלבד</p></div>
-            <div class="range-switch" role="group" aria-label="טווח הגרף">
-              @for (option of ranges; track option.key) { <button type="button" [class.selected]="range === option.key" [attr.aria-pressed]="range === option.key" [disabled]="loading" (click)="load(option.key)">{{ option.label }}</button> }
-            </div>
+          <div class="section-header"><div><h2 id="trend-title">מגמת התרומות</h2><p>תרומות ששולמו בתקופה</p></div>
           </div>
-          <div class="chart-summary"><strong>{{ fmtMoney(trend.total) }}</strong>
+          <div class="chart-summary"><strong>{{ fmtMoney(donationTotal) }}</strong>
             @if (comparisonPercent !== null) { <span [class.collected]="comparisonPercent! >= 0">{{ comparisonPercent! >= 0 ? '+' : '' }}{{ comparisonPercent | number:'1.0-1' }}% לעומת התקופה הקודמת</span> }
-            @else { <span>בתקופה הקודמת: {{ fmtMoney(trend.previousTotal) }}</span> }
+            @else if (previousTotal !== null) { <span>בתקופה הקודמת: {{ fmtMoney(previousTotal) }}</span> }
+            @else { <span>השוואה לתקופה קודמת אינה זמינה</span> }
             @if (loading) { <span role="status">מעדכן…</span> }
           </div>
-          @if (hasDonations) {
+          @if (period === 'month' && !monthSeriesAvailable) {
+            <div class="empty-state chart-empty">אין פירוט יומי מלא לחודש הנוכחי</div>
+          } @else if (hasDonations) {
             <div class="chart-wrap" dir="ltr">
-              <svg #lineSvg class="chart-svg" [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight" role="img" aria-labelledby="chart-description" (mousemove)="onLineMove($event, lineSvg)" (mouseleave)="onLineLeave()">
+              <div class="chart-amount-axis" aria-hidden="true">
+                <span>{{ fmtMoney(lineMax) }}</span><span>{{ fmtMoney(lineMax / 2) }}</span><span>{{ fmtMoney(0) }}</span>
+              </div>
+              <svg #lineSvg class="chart-svg" [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight" preserveAspectRatio="none" role="img" aria-labelledby="chart-description" (mousemove)="onLineMove($event, lineSvg)" (mouseleave)="onLineLeave()">
                 <title id="chart-description">סכום התרומות ששולמו לפי תאריך. פירוט נגיש מתחת לגרף.</title>
                 <line x1="8" x2="552" y1="140" y2="140" class="chart-grid" />
                 <line x1="8" x2="552" y1="75" y2="75" class="chart-grid" />
+                <line x1="8" x2="552" y1="10" y2="10" class="chart-grid" />
                 <path [attr.d]="lineAreaPath" class="chart-area" /><path [attr.d]="linePath" class="chart-line" />
                 @if (lineHover; as hover) { <line [attr.x1]="hover.x" [attr.x2]="hover.x" y1="10" y2="140" class="chart-guide" /><circle [attr.cx]="hover.x" [attr.cy]="hover.y" r="4" class="chart-dot" /> }
               </svg>
@@ -77,7 +92,7 @@
         </section>
       }
       <section #attentionSection class="panel attention-panel" id="dashboard-attention" tabindex="-1" aria-labelledby="attention-title">
-        <div class="section-header"><h2 id="attention-title">דורש טיפול</h2><span class="count-badge" [class.clear]="!overview.kpis.attentionCount">{{ overview.kpis.attentionCount }}</span></div>
+        <div class="section-header"><div><h2 id="attention-title">דורש טיפול</h2><p>מצב נוכחי</p></div>@if (context.isSuperAdmin()) { <a class="count-badge" routerLink="/platform/tasks">{{ overview.kpis.attentionCount }}</a> } @else { <span class="count-badge">{{ overview.kpis.attentionCount }}</span> }</div>
         @if (visibleAttention.length) {
           <ul class="attention-list">@for (item of visibleAttention; track item.id) {
             <li><a class="attention-item" [routerLink]="item.route" [queryParams]="item.query" [fragment]="item.fragment"><strong>{{ item.name }}</strong><span>{{ item.reason }}</span><span class="action-label">{{ item.action }} <span aria-hidden="true">←</span></span></a></li>
@@ -86,11 +101,25 @@
         } @else { <div class="empty-state attention-empty"><span class="empty-mark success-mark" aria-hidden="true">✓</span><strong>אין פריטים הממתינים לטיפול</strong></div> }
       </section>
 
+      @if (context.isSuperAdmin()) {
+        <section class="panel revenue-panel">
+          <div class="section-header"><div><h2>גבייה והכנסות</h2><p>יתרת חיובים מאושרים בכל התקופות</p></div></div>
+          <p><strong>{{ fmtMoney(overview.kpis.feesOutstanding) }}</strong></p>
+          <a class="cm-button" routerLink="/platform/collection-ops">לעמלות וגבייה</a>
+        </section>
+      }
       <section class="panel activity-panel" aria-labelledby="activity-title">
         <div class="section-header"><div><h2 id="activity-title">פעילות אחרונה</h2><p>האירועים העסקיים האחרונים בפלטפורמה</p></div></div>
-        @if (recentActivity.length) { <ul class="activity-list">@for (item of recentActivity; track item.id) {
-          <li><span class="activity-dot" aria-hidden="true"></span><div class="activity-body"><span class="activity-label">{{ item.label }} @if (item.amount !== null) { · {{ fmtMoney(item.amount) }} }</span><a [routerLink]="item.route" [queryParams]="item.query">{{ item.name }}</a></div><time [attr.datetime]="item.timestamp" dir="ltr">{{ fmtDate(item.timestamp, true) }}</time></li>
-        }</ul> } @else { <div class="empty-state"><strong>עדיין אין פעילות להצגה</strong><span>פעילות חדשה תופיע כאן לאחר שתתרחש.</span></div> }
+        @if (recentActivity.length) {
+          <div class="sa-table-wrap"><table class="sa-table">
+            <thead><tr><th>מועד</th><th>ישות</th><th>פעילות</th><th>סכום</th></tr></thead>
+            <tbody>@for (item of recentActivity; track item.id) {
+              <tr><td><time [attr.datetime]="item.timestamp" dir="ltr">{{ fmtDate(item.timestamp, true) }}</time></td>
+                <td><a [routerLink]="item.route" [queryParams]="item.query">{{ item.name }}</a></td>
+                <td>{{ item.label }}</td><td><bdi>{{ item.amount === null ? '—' : fmtMoney(item.amount) }}</bdi></td></tr>
+            }</tbody>
+          </table></div>
+        } @else { <div class="empty-state"><strong>עדיין אין פעילות להצגה</strong><span>פעילות חדשה תופיע כאן לאחר שתתרחש.</span></div> }
       </section>
       <section class="panel quick-panel" aria-labelledby="quick-title"><h2 id="quick-title">פעולות מהירות</h2><div class="quick-actions">
         @if (context.hasPlatformSection('organizations')) { <a routerLink="/platform/organizations" [queryParams]="{ status: 'pending_review' }"><span>בדיקת עמותות ממתינות</span><span aria-hidden="true">←</span></a><a routerLink="/organization-registration"><span>יצירת עמותה</span><span aria-hidden="true">＋</span></a> }
@@ -103,7 +132,7 @@
 @if (donorsOpen && data) {
   <div class="drawer-backdrop" (click)="closeDonors()">
     <aside #donorDrawer class="donor-drawer" role="dialog" aria-modal="true" aria-labelledby="donors-title" aria-describedby="donors-period" dir="rtl" (click)="$event.stopPropagation()">
-      <header class="drawer-header"><div><h2 id="donors-title">תורמים חדשים</h2><p id="donors-period">{{ data.kpis.newDonorsThisMonth }} תורמים שתרומתם הראשונה שולמה החודש@if (data.period) { · החל מ־<span dir="ltr">{{ fmtDate(data.period.start) }}</span> }</p></div><button #drawerClose type="button" class="close-button" aria-label="סגירת חלונית התורמים" (click)="closeDonors()">×</button></header>
+      <header class="drawer-header"><div><h2 id="donors-title">תורמים חדשים</h2><p id="donors-period">{{ periodDonors?.length }} תורמים שתרומתם הראשונה שולמה בתקופה שנבחרה</p></div><button #drawerClose type="button" class="close-button" aria-label="סגירת חלונית התורמים" (click)="closeDonors()">×</button></header>
       @if (data.newDonors.length) {
         <p class="drawer-note">הסכום מתייחס לתרומה הראשונה ששולמה, לפי המידע הקיים.</p>
         <div class="table-wrap"><table><thead><tr><th scope="col">שם התורם</th><th scope="col">תרומה ראשונה</th><th scope="col">סכום</th></tr></thead><tbody>

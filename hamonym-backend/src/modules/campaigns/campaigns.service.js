@@ -896,6 +896,26 @@ exports.updateCampaign =
     // registration_options isn't a campaigns column — it's synced into its
     // own table separately, below.
     const registrationOptions = data.registration_options;
+    const visibility = data.workspace_visibility;
+    if (visibility !== undefined && (
+      !visibility || typeof visibility !== 'object' || Array.isArray(visibility)
+      || data.blocks !== undefined
+      || typeof visibility.blockId !== 'string' || !visibility.blockId || visibility.blockId.length > 128
+      || typeof visibility.visible !== 'boolean'
+      || (visibility.statKey !== undefined && ![
+        'target', 'raised', 'percent', 'supporters', 'start_date', 'end_date', 'days_remaining', 'ambassadors',
+      ].includes(visibility.statKey))
+    )) {
+      throw new Error('Invalid component visibility');
+    }
+    const location = data.campaign_location;
+    if (location !== undefined && (data.layout !== undefined || (
+      location !== null && (typeof location !== 'object' || Array.isArray(location)
+        || !['nationwide', 'region', 'online', 'international', 'custom'].includes(location.type)
+        || typeof location.label !== 'string')
+    ))) {
+      throw new Error('Invalid campaign location');
+    }
     data = { ...data };
     delete data.registration_options;
 
@@ -904,14 +924,39 @@ exports.updateCampaign =
         data
       );
 
-    const {
+    const hasColumns = Object.keys(data).length > 0;
+    if (!hasColumns && location === undefined && registrationOptions === undefined && visibility === undefined) {
+      throw new Error('No fields supplied');
+    }
+    const { updates, values } = hasColumns ? buildUpdateQuery(data) : { updates: '', values: [] };
+    const assignments = updates ? [updates] : [];
+    if (location === null) {
+      assignments.push("layout = COALESCE(layout, '{}'::jsonb) - 'campaignLocation'");
+    } else if (location !== undefined) {
+      values.push(JSON.stringify(location));
+      assignments.push(`layout = jsonb_set(COALESCE(layout, '{}'::jsonb), '{campaignLocation}', $${values.length}::jsonb, true)`);
+    }
 
-      updates,
-      values
-
-    } = buildUpdateQuery(
-      data
-    );
+    if (visibility !== undefined) {
+      const id = '$' + values.push(visibility.blockId);
+      const state = '$' + values.push(visibility.visible);
+      let changed = `jsonb_set(block.value, '{visible}', to_jsonb(${state}::boolean), true)`;
+      if (visibility.statKey !== undefined) {
+        const key = '$' + values.push(visibility.statKey);
+        changed = `CASE WHEN jsonb_typeof(block.value #> '{data,items}') = 'array' THEN
+          jsonb_set(block.value, '{data,items}', (
+            SELECT COALESCE(jsonb_agg(CASE WHEN item.value->>'key' = ${key}
+              THEN jsonb_set(item.value, '{visible}', to_jsonb(${state}::boolean), true)
+              ELSE item.value END ORDER BY item.position), '[]'::jsonb)
+            FROM jsonb_array_elements(block.value #> '{data,items}') WITH ORDINALITY AS item(value, position)
+          )) ELSE block.value END`;
+      }
+      assignments.push(`blocks = CASE WHEN jsonb_typeof(blocks) = 'array' THEN (
+        SELECT COALESCE(jsonb_agg(CASE WHEN block.value->>'id' = ${id}
+          THEN ${changed} ELSE block.value END ORDER BY block.position), '[]'::jsonb)
+        FROM jsonb_array_elements(blocks) WITH ORDINALITY AS block(value, position)
+      ) ELSE blocks END`);
+    }
 
     const transaction = registrationOptions !== undefined ? await db.connect() : null;
     try {
@@ -925,7 +970,7 @@ exports.updateCampaign =
 
           SET
 
-            ${updates},
+            ${assignments.length ? assignments.join(', ') + ',' : ''}
             ${data.status === 'published' ? 'published_at = COALESCE(published_at, NOW()),' : ''}
 
             updated_at = NOW()

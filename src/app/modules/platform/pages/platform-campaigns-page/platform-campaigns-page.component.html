@@ -1,5 +1,12 @@
-<div class="plat-page" dir="rtl">
+<div class="plat-page sa-v1 cm-v7" dir="rtl">
   <header class="plat-header"><div><h1 class="plat-title">קמפיינים</h1><p class="plat-subtitle">מצב הקמפיינים, גיוס ופעולות ניהול</p></div><span class="cell-secondary">{{ total | number }} קמפיינים</span></header>
+<div class="cm-summary sa-summary" aria-label="מדדים מרכזיים">
+  <div><small>כלל הקמפיינים</small><strong>{{ directoryCounts[0] == null ? '—' : (directoryCounts[0] | number) }}</strong></div>
+  <div><small>קמפיינים פעילים</small><strong>{{ directoryCounts[1] == null ? '—' : (directoryCounts[1] | number) }}</strong></div>
+  <div><small>קמפיינים מומלצים</small><strong>{{ directoryCounts[2] == null ? '—' : (directoryCounts[2] | number) }}</strong></div>
+  <div><small>סך גיוס מצטבר</small><strong>{{ directoryCounts[3] == null ? '—' : (directoryCounts[3] | number) }}</strong></div>
+</div>
+<section class="cm-ledger sa-ledger">
   @if (error) { <div class="plat-error" role="alert">{{ error }} <button class="secondary-button" (click)="load()">נסה שוב</button></div> }
   @if (actionError) { <div class="plat-action-error" role="alert">{{ actionError }}</div> }
   @if (feedback) { <p class="feedback" role="status">{{ feedback }}</p> }
@@ -9,7 +16,8 @@
   <nav class="plat-chips" aria-label="סינון קמפיינים"><button class="plat-chip" [class.active]="activeChip === 'all'" [attr.aria-pressed]="activeChip === 'all'" (click)="selectChip('all')">הכול</button>
     @for (chip of chips; track chip.key) { <button class="plat-chip" [class.active]="activeChip === chip.key" [attr.aria-pressed]="activeChip === chip.key" (click)="selectChip(chip.key)">{{ chip.label }}</button> }
   </nav>
-  <section class="plat-card" aria-label="רשימת קמפיינים" [attr.aria-busy]="loading || refreshing">
+  <h2>רשימת קמפיינים</h2>
+  <section class="sa-list-content" aria-label="רשימת קמפיינים" [attr.aria-busy]="loading || refreshing">
     @if (loading) { <div class="plat-loading" role="status">טוען קמפיינים…</div> }
     @else if (campaigns.length === 0 && !error) { <div class="plat-empty"><strong>{{ hasFilters ? 'אין קמפיינים התואמים לסינון' : 'עדיין אין קמפיינים במערכת' }}</strong>@if (hasFilters) { <button class="text-button" (click)="clearFilters()">הצג את כל הקמפיינים</button> }</div> }
     @else if (campaigns.length) {
@@ -32,30 +40,35 @@
             @if (visibleColumns.has('featured')) { <td><span class="cell-secondary" title="סימון קמפיין כמומלץ על ידי הפלטפורמה">{{ c.is_featured ? 'מומלץ' : 'ללא המלצה' }}</span></td> }
             @if (visibleColumns.has('locked')) { <td><span class="cell-secondary" title="נעילה מונעת עריכה של הקמפיין; מצב הפרסום מופיע בנפרד">{{ c.is_locked ? 'נעול לעריכה' : 'ללא נעילת עריכה' }}</span></td> }
             @if (visibleColumns.has('created_at')) { <td><time dir="ltr" [attr.datetime]="c.created_at">{{ fmtDate(c.created_at) }}</time>@if (advancedListAvailable) { <span class="cell-secondary">סיום: <bdi>{{ c.end_date ? fmtDate(c.end_date) : 'לא נקבע' }}</bdi></span> }</td> }
-            <td><button class="campaign-more-button" [disabled]="actionInProgress" (click)="openCampaign(c)" [attr.aria-label]="'ניהול ופעולות עבור ' + c.title" title="ניהול ופעולות" aria-haspopup="dialog">⋯</button></td>
+            <td><app-dropdown [actionMode]="true" triggerText="⋯" [label]="'פעולות עבור ' + c.title" [disabled]="actionInProgress" (selectionChange)="runCampaignMenu(c, $event)">
+              <app-dropdown-option value="details" icon="file">פרטי קמפיין</app-dropdown-option>
+              @if (!c.deleted_at) {
+                <app-dropdown-option value="view" icon="eye">צפייה בעמוד התרומה</app-dropdown-option>
+                <app-dropdown-option value="copy" icon="link">העתקת קישור לתרומה</app-dropdown-option>
+                @if (context.hasPlatformSection('campaigns')) {
+                  <app-dropdown-option value="featured" icon="star">{{ c.is_featured ? 'הסרת המלצה' : 'סימון כמומלץ' }}</app-dropdown-option>
+                  <app-dropdown-option value="lock" icon="lock">{{ c.is_locked ? 'אפשר עריכה' : 'נעילת עריכה' }}</app-dropdown-option>
+                  <app-dropdown-option value="slug" icon="pencil">שינוי כתובת</app-dropdown-option>
+                  <app-dropdown-option value="duplicate" icon="copy">שכפול לטיוטה</app-dropdown-option>
+                  @for (status of availableStatuses(c); track status) { <app-dropdown-option [value]="'status:' + status">שינוי סטטוס · {{ statusLabel(status) }}</app-dropdown-option> }
+                  <app-dropdown-option value="delete" icon="trash" destructive>מחיקת קמפיין</app-dropdown-option>
+                }
+              } @else if (context.hasPlatformSection('campaigns')) { <app-dropdown-option value="restore" icon="refresh">שחזור קמפיין</app-dropdown-option> }
+            </app-dropdown></td>
           </tr> }
         </tbody></table>
       </div>
-      <footer class="plat-footer"><span>{{ total | number }} קמפיינים</span><nav class="plat-pager" aria-label="דפדוף קמפיינים"><button (click)="prevPage()" [disabled]="page === 0 || refreshing" aria-label="עמוד קודם">→</button><span>{{ page + 1 }} מתוך {{ totalPages }}</span><button (click)="nextPage()" [disabled]="page >= totalPages - 1 || refreshing" aria-label="עמוד הבא">←</button></nav></footer>
+      @if (total > 0) { <app-management-pagination [page]="page" [total]="total" [pageSize]="limit" (pageChange)="page = $event; load()" /> }
     }
   </section>
   @if (selectedCampaign; as c) { <app-admin-details-drawer [heading]="c.title" (closed)="closeCampaign()">
-    <dl class="detail-grid"><dt>עמותה</dt><dd>@if (context.hasPlatformSection('organizations')) { <a [routerLink]="['/platform/organizations', c.entity_id]">{{ c.entity_name }}</a> } @else { {{ c.entity_name }} }</dd><dt>סטטוס</dt><dd>{{ c.deleted_at ? 'נמחק' : statusLabel(c.status) }}</dd><dt>גויס</dt><dd>{{ fmtMoney(c.current_amount) }}</dd><dt>יעד</dt><dd>{{ c.target_amount > 0 ? fmtMoney(c.target_amount) : 'ללא יעד' }}</dd><dt>יצירה</dt><dd dir="ltr">{{ fmtDate(c.created_at) }}</dd>@if (campaignDetail) { <dt>מועד סיום</dt><dd dir="ltr">{{ fmtDate(campaignDetail.end_date) }}</dd> }</dl>
+    @if (campaignDetail?.cover_image_url; as cover) { <img class="sa-campaign-cover" [src]="cover" alt=""> }
+    <dl class="detail-grid sa-detail-list"><dt>עמותה</dt><dd>@if (context.hasPlatformSection('organizations')) { <a [routerLink]="['/platform/organizations', c.entity_id]">{{ c.entity_name }}</a> } @else { {{ c.entity_name }} }</dd><dt>סטטוס</dt><dd>{{ c.deleted_at ? 'נמחק' : statusLabel(c.status) }}</dd><dt>גויס</dt><dd>{{ fmtMoney(c.current_amount) }}</dd><dt>יעד</dt><dd>{{ c.target_amount > 0 ? fmtMoney(c.target_amount) : 'ללא יעד' }}</dd><dt>יצירה</dt><dd dir="ltr">{{ fmtDate(c.created_at) }}</dd>@if (campaignDetail) { <dt>מועד סיום</dt><dd dir="ltr">{{ fmtDate(campaignDetail.end_date) }}</dd> }</dl>
     @if (detailLoading) { <p role="status">טוען פרטים נוספים…</p> } @if (detailError) { <p role="alert">{{ detailError }} <button class="text-button" (click)="openCampaign(c)">נסה שוב</button></p> }
-    <section class="detail-section"><h3>פעולות קמפיין</h3><div class="campaign-actions-menu">
-      @if (!c.deleted_at) {
-        <a [href]="campaignUrl(c)" target="_blank" rel="noopener">צפייה בעמוד התרומה ↗</a>
-        <button class="secondary-button" (click)="copyCampaignLink(c)">העתקת קישור לתרומה</button>
-        @if (context.hasPlatformSection('campaigns')) {
-        <label>שינוי סטטוס <select [ngModel]="c.status" (ngModelChange)="closeCampaign(); onStatusChange(c, $event)" [disabled]="actionInProgress"><option [value]="c.status" disabled>{{ statusLabel(c.status) }} — מצב נוכחי</option>@for (s of availableStatuses(c); track s) { <option [value]="s">{{ statusLabel(s) }}</option> }</select></label>
-        <button class="secondary-button" [disabled]="actionInProgress" (click)="closeCampaign(); toggleFeatured(c)">{{ c.is_featured ? 'הסר המלצת פלטפורמה' : 'סמן כמומלץ על ידי הפלטפורמה' }}</button>
-        <button class="secondary-button" [disabled]="actionInProgress" (click)="closeCampaign(); toggleLock(c)">{{ c.is_locked ? 'אפשר עריכת הקמפיין' : 'נעל את הקמפיין לעריכה' }}</button>
-        <button class="secondary-button" [disabled]="actionInProgress" (click)="closeCampaign(); requestSlugChange(c)">שינוי כתובת הקמפיין</button>
-        <button class="secondary-button" [disabled]="actionInProgress" (click)="closeCampaign(); duplicate(c)">שכפול לטיוטה חדשה</button>
-        <button class="secondary-button danger-action" [disabled]="actionInProgress" (click)="closeCampaign(); requestDelete(c)">מחיקת קמפיין</button>
-        }
-      } @else if (context.hasPlatformSection('campaigns')) { <button class="secondary-button" [disabled]="actionInProgress" (click)="closeCampaign(); restore(c)">שחזור קמפיין</button> }
-    </div></section>
+    <div drawerActions class="sa-drawer-actions">
+      <button type="button" class="cm-button" (click)="closeCampaign()">סגור</button>
+      @if (!c.deleted_at) { <a class="cm-button cm-primary" [href]="campaignUrl(c)" target="_blank" rel="noopener">צפייה בקמפיין</a> }
+    </div>
   </app-admin-details-drawer> }
   @if (pendingAction) {
     <div class="plat-modal-backdrop" (click)="cancelPendingAction()">
@@ -101,5 +114,7 @@
       </div>
     </div>
   }
+
+</section>
 
 </div>

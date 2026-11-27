@@ -1,3 +1,4 @@
+import { HmIconComponent } from '../../../shared/ui/design-system/icon.component';
 // src/app/core/layout/sidebar/sidebar.component.ts
 
 import { Component, computed, EventEmitter, Input, Output, inject } from '@angular/core';
@@ -55,6 +56,12 @@ const PLATFORM_COLLECTION_OPS: NavItem = { route: '/platform/collection-ops', la
 const PLATFORM_GENERAL_SETTINGS: NavItem = { route: '/platform/settings', label: 'shell.nav.platformSettings', icon: 'settings' };
 const PLATFORM_CATEGORY_SUGGESTIONS: NavItem = { route: '/platform/category-suggestions', label: 'shell.nav.platformCategorySuggestions', icon: 'reports' };
 
+const PLATFORM_TASKS: NavItem = { route: '/platform/tasks', label: 'shell.nav.platformTasks', icon: 'reports' };
+const PLATFORM_BUSINESS: NavItem = { route: '/platform/business-reports', label: 'shell.nav.platformBusinessReports', icon: 'reports' };
+const PLATFORM_PORTAL: NavItem = { route: '/platform/portal', label: 'shell.nav.platformPortal', icon: 'platform' };
+const PLATFORM_AUDIT: NavItem = { route: '/platform/audit', label: 'shell.nav.platformAudit', icon: 'reports' };
+const PLATFORM_DEV: NavItem = { route: '/platform/developer-tools', label: 'shell.nav.platformDeveloperTools', icon: 'settings' };
+
 const NAV_BY_ROLE: Record<RoleType, NavItem[]> = {
   'entity-manager':   [DASHBOARD, ENTITIES, CAMPAIGNS, DONATIONS, REGISTRATIONS, DONORS, AMBASSADORS, PARTNERS, REPORTS, SETTINGS],
   'campaign-manager': [CAMPAIGNS, AMBASSADORS, DONATIONS, REGISTRATIONS, REPORTS],
@@ -67,7 +74,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [TranslocoPipe, CommonModule, RouterLink, RouterLinkActive],
+  imports: [HmIconComponent, TranslocoPipe, CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.css', '../../../shared/styles/new-campaign-button.css'],
 })
@@ -95,10 +102,24 @@ export class SidebarComponent {
   readonly platformNavItems = computed(() => {
     if (!this.ctx.adminMode()) return [];
     const items = [PLATFORM_DASHBOARD];
+    if (this.ctx.isSuperAdmin()) items.push(PLATFORM_TASKS);
     if (this.ctx.hasPlatformSection('organizations')) items.push(PLATFORM_ORGANIZATIONS, PLATFORM_PARTNERS);
     if (this.ctx.hasPlatformSection('campaigns')) items.push(PLATFORM_CAMPAIGNS);
-    if (this.ctx.isSuperAdmin()) items.push(PLATFORM_USERS, PLATFORM_DONATIONS, PLATFORM_COLLECTION_OPS, ...(CATEGORY_SUGGESTIONS_ENABLED ? [PLATFORM_CATEGORY_SUGGESTIONS] : []), PLATFORM_GENERAL_SETTINGS);
+    if (this.ctx.isSuperAdmin()) items.push(PLATFORM_USERS, PLATFORM_DONATIONS, PLATFORM_COLLECTION_OPS, PLATFORM_BUSINESS, PLATFORM_PORTAL, ...(CATEGORY_SUGGESTIONS_ENABLED ? [PLATFORM_CATEGORY_SUGGESTIONS] : []), PLATFORM_GENERAL_SETTINGS, PLATFORM_AUDIT, PLATFORM_DEV);
     return items;
+  });
+
+  readonly platformNavigationGroups = computed(() => {
+    const items = this.platformNavItems();
+    const overview = [PLATFORM_DASHBOARD, PLATFORM_TASKS];
+    const management = [PLATFORM_ORGANIZATIONS, PLATFORM_CAMPAIGNS, PLATFORM_USERS, PLATFORM_PARTNERS];
+    const finance = [PLATFORM_DONATIONS, PLATFORM_COLLECTION_OPS, PLATFORM_BUSINESS];
+    return [
+      { label: 'shell.sidebar.platform', icon: 'chart' as const, items: overview.filter(item => items.includes(item)) },
+      { label: 'shell.nav.platformManagementGroup', icon: 'building' as const, items: management.filter(item => items.includes(item)) },
+      { label: 'shell.nav.platformFinanceGroup', icon: 'coins' as const, items: finance.filter(item => items.includes(item)) },
+      { label: 'shell.nav.platformSystemGroup', icon: 'settings' as const, items: items.filter(item => ![...overview, ...management, ...finance].includes(item)) },
+    ].filter(group => group.items.length);
   });
 
   readonly showNewCampaignBtn = computed(() => {

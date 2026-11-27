@@ -1,4 +1,4 @@
-﻿@import "../../../styles/settings-section-actions.css";
+@import "../../../styles/settings-section-actions.css";
 .section-title-row {
   display: flex;
 
@@ -30,7 +30,7 @@
 
   font-weight: 700;
 
-  color: #6D5DF6;
+  color: var(--hm-admin-primary);
 }
 
 .card-description {
@@ -95,7 +95,7 @@
 }
 
 .method-button.active {
-  border-color: #6D5DF6;
+  border-color: var(--hm-admin-primary);
 
   background: #eff6ff;
 }
@@ -429,7 +429,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #6D5DF6;
+  background: var(--hm-admin-primary);
   color: #ffffff;
   border-radius: 14px;
   padding: 14px 18px;
@@ -462,7 +462,7 @@
   align-self: flex-start;
   background: none;
   border: none;
-  color: #6D5DF6;
+  color: var(--hm-admin-primary);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -472,8 +472,8 @@
 .masav-help-toggle:hover { text-decoration: underline; }
 
 .masav-help-box {
-  border: 1px solid #e0d9ff;
-  background: #faf9ff;
+  border: 1px solid var(--hm-admin-primary-tint);
+  background: var(--hm-admin-primary-subtle);
   border-radius: 16px;
   padding: 18px 20px;
 }
@@ -500,8 +500,8 @@
 }
 
 .masav-why-box {
-  border-inline-start: 3px solid #6D5DF6;
-  background: #faf9ff;
+  border-inline-start: 3px solid var(--hm-admin-primary);
+  background: var(--hm-admin-primary-subtle);
   border-radius: 10px;
   padding: 14px 18px;
 }
@@ -551,7 +551,7 @@
 
 .masav-field input:focus,
 .masav-field select:focus {
-  border-color: #6D5DF6;
+  border-color: var(--hm-admin-primary);
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
 }
 
@@ -580,8 +580,8 @@
   grid-template-columns: 20px 1fr;
   align-items: start;
   gap: 10px;
-  border: 1px solid #e0d9ff;
-  background: #faf9ff;
+  border: 1px solid var(--hm-admin-primary-tint);
+  background: var(--hm-admin-primary-subtle);
   border-radius: 14px;
   padding: 14px 16px;
   font-size: 13px;

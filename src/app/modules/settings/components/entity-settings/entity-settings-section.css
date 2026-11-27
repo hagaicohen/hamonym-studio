@@ -1,0 +1,83 @@
+:host { display: block; min-width: 0; }
+
+.settings-card {
+  min-width: 0;
+  margin: 0;
+  padding: var(--entity-section-padding, 16px);
+  border: 1px solid var(--entity-section-border, #e0e5eb);
+  border-radius: 9px;
+  background: white;
+  box-shadow: none;
+  color: #283249;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.settings-card :is(button, input, select, textarea) { font-family: inherit; }
+.settings-card .card-top { margin: 0 0 18px; padding: 0; border: 0; gap: 12px; }
+.settings-card .section-title-row > lucide-icon { display: none; }
+.settings-card .card-title { font-size: 16px; font-weight: 700; color: #283249; }
+.settings-card .card-description { margin-top: 5px; font-size: 13px; line-height: 1.5; color: #687589; }
+.settings-card :is(.card-grid, .goals-grid, .masav-fields, .fields) { gap: 16px; }
+.settings-card :is(.edit-btn, .save-btn, .cancel-btn, .test-connection-btn) {
+  min-height: 36px;
+  padding: 8px 13px;
+  border-radius: 7px;
+  font-family: inherit;
+}
+.settings-card .save-btn:not(.success):not(.error) {
+  background: var(--hm-admin-primary);
+  border-color: var(--hm-admin-primary);
+  color: var(--hm-admin-on-primary);
+}
+.settings-card .save-btn:not(.success):not(.error):hover:not(:disabled) { background: var(--hm-admin-primary-hover); }
+.settings-card .savebar { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.settings-card :is(input:not([type=checkbox]):not([type=file]), select) {
+  min-height: 40px;
+  min-width: 0;
+  border-color: #e0e5eb;
+  border-radius: 6px;
+  font-family: inherit;
+}
+.settings-card select {
+  appearance: none;
+  padding-inline-end: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23687589' stroke-width='1.6'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 17px;
+  background-position: left 9px center;
+}
+.settings-card :is(button, input, select, summary):focus-visible,
+.settings-card :is(.upload-btn, .document-btn):focus-within {
+  outline: 2px solid var(--hm-admin-focus-ring);
+  outline-offset: 2px;
+}
+.settings-card input[type=checkbox] { flex: 0 0 17px; inline-size: 17px; block-size: 17px; margin: 0; accent-color: var(--hm-admin-primary); }
+.settings-card .campaign-type-check { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; cursor: pointer; }
+.settings-card :is(.upload-btn, label.document-btn) {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 36px;
+  max-width: 100%;
+  padding: 8px 14px;
+  color: var(--hm-admin-primary);
+  background: #fff;
+  border: 1px dashed #cdd0db;
+  border-radius: 7px;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.settings-card input[type=file] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.settings-card .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.settings-card .payment-verification { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.settings-card .money-input { direction: ltr; font-variant-numeric: tabular-nums; }
+.settings-card .method-button.active { border-color: var(--hm-admin-primary); background: var(--hm-admin-primary-subtle); color: var(--hm-admin-primary); }
+
+@media (max-width: 700px) {
+  .settings-card { padding: var(--entity-section-padding, 12px); }
+  .settings-card :is(.card-grid, .goals-grid, .masav-fields, .fields, .profile-grid, .top-row) { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .settings-card :is(input:not([type=checkbox]):not([type=file]), select, .savebar button) { min-height: 44px; }
+  .settings-card .savebar button { flex: 1; }
+}

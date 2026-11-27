@@ -7,7 +7,7 @@ import { LucideAngularModule, WalletCards, Pencil, TriangleAlert } from 'lucide-
   standalone: true,
   imports: [CommonModule, LucideAngularModule],
   templateUrl: './entity-payment-section-view.component.html',
-  styleUrl: './entity-payment-section-view.component.css',
+  styleUrls: ['./entity-payment-section-view.component.css', '../../entity-settings/entity-settings-section.css'],
 })
 export class EntityPaymentSectionViewComponent {
   @Input()

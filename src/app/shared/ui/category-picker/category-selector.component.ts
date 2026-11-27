@@ -1,8 +1,9 @@
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild, signal } from '@angular/core';
 import { LucideAngularModule, Check, Search, X } from 'lucide-angular';
+import { NgTemplateOutlet } from '@angular/common';
 import { ENTITY_CATEGORIES } from '../../config/entity-categories';
 import { normalizeCategoryText } from './category-selection';
-import { CategoryOption, categoryEmoji, categoryLabel } from '../../config/category-presentation';
+import { CategoryOption, categoryLabel, categorySolidIcon } from '../../config/category-presentation';
 
 /**
  * Shared searchable category list: multiple organization activities or one
@@ -11,7 +12,7 @@ import { CategoryOption, categoryEmoji, categoryLabel } from '../../config/categ
 @Component({
   selector: 'app-category-selector',
   standalone: true,
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, NgTemplateOutlet],
   templateUrl: './category-selector.component.html',
   styleUrl: './category-picker.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,7 +27,6 @@ export class CategorySelectorComponent {
   @Input() subcategory = '';
   @Input() limit?: number;
   @Output() subcategorySelected = new EventEmitter<{ id: string; value: string }>();
-  readonly emoji = categoryEmoji;
   readonly categoryLabel = categoryLabel;
 
   @Output() selectedChange = new EventEmitter<string[]>();
@@ -50,7 +50,9 @@ export class CategorySelectorComponent {
     const category = this.categories.find(c => c.id === id);
     return category ? categoryLabel(category) : id;
   }
-  emojiForId(id: string): string { return categoryEmoji(this.categories.find(category => category.id === id) || { id, label: id }); }
+  iconForId(id: string) {
+    return categorySolidIcon(this.categories.find(category => category.id === id) ?? { id, label: id });
+  }
 
   isSelected(id: string): boolean {
     return this.selectedIds.includes(id);

@@ -1,22 +1,21 @@
-<ng-container *ngIf="showJoinModal">
+<dialog #dialog class="hm-join-modal" dir="rtl" aria-labelledby="hm-join-title" (cancel)="cancel($event)" (click)="backdrop($event)">
   <ng-container *ngIf="{ draft: draft$ | async } as vm2">
-  <div class="hm-join-overlay" (click)="closeJoinModal()"></div>
-  <div class="hm-join-modal" *ngIf="vm2.draft as draft">
+  <div class="hm-join-content" *ngIf="vm2.draft as draft">
 
     <!-- Header -->
     <div class="hm-join-header">
-      <h3 class="hm-join-title">{{ 'publicPage.campaignPreview.joinAsAnAmbassador' | hmPublic }}</h3>
-      <button class="hm-join-close" (click)="closeJoinModal()">✕</button>
+      <h3 id="hm-join-title" class="hm-join-title">{{ 'publicPage.campaignPreview.joinAsAnAmbassador' | hmPublic }}</h3>
+      <button type="button" aria-label="סגירה" [disabled]="joinStatus === 'loading'" class="hm-join-close" (click)="closeJoinModal()">✕</button>
     </div>
 
     <!-- FORM STATE -->
-    <ng-container *ngIf="joinStatus === 'idle' || joinStatus === 'loading'">
+    <ng-container *ngIf="joinStatus === 'idle' || joinStatus === 'loading' || joinStatus === 'error'">
       <div class="hm-join-body">
         <p class="hm-join-sub">{{ 'publicPage.campaignPreview.getAPersonalSharingLink' | hmPublic }}</p>
 
         <div class="hm-join-field">
           <label class="hm-join-label">{{ 'publicPage.campaignPreview.fullName' | hmPublic }} <span style="color:#ef4444">*</span></label>
-          <input class="hm-join-input" type="text" [(ngModel)]="joinForm.fullName"
+          <input class="hm-join-input" type="text" autofocus autocomplete="name" [(ngModel)]="joinForm.fullName"
                  [placeholder]="'publicPage.campaignPreview.janeDoe' | hmPublic" [disabled]="joinStatus === 'loading'">
         </div>
         <div class="hm-join-field">
@@ -46,11 +45,13 @@
         <div class="hm-join-field">
           <app-ambassador-slug-field
             [campaignSlug]="draft.slug!"
+            [disabled]="joinStatus === 'loading'"
             [nameForDefault]="joinForm.fullName"
             [(value)]="joinForm.slug"
             (availabilityChange)="joinSlugAvailable = $event">
           </app-ambassador-slug-field>
         </div>
+        <p *ngIf="joinError" class="hm-join-error" role="alert">{{ joinError }}</p>
       </div>
       <div class="hm-join-footer">
         <button class="hm-join-submit"
@@ -85,18 +86,7 @@
       </div>
     </ng-container>
 
-    <!-- ERROR STATE -->
-    <ng-container *ngIf="joinStatus === 'error'">
-      <div class="hm-join-body hm-join-success">
-        <div class="hm-join-success-icon" style="color:#ef4444">✗</div>
-        <h4 class="hm-join-success-title">{{ 'publicPage.campaignPreview.error' | hmPublic }}</h4>
-        <p class="hm-join-success-sub">{{ joinError | hmPublic }}</p>
-        <button class="hm-join-submit" [style.background]="primaryColor(draft)"
-                (click)="joinStatus = 'idle'">{{ 'publicPage.campaignPreview.tryAgain' | hmPublic }}</button>
-      </div>
-    </ng-container>
 
   </div>
   </ng-container>
-</ng-container>
-
+</dialog>

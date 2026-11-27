@@ -47,11 +47,11 @@
               <div class="file-card">
                 <button type="button" class="file-remove-btn" (click)="removeFile(i)" title="הסר קובץ">✕</button>
                 <div class="file-name">{{ f.file.name }}</div>
-                <select class="file-type-select" [ngModel]="f.typeLabel" (ngModelChange)="updateFileType(i, $event)">
+                <app-dropdown class="file-type-select" [ngModel]="f.typeLabel" (ngModelChange)="updateFileType(i, $event)">
                   @for (opt of fileTypeOptions; track opt) {
-                    <option [value]="opt">{{ opt }}</option>
+                    <app-dropdown-option [value]="opt">{{ opt }}</app-dropdown-option>
                   }
-                </select>
+                </app-dropdown>
                 <input class="file-note-input" type="text" placeholder="הערה קצרה (לא חובה)"
                   [ngModel]="f.note" (ngModelChange)="updateFileNote(i, $event)" />
               </div>
@@ -131,12 +131,12 @@
           <div class="brief-section">
             <h3>עמותה חדשה — לבדיקה והשלמה לפני יצירה</h3>
             <label class="edit-field-label">סוג ישות</label>
-            <select class="ai-input" [ngModel]="newOrgEntityType()" (ngModelChange)="newOrgEntityType.set($event)">
-              <option value="" disabled>בחר סוג ישות</option>
+            <app-dropdown class="ai-input" [ngModel]="newOrgEntityType()" (ngModelChange)="newOrgEntityType.set($event)">
+              <app-dropdown-option value="" disabled>בחר סוג ישות</app-dropdown-option>
               @for (opt of entityTypeOptions; track opt.value) {
-                <option [value]="opt.value">{{ opt.label }}</option>
+                <app-dropdown-option [value]="opt.value">{{ opt.label }}</app-dropdown-option>
               }
-            </select>
+            </app-dropdown>
 
             <label class="edit-field-label">שם העמותה</label>
             <input class="ai-input" type="text" [ngModel]="newOrgName()" (ngModelChange)="newOrgName.set($event)" />

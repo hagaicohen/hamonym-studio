@@ -1,45 +1,56 @@
 <div class="don-shell" [class.don-shell--scoped]="campaignScoped">
-  <div class="don-page">
+  <div class="don-page" [class.org-v1]="!campaignScoped" [class.cm-v7]="!purchasesOnly">
 
   @if (error) {
     <div class="don-error">{{ error }}</div>
   } @else {
 
-  <button type="button" class="don-back" *ngIf="campaignScoped" (click)="back()">→ חזרה לסקירה כללית</button>
 
   <!-- ══ HEADER ══ -->
   <div class="don-header">
-    <h1 class="don-title">תרומות{{ campaignScoped && campaignTitle ? ' — ' + campaignTitle : '' }}</h1>
-    <div class="period-tabs">
-      <button [class.active]="period === 'month'"      (click)="setPeriod('month')">החודש</button>
-      <button [class.active]="period === 'last_month'" (click)="setPeriod('last_month')">חודש שעבר</button>
-      <button [class.active]="period === 'quarter'"    (click)="setPeriod('quarter')">3 חודשים</button>
-      <button [class.active]="period === 'all'"        (click)="setPeriod('all')">הכל</button>
+    <div>    <h1 class="don-title">{{ purchasesOnly ? 'רכישות תשורות' : 'תרומות ועסקאות' }}</h1>
+      <p class="cm-description">מעקב אחר תשלומים, תרומות וקבלות {{ campaignScoped ? 'בקמפיין' : 'בכל הקמפיינים של העמותה' }}</p>
     </div>
+    <app-date-range-picker [campaign]="true" [showRange]="!campaignScoped" />
+    @if (workspaceDraft(); as campaign) {
+      @if (campaignScoped && !purchasesOnly && campaign.id === campaignFilter) {
+        <app-campaign-dashboard-finance [draft]="campaign" [campaignId]="campaignFilter" [openOnEntry]="openManualOnEntry" (recorded)="load()" />
+      }
+    }
+
   </div>
 
   <!-- ══ KPI ROW ══ -->
-  <div class="don-kpi-row">
+  @if (!purchasesOnly) {
+  <div class="don-kpi-row cm-summary">
     <div class="don-kpi-card">
       <div class="kpi-label">סך גיוס</div>
-      <div class="kpi-value primary">{{ fmtMoney(kpi.totalRaised) }}</div>
+      <div class="kpi-value primary">{{ allPaidAmountsUnconverted ? '—' : fmtMoney(kpi.totalRaised) }}</div>
     </div>
     <div class="don-kpi-card">
-      <div class="kpi-label">תרומות שהצליחו</div>
+      <div class="kpi-label">תרומות שאושרו</div>
       <div class="kpi-value">{{ kpi.paidCount | number }}</div>
     </div>
     <div class="don-kpi-card">
       <div class="kpi-label">ממוצע תרומה</div>
-      <div class="kpi-value">{{ fmtMoney(kpi.avgAmount) }}</div>
+      <div class="kpi-value">{{ allPaidAmountsUnconverted ? '—' : fmtMoney(kpi.avgAmount) }}</div>
     </div>
     <div class="don-kpi-card">
-      <div class="kpi-label">נכשלו</div>
+      <div class="kpi-label">עסקאות שנכשלו</div>
       <div class="kpi-value danger">{{ kpi.failedCount | number }}</div>
     </div>
   </div>
 
+  }
+
+  @if (!purchasesOnly && kpi.unconvertedPaidCount) {
+    <p class="cm-description">הסכומים בשקלים כוללים רק תרומות עם שער המרה זמין. {{ kpi.unconvertedPaidCount }} תרומות מאושרות ממתינות לשער.</p>
+  }
+
   <!-- ══ FILTERS ══ -->
-  <div class="don-filters">
+  <section class="cm-ledger" aria-label="כל העסקאות">
+  <h2 class="cm-panel-title">כל העסקאות</h2>
+  <div class="don-filters cm-filters">
     <input
       class="don-search"
       type="search"
@@ -48,19 +59,45 @@
       (input)="onSearch()"
     />
 
-    <select class="don-select don-select--campaign" *ngIf="!campaignScoped" [(ngModel)]="campaignFilter" (change)="onFilterChange()">
-      <option value="">כל הקמפיינים</option>
+    <app-dropdown class="don-select don-select--campaign" *ngIf="!campaignScoped" [(ngModel)]="campaignFilter" (selectionChange)="onFilterChange()">
+      <app-dropdown-option value="">כל הקמפיינים</app-dropdown-option>
       @for (c of campaigns; track c.id) {
-        <option [value]="c.id">{{ c.title }}</option>
+        <app-dropdown-option [value]="c.id">{{ c.title }}</app-dropdown-option>
       }
-    </select>
+    </app-dropdown>
 
-    <select class="don-select" [(ngModel)]="statusFilter" (change)="onFilterChange()">
-      <option value="all">כל הסטטוסים</option>
-      <option value="paid">שולם</option>
-      <option value="failed">נכשל</option>
-      <option value="pending">ממתין</option>
-    </select>
+    <app-dropdown class="don-select" label="סינון לפי סטטוס" [(ngModel)]="statusFilter" (selectionChange)="onFilterChange()">
+      <app-dropdown-option value="all">כל הסטטוסים</app-dropdown-option>
+      <app-dropdown-option value="paid">שולם</app-dropdown-option>
+      <app-dropdown-option value="failed">נכשל</app-dropdown-option>
+      <app-dropdown-option value="pending">ממתין</app-dropdown-option>
+    </app-dropdown>
+
+    @if (!purchasesOnly && !campaignScoped) {
+      <app-dropdown class="ambassador-filter" label="סינון לפי שגריר" searchMode="remote"
+                    [value]="unassignedAmbassador ? null : ambassadorName"
+                    [selectedLabel]="unassignedAmbassador ? 'ללא שיוך לשגריר' : ambassadorName"
+                    [statusMessage]="ambassadorOptionsLoading ? 'טוען שגרירים…' : (ambassadorOptionsError ? 'לא ניתן לטעון את רשימת השגרירים' : (!ambassadorOptions.length ? 'לא נמצאו שגרירים' : ''))"
+                    [more]="ambassadorMoreOptions" (openedChange)="onAmbassadorDropdown($event)"
+                    (queryChange)="searchAmbassadorOptions($event)" (moreRequested)="loadAmbassadorOptions(ambassadorOptionPage + 1)"
+                    (selectionChange)="selectAmbassador($event)">
+        <app-dropdown-option value="">כל השגרירים</app-dropdown-option>
+        <app-dropdown-option [ngValue]="null">ללא שיוך לשגריר</app-dropdown-option>
+        @for (name of ambassadorOptions; track name) { <app-dropdown-option [value]="name">{{ name }}</app-dropdown-option> }
+      </app-dropdown>
+    } @else if (!purchasesOnly) {
+      <input class="don-search" type="search" aria-label="חיפוש שגריר" placeholder="חיפוש שגריר" maxlength="120"
+        [(ngModel)]="ambassadorName" [disabled]="unassignedAmbassador" (input)="onSearch()">
+      <label><input type="checkbox" [(ngModel)]="unassignedAmbassador" (change)="onFilterChange()"> ללא שיוך</label>
+    }
+    @if (!purchasesOnly || campaignScoped) {
+      <app-dropdown class="don-select" label="סינון לפי קבלה" [(ngModel)]="receiptFilter" (selectionChange)="onFilterChange()">
+        <app-dropdown-option value="all">כל הקבלות</app-dropdown-option><app-dropdown-option value="issued">קבלה קיימת</app-dropdown-option><app-dropdown-option value="missing">ללא קבלה</app-dropdown-option>
+      </app-dropdown>
+      <app-dropdown class="don-select" label="סינון לפי מטבע" [(ngModel)]="currencyFilter" (selectionChange)="onFilterChange()">
+        <app-dropdown-option value="all">כל המטבעות</app-dropdown-option><app-dropdown-option value="ILS">שקל חדש</app-dropdown-option><app-dropdown-option value="USD">דולר ארה״ב</app-dropdown-option><app-dropdown-option value="EUR">אירו</app-dropdown-option>
+      </app-dropdown>
+    }
 
     <button class="don-export-btn" (click)="exportCsv()" [disabled]="exporting">
       <app-icon name="download" /> {{ exporting ? 'מייצא...' : 'ייצוא CSV' }}
@@ -101,32 +138,42 @@
                   קמפיין<span class="sort-arrow">{{ sortField === 'campaign' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
                 </th>
               }
-              <th class="sortable" [class.active]="sortField === 'amount'" (click)="sortBy('amount')">
+              <th class="sortable" [class.don-amount]="campaignScoped" [class.active]="sortField === 'amount'" (click)="sortBy('amount')">
                 סכום<span class="sort-arrow">{{ sortField === 'amount' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
               </th>
+              @if (!purchasesOnly || campaignScoped) { <th scope="col">סוג תרומה</th> }
               @if (isColVisible('date')) {
                 <th class="sortable ltr-col" [class.active]="sortField === 'date'" (click)="sortBy('date')">
                   תאריך<span class="sort-arrow">{{ sortField === 'date' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
                 </th>
               }
+              @if (!purchasesOnly || campaignScoped) { <th scope="col">קבלה</th> }
               @if (isColVisible('status')) {
                 <th class="sortable col-secondary" [class.active]="sortField === 'status'" (click)="sortBy('status')">
                   סטטוס<span class="sort-arrow">{{ sortField === 'status' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
                 </th>
               }
+              @if (!purchasesOnly && isColVisible('ambassador')) { <th scope="col">שגריר</th> }
+              <th scope="col">פרטים</th>
             </tr>
           </thead>
           <tbody>
             @for (d of donations; track d.id) {
               <tr class="don-row" (click)="openDrawer(d)">
                 <td class="don-name">
-                  {{ donorDisplay(d) }}
+                  <button type="button" class="cm-row-link" (click)="$event.stopPropagation(); openDrawer(d)">{{ donorDisplay(d) }}</button>
                   @if (d.is_mock) { <span class="badge-test">TEST</span> }
                 </td>
-                @if (isColVisible('campaign')) { <td class="don-campaign col-secondary">{{ d.campaign_title }}</td> }
-                <td class="don-amount">{{ fmtDonationAmount(d) }}</td>
-                @if (isColVisible('date'))   { <td class="don-date ltr-col">{{ fmtDate(d.completed_at ?? d.created_at) }}</td> }
-                @if (isColVisible('status')) { <td class="col-secondary"><span class="status-badge status-{{ d.status }}">{{ statusLabel(d.status) }}</span></td> }
+                @if (isColVisible('campaign')) { <td class="don-campaign col-secondary" data-label="קמפיין">{{ d.campaign_title }}</td> }
+                <td class="don-amount" data-label="סכום">{{ fmtDonationAmount(d) }}</td>
+                @if (!purchasesOnly || campaignScoped) { <td data-label="סוג תרומה">{{ donationKind(d) }}</td> }
+                @if (isColVisible('date'))   { <td class="don-date ltr-col" data-label="תאריך">{{ fmtDate(d.completed_at ?? d.created_at) }}</td> }
+                @if (!purchasesOnly || campaignScoped) { <td data-label="קבלה">{{ d.receipt_id ? 'קבלה קיימת' : '—' }}</td> }
+                @if (isColVisible('status')) { <td class="col-secondary" data-label="סטטוס"><span class="status-badge status-{{ d.status }}">{{ statusLabel(d.status) }}</span></td> }
+                @if (!purchasesOnly && isColVisible('ambassador')) {
+                  <td data-label="שגריר">{{ d.ambassador_name || '—' }}</td>
+                }
+                <td class="cm-details-cell"><button class="cm-button" type="button" (click)="$event.stopPropagation(); openDrawer(d)">פרטים</button></td>
               </tr>
             }
           </tbody>
@@ -134,22 +181,22 @@
       </div>
 
       <!-- Pagination -->
+      @if (campaignScoped) {
       <div class="don-pagination">
-        <label class="pag-limit">
-          שורות בעמוד:
-          <select [(ngModel)]="limit" (change)="onLimitChange()">
-            <option [ngValue]="10">10</option>
-            <option [ngValue]="25">25</option>
-            <option [ngValue]="50">50</option>
-          </select>
-        </label>
         <button class="pag-btn" (click)="prevPage()" [disabled]="page === 0">הקודם</button>
-        <span class="pag-info">עמוד {{ page + 1 }} מתוך {{ totalPages }}</span>
+        <span class="pag-info">
+          @if (campaignScoped) { {{ page * limit + 1 }}–{{ page * limit + donations.length }} מתוך {{ kpi.total }} }
+          @else { עמוד {{ page + 1 }} מתוך {{ totalPages }} }
+        </span>
         <button class="pag-btn" (click)="nextPage()" [disabled]="page >= totalPages - 1">הבא</button>
       </div>
+      } @else {
+      <app-management-pagination [page]="page" [total]="kpi.total" [pageSize]="limit" (pageChange)="page = $event; load()" />
+      }
     }
   </div>
 
+  </section>
   }
   </div>
 </div>
@@ -157,13 +204,24 @@
 <!-- ══ DRAWER ══ -->
 @if (selected) {
   <div class="don-overlay" (click)="closeDrawer()"></div>
-  <div class="don-drawer">
+  <div class="don-drawer" [class.cm-drawer]="campaignScoped" role="dialog" aria-modal="true" aria-labelledby="cm-detail-title" (keydown.escape)="closeDrawer()">
     <div class="drawer-header">
-      <button class="drawer-close" (click)="closeDrawer()">✕</button>
-      <h2 class="drawer-title">פרטי תרומה</h2>
+      <button aria-label="סגירה" class="drawer-close" (click)="closeDrawer()">✕</button>
+      <h2 class="drawer-title" id="cm-detail-title">פרטי תרומה</h2>
     </div>
 
     <div class="drawer-body">
+      @if (selected.ambassador_name && selected.campaign_id) {
+        <div class="drawer-row">
+          <span class="dr-label">שגריר משויך</span>
+          <a [routerLink]="['/campaigns', selected.campaign_id, 'ambassadors']">{{ selected.ambassador_name }}</a>
+        </div>
+      }
+
+      @if (selected.receipt_id) {
+        <button type="button" [disabled]="receiptLoading" (click)="openReceipt(selected)">הורדת קבלה</button>
+        @if (receiptError) { <p role="alert">{{ receiptError }}</p> }
+      }
 
       <div class="drawer-section">
         <div class="drawer-row">
@@ -214,6 +272,17 @@
           <span class="dr-label">סכום</span>
           <span class="dr-value bold">{{ fmtDonationAmount(selected) }}</span>
         </div>
+        @if (campaignScoped) {
+          <div class="drawer-row">
+            <span class="dr-label">מזהה עסקה</span><span class="dr-value" dir="ltr">{{ selected.id }}</span>
+          </div>
+          @if (selected.currency && selected.currency !== 'ILS') {
+            <div class="drawer-row">
+              <span class="dr-label">סכום בש״ח</span>
+              <span class="dr-value">{{ selected.amount_ils != null ? fmtMoney(selected.amount_ils) : 'שער המרה חסר' }}</span>
+            </div>
+          }
+        }
         <div class="drawer-row">
           <span class="dr-label">סטטוס</span>
           <span class="dr-value">
@@ -250,5 +319,10 @@
       </div>
 
     </div>
+    @if (campaignScoped) {
+      <footer class="cm-drawer-foot">
+        <button class="cm-button" type="button" (click)="closeDrawer()">סגור</button>
+      </footer>
+    }
   </div>
 }

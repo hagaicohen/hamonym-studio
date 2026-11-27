@@ -1,6 +1,8 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { ActivatedRoute, RouterOutlet } from '@angular/router';
+import { CampaignDashboardStatusComponent } from '../../../pages/campaign-dashboard-page/sections/campaign-dashboard-status/campaign-dashboard-status.component';
 import { Subscription } from 'rxjs';
+import { AppLoaderService } from '../../../../../core/services/app-loader.service';
 import { CampaignWorkspaceContextService } from '../../../services/campaign-workspace-context.service';
 import { CampaignManagementSidebarComponent } from '../campaign-management-sidebar/campaign-management-sidebar.component';
 
@@ -14,16 +16,28 @@ import { CampaignManagementSidebarComponent } from '../campaign-management-sideb
 @Component({
   selector: 'app-campaign-workspace-shell',
   standalone: true,
-  imports: [CampaignManagementSidebarComponent, RouterOutlet],
+  imports: [CampaignManagementSidebarComponent, CampaignDashboardStatusComponent, RouterOutlet],
   templateUrl: './campaign-workspace-shell.component.html',
   styleUrl: './campaign-workspace-shell.component.css',
 })
 export class CampaignWorkspaceShellComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private ctx = inject(CampaignWorkspaceContextService);
+  private loader = inject(AppLoaderService);
   private sub?: Subscription;
 
+  @ViewChild(CampaignManagementSidebarComponent) sidebar?: CampaignManagementSidebarComponent;
+
   campaignId = '';
+  loadError = '';
+
+  toggleSidebar(): void { this.sidebar?.toggleMobile(); }
+  readonly draft = this.ctx.draft;
+
+  get isRace(): boolean {
+    const campaign = this.draft();
+    return campaign?.layout?.preset === 'race' || !!campaign?.registrationOptions.length;
+  }
 
   // Reads straight from the shared context signal, so the moment any
   // CampaignDraft-based child page's ensureLoaded() call resolves (or was
@@ -51,11 +65,20 @@ export class CampaignWorkspaceShellComponent implements OnInit, OnDestroy {
       // Sidebar just falls back to isOngoing=false on error; each child
       // page still fetches (via the same shared context) and surfaces its
       // own load error independently.
-      this.ctx.ensureLoaded(id).subscribe({ error: () => {} });
+      this.loadError = '';
+      this.ctx.ensureLoaded(id).subscribe({
+        error: () => {
+          if (this.campaignId === id) {
+            this.loadError = 'טעינת הקמפיין נכשלה או שאין הרשאה לצפייה';
+            this.loader.hide();
+          }
+        },
+      });
     });
   }
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    this.ctx.clear(this.campaignId);
   }
 }

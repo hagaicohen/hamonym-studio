@@ -4,13 +4,13 @@
   <div class="don-card"><div class="don-loading"><div class="don-spinner"></div></div></div>
 } @else {
 
-  <div class="don-kpi-row" [class.don-kpi-row--5]="!campaignId" [class.don-kpi-row--3]="campaignId">
+  <div class="don-kpi-row" [class.cm-summary]="true" [class.don-kpi-row--5]="!campaignId" [class.don-kpi-row--3]="campaignId">
     <div class="don-kpi-card">
       <div class="kpi-label">גויס בתקופה</div>
       <div class="kpi-value primary">{{ fmtMoney(kpi.totalRaisedInRange) }}</div>
     </div>
     <div class="don-kpi-card">
-      <div class="kpi-label">תורמים בתקופה</div>
+      <div class="kpi-label">{{ campaignId ? 'תורמים מזוהים בתקופה' : 'תרומות מאושרות בתקופה' }}</div>
       <div class="kpi-value">{{ kpi.totalDonorsInRange | number }}</div>
     </div>
     <div class="don-kpi-card">
@@ -39,11 +39,11 @@
         (input)="onSearch()"
       />
 
-      <select class="don-select" [(ngModel)]="statusFilter" (change)="onFilterChange()">
-        <option value="all">כל הסטטוסים</option>
-        <option value="published">פורסם</option>
-        <option value="pending_review">ממתין לאישור</option>
-      </select>
+      <app-dropdown class="don-select" [(ngModel)]="statusFilter" (selectionChange)="onFilterChange()">
+        <app-dropdown-option value="all">כל הסטטוסים</app-dropdown-option>
+        <app-dropdown-option value="published">פורסם</app-dropdown-option>
+        <app-dropdown-option value="pending_review">ממתין לאישור</app-dropdown-option>
+      </app-dropdown>
     }
 
     <button class="don-export-btn" (click)="exportCsv()" [disabled]="exporting || campaigns.length === 0">
@@ -95,7 +95,7 @@
               }
               @if (isColVisible('donors')) {
                 <th class="sortable col-secondary" [class.active]="sortField === 'donors'" (click)="sortBy('donors')">
-                  תורמים<span class="sort-arrow">{{ sortField === 'donors' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
+                  תומכים<span class="sort-arrow">{{ sortField === 'donors' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ▼' }}</span>
                 </th>
               }
               @if (isColVisible('avg')) {

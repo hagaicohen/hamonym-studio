@@ -1,4 +1,8 @@
-import { Component, OnInit, inject, effect, untracked } from '@angular/core';
+import { DropdownComponent, DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
+import { ManagementPaginationComponent } from '../../../../shared/components/management-pagination/management-pagination.component';
+import { Component, DestroyRef, OnInit, inject, effect, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { Users } from 'lucide-angular';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
@@ -8,8 +12,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
+import { formatMoney } from '../../../campaigns/utils/donation-currency';
 import { CampaignApiService } from '../../../campaigns/services/campaign-api.service';
-
+
+
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 interface Kpi {
   donorCount:  number;
@@ -17,7 +23,18 @@ interface Kpi {
   avgPerDonor: number;
 }
 
+interface DonorTransaction {
+  id: string;
+  amount: number;
+  created_at: string;
+  completed_at: string | null;
+  ambassador_name?: string | null;
+  campaign_title?: string;
+  currency?: 'ILS' | 'USD' | 'EUR';
+}
+
 interface DonorRow {
+  ambassador_names?: string | null;
   donor_key:        string;
   email:            string | null;
   phone:            string | null;
@@ -46,7 +63,7 @@ const COLUMNS_STORAGE_KEY = 'donors-hidden-columns';
 @Component({
   selector: 'app-donors-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule, EmptyStateComponent],
+  imports: [DropdownComponent, DropdownOptionComponent, ManagementPaginationComponent, HmIconComponent, CommonModule, FormsModule, EmptyStateComponent],
   templateUrl: './donors-page.component.html',
   styleUrl: './donors-page.component.css',
 })
@@ -73,6 +90,55 @@ export class DonorsPageComponent implements OnInit {
   donors: DonorRow[] = [];
   kpi: Kpi = { donorCount: 0, totalRaised: 0, avgPerDonor: 0 };
   selected: DonorRow | null = null;
+  private readonly destroyRef = inject(DestroyRef);
+  private historyRequest?: Subscription;
+  historyRows: DonorTransaction[] = [];
+  historyTotal = 0;
+  historyPage = 0;
+  readonly historyLimit = 25;
+  historyLoading = false;
+  historyError = '';
+
+  historyAmount(transaction: DonorTransaction): string {
+    return transaction.currency ? formatMoney(transaction.amount, transaction.currency) : this.fmtMoney(transaction.amount);
+  }
+
+  donorCampaigns: { id: string; title: string }[] = [];
+  ambassadorQuery = '';
+
+  private loadCampaignOptions(entityId: string): void {
+    this.donorCampaigns = [];
+    this.campaignApi.list(entityId).subscribe({
+      next: campaigns => {
+        if (this.currentEntity.currentEntity()?.id !== entityId) return;
+        this.donorCampaigns = campaigns.flatMap(campaign => campaign.id ? [{ id: campaign.id, title: campaign.title }] : []);
+      },
+    });
+  }
+
+  loadHistory(page: number): void {
+    const row = this.selected;
+    const entityId = this.currentEntity.currentEntity()?.id;
+    if (!row || !entityId) return;
+    this.historyRequest?.unsubscribe();
+    this.historyLoading = true;
+    this.historyError = '';
+    const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+    let params = new HttpParams().set('donorKey', row.donor_key)
+      .set('status', 'paid').set('limit', this.historyLimit).set('page', page);
+    if (this.campaignId) params = params.set('campaignId', this.campaignId);
+    this.historyRequest = this.http.get<{ donations: DonorTransaction[]; total: number }>(
+      `${environment.apiUrl}/api/donations/entity/${entityId}`, { headers, params },
+    ).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: response => {
+        this.historyRows = response.donations;
+        this.historyTotal = response.total;
+        this.historyPage = page;
+        this.historyLoading = false;
+      },
+      error: () => { this.historyError = 'טעינת היסטוריית התרומות נכשלה'; this.historyLoading = false; },
+    });
+  }
 
   searchQuery = '';
   sortField: SortField = 'total';
@@ -104,7 +170,7 @@ export class DonorsPageComponent implements OnInit {
       const id = this.currentEntity.currentEntity()?.id ?? null;
       if (id === this.lastLoadedEntityId) return;
       this.lastLoadedEntityId = id;
-      untracked(() => this.load());
+      untracked(() => { this.load(); if (id && !this.campaignScoped) this.loadCampaignOptions(id); });
     });
   }
 
@@ -123,6 +189,13 @@ export class DonorsPageComponent implements OnInit {
   }
 
   back(): void { this.router.navigate(['/campaigns', this.campaignId, 'dashboard']); }
+
+  applyCampaignFilter(id: string): void {
+    this.campaignId = id;
+    this.campaignTitle = this.donorCampaigns.find(campaign => campaign.id === id)?.title ?? null;
+    this.page = 0;
+    this.load();
+  }
 
   clearCampaignFilter(): void {
     this.campaignId    = '';
@@ -164,13 +237,20 @@ export class DonorsPageComponent implements OnInit {
   prevPage(): void { if (this.page > 0) { this.page--; this.load(); } }
   nextPage(): void { if (this.page < this.totalPages - 1) { this.page++; this.load(); } }
 
-  onLimitChange(): void {
-    this.page = 0;
-    this.load();
+
+  openDrawer(row: DonorRow): void {
+    this.selected = row;
+    this.historyRows = [];
+    this.historyTotal = 0;
+    this.loadHistory(0);
   }
 
-  openDrawer(d: DonorRow): void { this.selected = d; }
-  closeDrawer(): void           { this.selected = null; }
+  closeDrawer(): void {
+    this.selected = null;
+    this.historyRequest?.unsubscribe();
+    this.historyLoading = false;
+    this.historyError = '';
+  }
 
   load(): void {
     const entity = this.currentEntity.currentEntity();
@@ -188,6 +268,8 @@ export class DonorsPageComponent implements OnInit {
       .set('sortDir', this.sortDir);
 
     if (this.campaignId)         params = params.set('campaignId', this.campaignId);
+    params = params.set('workspace', '1');
+    if (!this.campaignScoped && this.ambassadorQuery.trim()) params = params.set('ambassadorName', this.ambassadorQuery.trim());
     if (this.searchQuery.trim()) params = params.set('search', this.searchQuery.trim());
 
     this.http.get<any>(`${environment.apiUrl}/api/donations/entity/${entity.id}/donors`, { headers, params })
@@ -226,6 +308,8 @@ export class DonorsPageComponent implements OnInit {
       .set('sortDir', this.sortDir);
 
     if (this.campaignId)         params = params.set('campaignId', this.campaignId);
+    params = params.set('workspace', '1');
+    if (!this.campaignScoped && this.ambassadorQuery.trim()) params = params.set('ambassadorName', this.ambassadorQuery.trim());
     if (this.searchQuery.trim()) params = params.set('search', this.searchQuery.trim());
 
     this.http.get<any>(`${environment.apiUrl}/api/donations/entity/${entity.id}/donors`, { headers, params })

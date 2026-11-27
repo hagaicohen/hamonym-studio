@@ -25,8 +25,8 @@
   }
 
   <!-- תנאי החיוב -->
-  <div class="bes-section">
-    <div class="bes-section-title">תנאי החיוב</div>
+  <div class="bes-section cm-ledger">
+    <h2 class="bes-section-title cm-panel-title">תנאי החיוב</h2>
     @if (billingAccount; as account) {
       <div class="bes-row"><span>עמלת פלטפורמה</span><b>{{ feePercentOf(account) }}%</b></div>
     } @else {
@@ -57,8 +57,8 @@
   </div>
 
   <!-- כרטיס אשראי -->
-  <div class="bes-section">
-    <div class="bes-section-title">כרטיס אשראי</div>
+  <div class="bes-section cm-ledger">
+    <h2 class="bes-section-title cm-panel-title">כרטיס אשראי</h2>
     <div class="bes-row"><span>מצב</span><b>{{ cardReady.icon }} {{ cardReady.label }}</b></div>
     <p class="bes-note">עד ₪3,540 החיוב נגבה בכרטיס אשראי.</p>
   </div>
@@ -71,7 +71,7 @@
        than requiring bank details first, commit d5ab4e7); אישור מס״ב is
        the one action that genuinely requires both, enforced by the
        backend (authorize()) regardless of what this UI allows clicking. -->
-  <div class="bes-section">
+  <div class="bes-section cm-ledger">
     <div class="bes-section-title">מס״ב</div>
 
     <!-- פרטי חשבון בנק -->
@@ -95,12 +95,12 @@
         <div class="ba-form-fields">
           <label class="ba-field">
             <span>בנק</span>
-            <select [(ngModel)]="masavBankCode">
-              <option value="" disabled>בחרו בנק</option>
+            <app-dropdown [(ngModel)]="masavBankCode">
+              <app-dropdown-option value="" disabled>בחרו בנק</app-dropdown-option>
               @for (bank of israeliBanks; track bank.code) {
-                <option [value]="bank.code">{{ bank.name }} ({{ bank.code }})</option>
+                <app-dropdown-option [value]="bank.code">{{ bank.name }} ({{ bank.code }})</app-dropdown-option>
               }
-            </select>
+            </app-dropdown>
           </label>
           <label class="ba-field"><span>סניף</span><input type="text" [(ngModel)]="masavBranchCode" /></label>
           <label class="ba-field"><span>מספר חשבון</span><input type="text" [(ngModel)]="masavAccountNumber" /></label>

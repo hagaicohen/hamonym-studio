@@ -12,46 +12,6 @@
       <div class="card-description">הגדרת אמצעי החיוב של העמותה</div>
     </div>
 
-    <div class="card-actions">
-      <button
-        class="cancel-btn"
-        type="button"
-        [disabled]="saveState.isSaving || masavSubmitBusy"
-        (click)="cancel.emit()"
-      >
-        ביטול
-      </button>
-
-      <button
-        class="save-btn"
-        type="button"
-        [class.success]="saveState.saveCompleted"
-        [class.error]="saveState.saveFailed"
-        [disabled]="saveState.isSaving || masavSubmitBusy"
-        (click)="onSaveClick()"
-      >
-        @if (
-          !saveState.isSaving &&
-          !masavSubmitBusy &&
-          !saveState.saveCompleted &&
-          !saveState.saveFailed
-        ) {
-          שמירת אמצעי החיוב
-        }
-
-        @if (saveState.isSaving || masavSubmitBusy) {
-          <div class="btn-spinner"></div>
-        }
-
-        @if (!saveState.isSaving && !masavSubmitBusy && saveState.saveCompleted) {
-          <div class="save-success">✓ נשמר</div>
-        }
-
-        @if (!saveState.isSaving && !masavSubmitBusy && saveState.saveFailed) {
-          <div class="save-failed">✕ נכשל</div>
-        }
-      </button>
-    </div>
   </div>
 
   @if (masavFormError) {
@@ -239,12 +199,12 @@
       <div class="masav-fields">
         <label class="masav-field">
           <span>בנק</span>
-          <select [(ngModel)]="masavBankCode">
-            <option value="" disabled>בחרו בנק</option>
+          <app-dropdown [(ngModel)]="masavBankCode">
+            <app-dropdown-option value="" disabled>בחרו בנק</app-dropdown-option>
             @for (bank of israeliBanks; track bank.code) {
-              <option [value]="bank.code">{{ bank.name }} ({{ bank.code }})</option>
+              <app-dropdown-option [value]="bank.code">{{ bank.name }} ({{ bank.code }})</app-dropdown-option>
             }
-          </select>
+          </app-dropdown>
         </label>
         <label class="masav-field"><span>סניף</span><input type="text" [(ngModel)]="masavBranchCode" /></label>
         <label class="masav-field"><span>מספר חשבון</span><input type="text" [(ngModel)]="masavAccountNumber" /></label>
@@ -283,7 +243,7 @@
 
         <label class="upload-btn">
           {{ masavDocFile ? masavDocFile.name : (masavConfig?.has_authorization_document ? 'החלפת הקובץ' : 'בחירת קובץ') }}
-          <input type="file" hidden accept=".pdf,image/*" (change)="onMasavDocSelected($event)" />
+          <input type="file" accept=".pdf,image/*" (change)="onMasavDocSelected($event)" />
         </label>
       </div>
 
@@ -301,4 +261,44 @@
       </div>
     </div>
   }
+    <div class="savebar">
+      <button
+        class="cancel-btn"
+        type="button"
+        [disabled]="saveState.isSaving || masavSubmitBusy"
+        (click)="cancel.emit()"
+      >
+        ביטול
+      </button>
+
+      <button
+        class="save-btn"
+        type="button"
+        [class.success]="saveState.saveCompleted"
+        [class.error]="saveState.saveFailed"
+        [disabled]="saveState.isSaving || masavSubmitBusy"
+        (click)="onSaveClick()"
+      >
+        @if (
+          !saveState.isSaving &&
+          !masavSubmitBusy &&
+          !saveState.saveCompleted &&
+          !saveState.saveFailed
+        ) {
+          שמירת אמצעי החיוב
+        }
+
+        @if (saveState.isSaving || masavSubmitBusy) {
+          <div class="btn-spinner"></div>
+        }
+
+        @if (!saveState.isSaving && !masavSubmitBusy && saveState.saveCompleted) {
+          <div class="save-success">✓ נשמר</div>
+        }
+
+        @if (!saveState.isSaving && !masavSubmitBusy && saveState.saveFailed) {
+          <div class="save-failed">✕ נכשל</div>
+        }
+      </button>
+    </div>
 </div>

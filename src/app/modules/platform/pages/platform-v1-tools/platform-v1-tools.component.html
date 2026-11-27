@@ -1,0 +1,149 @@
+<main class="sa-v1 cm-v7" dir="rtl">
+  @switch (screen) {
+    @case ('portal') {
+      <header class="sa-heading"><h1>ניהול הפורטל</h1></header>
+      <p class="sa-empty">בקרוב</p>
+    }
+    @case ('tasks') {
+      <header class="sa-heading"><div><h1>מרכז משימות וחריגות</h1><p class="sa-description">נושאים הדורשים טיפול במערכת</p></div></header>
+      <div class="cm-summary sa-summary" aria-label="מדדי משימות">
+        @for (item of taskTabs; track item.key) {
+          <div><small>{{ item.key === 'all' ? 'כל החריגות' : item.label }}</small><strong>{{ taskTotal(item.key) == null ? '—' : (taskTotal(item.key) | number) }}</strong></div>
+        }
+      </div>
+      <section class="cm-ledger sa-ledger">
+        <h2>נושאים לטיפול</h2>
+        <nav class="cm-tabs" aria-label="סוג חריגה">
+          @for (tab of taskTabs; track tab.key) {
+            <button type="button" [attr.aria-pressed]="taskTab === tab.key" (click)="taskTab = tab.key; taskPage = 0"><app-icon [name]="$any(tab.icon)" />{{ tab.label }}</button>
+          }
+        </nav>
+        <div class="cm-filters">
+          <input class="cm-input" type="search" placeholder="חיפוש לפי נושא או ארגון" aria-label="חיפוש משימות" [(ngModel)]="taskSearch" (ngModelChange)="taskPage = 0">
+          <app-entity-combobox [entities]="organizations" [selectedId]="organizationFilter || undefined" placeholder="כל הארגונים" (selectedIdChange)="organizationFilter = $event || ''; taskPage = 0" />
+        </div>
+        @if (loading) { <p class="sa-empty" role="status">טוען משימות…</p> }
+        @if (error) { <p class="sa-empty" role="alert">{{ error }}</p> }
+        @let tasks = groupedTasks;
+        @if (tasks.length) {
+          <div class="sa-table-wrap"><table class="sa-table">
+            <thead><tr><th scope="col">נושא</th><th scope="col">ארגון</th><th scope="col">אירועים</th><th scope="col">סטטוס</th><th scope="col">טיפול</th></tr></thead>
+            <tbody>@for (row of (tasks | slice:taskPage * 25:(taskPage + 1) * 25); track $index) {
+              <tr><td><strong>{{ taskKind(row.kind) }}</strong><div>{{ row.reason }}</div></td><td>{{ row.name }}</td><td>{{ row.count | number }}</td><td>דורש טיפול</td><td><button class="cm-button" type="button" (click)="selectedTask = row">פרטים</button></td></tr>
+            }</tbody>
+          </table></div>
+          <app-management-pagination [page]="taskPage" [total]="tasks.length" (pageChange)="taskPage = $event" />
+        } @else if (!loading && !error) { <p class="sa-empty">אין נושאים לטיפול בתצוגה זו</p> }
+      </section>
+      @if (selectedTask; as task) {
+        <app-admin-details-drawer [heading]="task.name" (closed)="selectedTask = null">
+          <dl class="sa-detail-list"><dt>סוג חריגה</dt><dd>{{ taskKind(task.kind) }}</dd><dt>ארגון</dt><dd>{{ task.name }}</dd><dt>אירועים</dt><dd>{{ task.count | number }}</dd></dl>
+          <h3>פירוט אירועים</h3>
+          @for (event of task.events; track $index) {
+            <article class="sa-event"><strong>{{ event.reason }}</strong><p>דורש טיפול @if (event.amount != null) { · <bdi>{{ event.amount | currency:'ILS' }}</bdi> }</p>
+              <a class="cm-button" [routerLink]="event.route" [queryParams]="event.query" [fragment]="event.fragment">{{ event.action || 'לטיפול' }}</a>
+            </article>
+          }
+          <div drawerActions class="sa-drawer-actions"><button type="button" class="cm-button" (click)="selectedTask = null">סגור</button>
+            <a class="cm-button cm-primary" [routerLink]="task.route" [queryParams]="task.query" [fragment]="task.fragment">למסך הטיפול</a></div>
+        </app-admin-details-drawer>
+      }
+    }
+    @case ('business') {
+      <header class="sa-heading sa-period-heading"><div><h1>דוחות עסקיים</h1><p class="sa-description">הכנסות, עמלות והתחשבנות של הפלטפורמה</p></div><a class="cm-button" routerLink="/platform/collection-ops" [queryParams]="{tab: 'reports'}">לדוחות הגבייה</a><app-date-range-picker class="sa-header-period" [campaign]="true" [showRange]="true" /></header>
+      <nav class="cm-tabs" aria-label="דוחות עסקיים">
+        <button type="button" [attr.aria-pressed]="businessTab === 'summary'" (click)="businessTab = 'summary'">סקירה עסקית</button>
+        <button type="button" [attr.aria-pressed]="businessTab === 'growth'" (click)="businessTab = 'growth'">צמיחה</button>
+        <button type="button" [attr.aria-pressed]="businessTab === 'settlement'" (click)="businessTab = 'settlement'">התחשבנות</button>
+      </nav>
+      @if (businessTab === 'growth') { <section class="cm-ledger sa-ledger"><h2>צמיחת הפלטפורמה</h2><p class="sa-empty">סדרת צמיחה עסקית אינה זמינה ממקורות הנתונים הקיימים.</p></section> }
+      @else if (loading) { <p class="sa-empty" role="status">טוען נתונים…</p> }
+      @else if (error) { <p class="sa-empty" role="alert">{{ error }}</p> }
+      @else {
+        @if (financial) {
+        @let data = financial;
+        <section class="cm-ledger sa-ledger">
+          <h2>{{ businessTab === 'summary' ? 'סקירה עסקית' : 'התחשבנות' }} · <bdi>{{ month }}</bdi></h2>
+          <div class="cm-summary sa-summary">
+            <div><small>תרומות בתקופה</small><strong>{{ data.periodDonations.grossRaised == null ? '—' : (data.periodDonations.grossRaised | currency:'ILS') }}</strong></div>
+            <div><small>עמלות שנצברו לפני חיוב</small><strong>{{ data.accrued.accruedFee | currency:'ILS' }}</strong></div>
+            <div><small>חיובים שהופקו</small><strong>{{ data.totalBilled == null ? '—' : (data.totalBilled | currency:'ILS') }}</strong></div>
+            <div><small>גבייה בפועל</small><strong>{{ data.paidConfirmed == null ? '—' : (data.paidConfirmed | currency:'ILS') }}</strong></div>
+            <div><small>יתרה פתוחה</small><strong>{{ data.openBalance == null ? '—' : (data.openBalance | currency:'ILS') }}</strong></div>
+          </div>
+        </section>
+        } @else {
+          <p>הפירוט כולל מחזורי חיוב החופפים לטווח. מדדי הסקירה זמינים ברמת חודש חיוב.</p>
+        }
+        @if (businessTab === 'summary') {
+          <section class="cm-ledger sa-ledger"><h2>מגמות הכנסות</h2><p class="sa-empty">סדרת הכנסות לאורך זמן אינה זמינה במקור הנתונים הקיים.</p></section>
+        }
+        <section class="cm-ledger sa-ledger">
+          <h2>{{ businessTab === 'settlement' ? 'התחשבנות לפי ארגון' : 'פירוט לפי ארגון' }}</h2>
+          @if (financialRowsLoading) { <p class="sa-empty" role="status">טוען פירוט…</p> }
+          @else if (financialRowsError) { <p class="sa-empty" role="alert">טעינת הפירוט נכשלה</p> }
+          @else if (financialRows.length) {
+            <div class="sa-table-wrap"><table class="sa-table">
+              <thead><tr><th>ארגון</th><th>מחזור חיוב</th><th>חיובים שהופקו</th><th>גבייה בפועל</th><th>יתרה</th></tr></thead>
+              <tbody>@for (row of (financialRows | slice:financialPage * 25:(financialPage + 1) * 25); track $index) {
+                <tr><td>{{ row.entityName }} @if (row.isDraft) { <small>· טיוטה</small> }</td><td><bdi>{{ row.periodStart | date:'dd/MM/yyyy' }}</bdi></td><td><bdi>{{ row.billed | currency:'ILS' }}</bdi></td><td><bdi>{{ row.collected | currency:'ILS' }}</bdi></td><td><bdi>{{ row.outstanding | currency:'ILS' }}</bdi></td></tr>
+              }</tbody>
+            </table></div>
+            <app-management-pagination [page]="financialPage" [total]="financialRows.length" (pageChange)="financialPage = $event" />
+          } @else { <p class="sa-empty">אין פירוט חיובים לתקופה זו</p> }
+        </section>
+      }
+    }
+    @case ('catalog') {
+      <header class="sa-heading"><div><h1>ניהול קטגוריות</h1><p class="sa-description">המאגר המשותף לממשקי הניהול</p></div><a class="cm-button" routerLink="/platform/settings">חזרה להגדרות</a></header>
+      <section class="cm-ledger sa-ledger">
+        <h2>קטגוריות</h2>
+        <div class="cm-filters"><input class="cm-input" type="search" aria-label="חיפוש קטגוריה" placeholder="חיפוש לפי שם קטגוריה" [(ngModel)]="catalogQuery" (ngModelChange)="catalogPage = 0"></div>
+        @let categories = catalogRows;
+        @if (categories.length) {
+          <div class="sa-table-wrap"><table class="sa-table">
+            <thead><tr><th>קטגוריה</th><th>אייקון</th><th>נראות</th><th>סדר</th></tr></thead>
+            <tbody>@for (row of (categories | slice:catalogPage * 25:(catalogPage + 1) * 25); track row.id) {
+              <tr><td>{{ row.name }}</td><td>@if (categoryIcon(row); as icon) {
+                <svg class="sa-solid-icon" [attr.viewBox]="icon.viewBox" fill="currentColor" aria-hidden="true">@for (path of icon.paths; track $index) { <path [attr.d]="path" /> }</svg>
+              }</td><td>זמינה לבחירה</td><td>{{ row.order | number }}</td></tr>
+            }</tbody>
+          </table></div>
+          <app-management-pagination [page]="catalogPage" [total]="categories.length" (pageChange)="catalogPage = $event" />
+        } @else { <p class="sa-empty">לא נמצאו קטגוריות</p> }
+        <p class="sa-empty">עריכת שמות, סדר ונראות מחייבת מקור נתונים הניתן לעריכה ברמת הפלטפורמה.</p>
+      </section>
+    }
+    @case ('audit') {
+      <header class="sa-heading"><div><h1>יומן פעילות</h1><p class="sa-description">אירועי הפלטפורמה ופעולות ניהול מתועדות</p></div></header>
+      <section class="cm-ledger sa-ledger">
+        <h2>יומן אירועים</h2>
+        <div class="cm-filters"><label>סוג אירוע <app-dropdown [(ngModel)]="auditType" (ngModelChange)="loadAudit(0)">@for (type of auditTypes; track type.key) { <app-dropdown-option [value]="type.key">{{ type.label }}</app-dropdown-option> }</app-dropdown></label><button type="button" class="cm-button" [disabled]="!auditTotal || loading || !!error || auditExporting" (click)="exportAudit()">ייצוא CSV</button></div>
+        @if (auditExportError) { <p class="sa-empty" role="alert">{{ auditExportError }}</p> }
+        @if (loading) { <p class="sa-empty" role="status">טוען אירועים…</p> }
+        @else if (error) { <p class="sa-empty" role="alert">{{ error }}</p> }
+        @else if (auditRows.length) {
+          <div class="sa-table-wrap"><table class="sa-table">
+            <thead><tr>
+              <th scope="col" [attr.aria-sort]="auditSort === 'asc' ? 'ascending' : 'descending'"><button type="button" class="cm-row-link" (click)="sortAudit()">תאריך ושעה {{ auditSort === 'asc' ? '↑' : '↓' }}</button></th>
+              <th scope="col">מבצע הפעולה</th><th scope="col">פעולה</th><th scope="col">ישות</th><th scope="col">פרטים</th>
+            </tr></thead>
+            <tbody>@for (row of auditRows; track $index) { <tr><td><bdi>{{ row.timestamp | date:'dd/MM/yyyy HH:mm' }}</bdi></td><td>{{ auditActor(row) }}</td><td>{{ auditAction(row) }}</td><td>{{ row.title }}</td>
+              <td><button type="button" class="cm-button" (click)="auditDetail = row">פרטים</button></td></tr> }</tbody>
+          </table></div>
+          <app-management-pagination [page]="page" [total]="auditTotal" (pageChange)="loadAudit($event)" />
+        } @else { <p class="sa-empty">אין אירועים בתצוגה זו</p> }
+      </section>
+      @if (auditDetail; as event) {
+        <app-admin-details-drawer heading="פרטי אירוע" (closed)="auditDetail = null">
+          <dl class="sa-detail-list">
+            <dt>תאריך ושעה</dt><dd><bdi>{{ event.timestamp | date:'dd/MM/yyyy HH:mm' }}</bdi></dd>
+            <dt>מבצע הפעולה</dt><dd>{{ auditActor(event) }}</dd><dt>פעולה</dt><dd>{{ auditAction(event) }}</dd>
+            <dt>ישות</dt><dd>{{ event.title }}</dd><dt>פירוט</dt><dd>{{ event.subtitle || '—' }}</dd>
+          </dl>
+          <div drawerActions class="sa-drawer-actions"><button type="button" class="cm-button" (click)="auditDetail = null">סגור</button></div>
+        </app-admin-details-drawer>
+      }
+    }
+  }
+</main>

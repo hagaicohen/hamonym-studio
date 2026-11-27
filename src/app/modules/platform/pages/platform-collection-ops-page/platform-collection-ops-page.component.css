@@ -69,14 +69,14 @@
   color: #92400e;
 }
 
-/* Compact month navigation (2026-10, replaces the dropdown) -- any month
-   is navigable regardless of whether billing records exist for it. */
+/* The picker and navigation share one row above the overview. */
 .col-month-nav {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  margin-bottom: 18px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: 16px;
 }
 .col-month-chevron {
   width: 32px;

@@ -1,8 +1,7 @@
-import { Component, Input, OnChanges, inject } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { CampaignDraft } from '../../../../services/campaign-studio-state.service';
-import { AmbassadorService } from '../../../../services/ambassador.service';
 
 import { HmIconComponent } from '../../../../../../shared/ui/design-system/icon.component';
 // Architecture reset (2026-08-06) — this used to embed the Builder's own
@@ -18,32 +17,14 @@ import { HmIconComponent } from '../../../../../../shared/ui/design-system/icon.
   templateUrl: './campaign-dashboard-management.component.html',
   styleUrl: './campaign-dashboard-management.component.css',
 })
-export class CampaignDashboardManagementComponent implements OnChanges {
+export class CampaignDashboardManagementComponent {
   @Input({ required: true }) draft!: CampaignDraft;
   @Input() campaignId = '';
-
-  private ambassadorSvc = inject(AmbassadorService);
-
-  get isOngoing(): boolean { return this.draft.campaignLifecycle === 'ongoing'; }
 
   // Same reasoning as campaign-workspace-shell.component.ts's sidebar gate —
   // Rewards/Sponsors have no equivalent on MinimalDonationPageComponent,
   // Ambassadors does apply to every format. UI-only.
   get isMinimalFormat(): boolean { return this.draft.layout?.pageFormat === 'minimal'; }
 
-  // Ambassadors moved to their own table/service (campaign_ambassadors,
-  // ambassadorSvc) — draft.ambassadors is the pre-migration CampaignDraft
-  // field, never written to since, so this card always showed 0 real
-  // ambassadors regardless of how many actually existed. Every other card
-  // here (Rewards/Sponsors/Updates) is still genuinely JSONB-on-campaign,
-  // so draft.*.length stays correct for those.
-  ambassadorCount: number | null = null;
-
-  ngOnChanges(): void {
-    if (!this.campaignId) return;
-    this.ambassadorSvc.list(this.campaignId).subscribe({
-      next: (list) => { this.ambassadorCount = list.length; },
-      error: () => { this.ambassadorCount = null; },
-    });
-  }
+  @Input() ambassadorCount: number | null = null;
 }

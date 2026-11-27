@@ -30,6 +30,10 @@ export class CampaignDashboardStatusComponent {
 
   private currentEntity = inject(CurrentEntityService);
 
+  get organizationName(): string {
+    return this.draft.entityName || this.currentEntity.currentEntity()?.display_name || '';
+  }
+
   get statusLabel(): string { return STATUS_LABELS[this.draft.status] ?? this.draft.status; }
   get canView(): boolean { return !!this.draft.slug; }
   get isOngoing(): boolean { return this.draft.campaignLifecycle === 'ongoing'; }
@@ -43,6 +47,7 @@ export class CampaignDashboardStatusComponent {
   // normally regardless.
   get isDraft(): boolean { return this.draft.status === 'draft'; }
   get entityApproved(): boolean { return this.currentEntity.currentEntity()?.status === 'active'; }
+
 
   get editLink(): string[] { return campaignEditPath(this.campaignId); }
   readonly publishStep = PUBLISH_STEP;

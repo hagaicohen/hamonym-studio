@@ -1,3 +1,4 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
 import { Component, EventEmitter, Output } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
@@ -21,7 +22,7 @@ import { RegistrationIdentityCheckComponent, IdentityCheckState } from '../../..
 @Component({
   selector: 'app-step-entity',
   standalone: true,
-  imports: [CommonModule, FormsModule, RegistrationIdentityCheckComponent, CategorySelectorComponent, CategorySuggestComponent],
+  imports: [DropdownComponent, DropdownOptionComponent, CommonModule, FormsModule, RegistrationIdentityCheckComponent, CategorySelectorComponent, CategorySuggestComponent],
   templateUrl: './step-entity.component.html',
   styleUrls: ['./step-entity.component.css'],
 })

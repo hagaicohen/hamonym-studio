@@ -99,11 +99,11 @@
 
                 <h4>הכרעה סופית</h4>
                 <p class="fin-hint">תיעוד החלטה בלבד — שום החזר/זיכוי לא מבוצע אוטומטית על ידי המערכת.</p>
-                <select [(ngModel)]="resolutionType">
-                  <option value="resolve_no_overpayment">אינה גביית-יתר אמיתית (false positive)</option>
-                  <option value="resolve_credit">יזוכה לעמותה</option>
-                  <option value="resolve_refund">יוחזר לתורם</option>
-                </select>
+                <app-dropdown [(ngModel)]="resolutionType">
+                  <app-dropdown-option value="resolve_no_overpayment">אינה גביית-יתר אמיתית (false positive)</app-dropdown-option>
+                  <app-dropdown-option value="resolve_credit">יזוכה לעמותה</app-dropdown-option>
+                  <app-dropdown-option value="resolve_refund">יוחזר לתורם</app-dropdown-option>
+                </app-dropdown>
                 <textarea [(ngModel)]="resolveReason" placeholder="הערה — מה הוחלט ולמה" rows="2"></textarea>
                 <textarea [(ngModel)]="resolveEvidenceNotes" placeholder="ראיות/פרטים נוספים (לא חובה)" rows="2"></textarea>
                 @if (resolveError) { <div class="fin-error">{{ resolveError }}</div> }

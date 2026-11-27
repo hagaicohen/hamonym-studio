@@ -1,3 +1,4 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../../shared/ui/dropdown/dropdown.component';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -8,10 +9,10 @@ import { SectionSaveState } from '../../../models/section-save-state.model';
 @Component({
   selector: 'app-entity-payment-section-edit',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [DropdownComponent, DropdownOptionComponent, CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './entity-payment-section-edit.component.html',
 
-  styleUrl: './entity-payment-section-edit.component.css',
+  styleUrls: ['./entity-payment-section-edit.component.css', '../../entity-settings/entity-settings-section.css'],
 })
 export class EntityPaymentSectionEditComponent {
   @Input()

@@ -4,7 +4,12 @@
   <ng-container *ngIf="!loading && draft as d">
     <div class="rg-main">
       <button type="button" class="rg-back" (click)="back()">→ חזרה לסקירה כללית</button>
-      <h1 class="rg-title"><app-icon name="ticket" /> הרשמה</h1>
+      <h2 class="rg-title">קטלוג מקצים</h2>
+      <div class="rg-links campaign-linked-tabs">
+        <span aria-current="page">קטלוג מקצים</span>
+        <a [routerLink]="['../registrations']">משתתפים</a>
+        <a [routerLink]="['../edit']">עריכת דף הקמפיין</a>
+      </div>
       <p class="rg-subtitle">{{ d.title }} · {{ d.registrationOptions.length }} קטגוריות</p>
 
       <div class="rg-form-panel">

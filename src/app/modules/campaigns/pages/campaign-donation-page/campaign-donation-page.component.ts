@@ -1,11 +1,14 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MoneyInputDirective } from '../../../../shared/directives/money-input.directive';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignWorkspaceContextService } from '../../services/campaign-workspace-context.service';
 import { CampaignDraft } from '../../services/campaign-studio-state.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-
+
+
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 // Dedicated page (2026-08-06 architecture reset). Was briefly embedded in
 // the old accordion "Management" section (now removed) — re-homed here as
@@ -15,7 +18,7 @@ import { HmIconComponent } from '../../../../shared/ui/design-system/icon.compon
 @Component({
   selector: 'app-campaign-donation-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule],
+  imports: [MoneyInputDirective, FormsModule, HmIconComponent, CommonModule],
   templateUrl: './campaign-donation-page.component.html',
   styleUrl: './campaign-donation-page.component.css',
 })
@@ -30,6 +33,31 @@ export class CampaignDonationPageComponent implements OnInit {
   draft: CampaignDraft | null = null;
   loading = true;
   saving = false;
+  saved = false;
+  previewMode: 'once' | 'monthly' = 'once';
+  previewAmount: number | null = null;
+  private pending: Parameters<CampaignApiService['updateWorkspaceFields']>[1] = {};
+
+  get dirty(): boolean { return Object.keys(this.pending).length > 0; }
+
+  get previewAmounts(): number[] {
+    if (!this.draft) return [];
+    if (this.previewMode === 'monthly') return this.draft.allowMonthlyDonation ? this.draft.monthlyAmounts : [];
+    return this.draft.enableSuggestedAmounts ? this.draft.suggestedAmounts : [];
+  }
+
+  selectPreviewMode(mode: 'once' | 'monthly'): void {
+    this.previewMode = mode;
+    this.previewAmount = null;
+  }
+
+  cancel(): void {
+    this.pending = {};
+    this.draft = this.ctx.draft();
+    this.saved = false;
+    this.saveError = null;
+    this.selectPreviewMode('once');
+  }
   saveError: string | null = null;
 
   ngOnInit(): void {
@@ -44,31 +72,26 @@ export class CampaignDonationPageComponent implements OnInit {
 
   back(): void { this.router.navigate(['/campaigns', this.campaignId, 'dashboard']); }
 
-  patchDraft(partial: Partial<CampaignDraft>): void {
+  patchDraft(partial: Partial<Pick<CampaignDraft,
+    'enableSuggestedAmounts' | 'allowCustomAmount' | 'allowMonthlyDonation' | 'suggestedAmounts'
+    | 'monthlyAmounts' | 'recurringBillingMode' | 'recurringInstallmentsCount'
+  >>): void {
     if (!this.draft) return;
     this.draft = { ...this.draft, ...partial };
-    this.persist();
-  }
-
-  // Same pattern as campaign-rewards-page's amount field — blocks non-digit
-  // keys, and reformats with a thousands separator (so 4-digit amounts read
-  // as "1,500" instead of "1500") purely in the DOM on (input); the model
-  // only updates on (change)/blur, same as before, so autosave still fires
-  // once per edit rather than on every keystroke.
-  allowDigitsOnly(event: KeyboardEvent): void {
-    const allowed = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End'];
-    if (allowed.includes(event.key) || event.ctrlKey || event.metaKey) return;
-    if (!/^[0-9]$/.test(event.key)) event.preventDefault();
-  }
-
-  reformatAmountInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const raw = input.value.replace(/[^0-9]/g, '');
-    input.value = raw ? Number(raw).toLocaleString('he-IL') : '';
-  }
-
-  parsedAmount(input: HTMLInputElement): number {
-    return Number(input.value.replace(/[^0-9]/g, '')) || 0;
+    this.saved = false;
+    this.saveError = null;
+    this.previewAmount = null;
+    if (!this.draft.allowMonthlyDonation) this.previewMode = 'once';
+    this.pending = {
+      ...this.pending,
+      ...(partial.enableSuggestedAmounts !== undefined ? { enable_suggested_amounts: partial.enableSuggestedAmounts } : {}),
+      ...(partial.allowCustomAmount !== undefined ? { allow_custom_amount: partial.allowCustomAmount } : {}),
+      ...(partial.allowMonthlyDonation !== undefined ? { allow_monthly_donation: partial.allowMonthlyDonation } : {}),
+      ...(partial.suggestedAmounts !== undefined ? { suggested_amounts: partial.suggestedAmounts } : {}),
+      ...(partial.monthlyAmounts !== undefined ? { monthly_amounts: partial.monthlyAmounts } : {}),
+      ...(partial.recurringBillingMode !== undefined ? { recurring_billing_mode: partial.recurringBillingMode } : {}),
+      ...(partial.recurringInstallmentsCount !== undefined ? { recurring_installments_count: partial.recurringInstallmentsCount } : {}),
+    };
   }
 
   updateAmount(index: number, value: number): void {
@@ -107,13 +130,19 @@ export class CampaignDonationPageComponent implements OnInit {
     this.patchDraft({ monthlyAmounts: [...this.draft.monthlyAmounts, last * 2] });
   }
 
-  private persist(): void {
-    if (!this.draft) return;
+  save(): void {
+    if (!this.draft || !this.dirty || this.saving) return;
     this.saving = true;
     this.saveError = null;
-    this.campaignApi.update(this.campaignId, this.draft).subscribe({
-      next: (updated) => { this.saving = false; this.ctx.setDraft(updated); },
-      error: (err) => { this.saving = false; this.saveError = err?.error?.error || 'שמירת הגדרות התרומה נכשלה, נסו שוב'; },
+    this.campaignApi.updateWorkspaceFields(this.campaignId, this.pending).subscribe({
+      next: updated => {
+        this.saving = false;
+        this.saved = true;
+        this.pending = {};
+        this.draft = updated;
+        this.ctx.setDraft(updated);
+      },
+      error: err => { this.saving = false; this.saveError = err?.error?.error || 'שמירת הגדרות התרומה נכשלה, נסו שוב'; },
     });
   }
 }

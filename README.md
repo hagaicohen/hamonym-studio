@@ -2,6 +2,11 @@
 
 This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 18.0.6.
 
+## Project documentation
+
+- [Agent instructions](AGENTS.md) govern authorized project work.
+- [HAMONYM MASTER PLAN](docs/HAMONYM_MASTER_PLAN.md) tracks tasks and acceptance status. Implementation requires explicit authorization and an approved specification. Campaign management work is awaiting the approved redesign specification.
+
 ## Development server
 
 Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
@@ -19,6 +24,8 @@ Run `ng build` to build the project. The build artifacts will be stored in the `
 Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
 
 ## Running end-to-end tests
+
+UI acceptance is performed by the user under the [agent instructions](AGENTS.md).
 
 Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
 

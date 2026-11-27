@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostListener, OnInit, Output, inject } from '@angular/core';
+import { Component, EventEmitter, AfterViewInit, ElementRef, OnDestroy, ViewChild, OnInit, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -11,8 +11,8 @@ import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.com
 import { AmbassadorSlugFieldComponent } from '../ambassador-slug-field/ambassador-slug-field.component';
 @Component({selector:'app-campaign-join-dialog',standalone:true,
  imports:[CommonModule,FormsModule,RouterModule,HmPublicTextPipe,HmCurrencyPipe,HmMoneyArgPipe,HmIconComponent,AmbassadorSlugFieldComponent],
- templateUrl:'./campaign-join-dialog.component.html',styleUrls:['../../../studio/preview/campaign-preview/campaign-preview.component.css']})
-export class CampaignJoinDialogComponent implements OnInit {
+ templateUrl:'./campaign-join-dialog.component.html',styleUrl:'./campaign-join-dialog.component.css'})
+export class CampaignJoinDialogComponent implements OnInit, AfterViewInit, OnDestroy {
  private readonly state=inject(CampaignStudioStateService);
  private readonly ambassadorSvc=inject(AmbassadorService);
  private readonly auth=inject(AuthService);
@@ -21,8 +21,32 @@ export class CampaignJoinDialogComponent implements OnInit {
  @Output() closed=new EventEmitter<void>();
  @Output() joined=new EventEmitter<{slug:string;shareUrl:string}>();
  ngOnInit():void {this.openJoinModal(); const user=this.auth.currentUser(); if(user){this.joinForm.fullName=user.full_name;this.joinForm.email=user.email;}}
- @HostListener('document:keydown.escape') escape():void {if(this.joinStatus!=='loading')this.closeJoinModal();}
- primaryColor(draft:CampaignDraft):string {return (draft.layout.simpleStudio as any)?.theme?.primary || draft.layout?.theme?.secondaryColor || '#6fc9eb';}
+ @ViewChild('dialog', { static: true }) private dialog!: ElementRef<HTMLDialogElement>;
+ @ViewChild(AmbassadorSlugFieldComponent) private slugField?: AmbassadorSlugFieldComponent;
+ private oldBodyOverflow = '';
+ private oldRootOverflow = '';
+ private oldBodyPriority = '';
+ private oldRootPriority = '';
+ ngAfterViewInit(): void {
+  this.oldBodyOverflow = document.body.style.overflow;
+  this.oldRootOverflow = document.documentElement.style.overflow;
+  this.oldBodyPriority = document.body.style.getPropertyPriority('overflow');
+  this.oldRootPriority = document.documentElement.style.getPropertyPriority('overflow');
+  document.body.style.setProperty('overflow', 'hidden', 'important');
+  document.documentElement.style.setProperty('overflow', 'hidden', 'important');
+  this.dialog.nativeElement.showModal();
+ }
+ ngOnDestroy(): void {
+  this.dialog.nativeElement.close();
+  document.body.style.setProperty('overflow', this.oldBodyOverflow, this.oldBodyPriority);
+  document.documentElement.style.setProperty('overflow', this.oldRootOverflow, this.oldRootPriority);
+ }
+ cancel(event: Event): void { event.preventDefault(); this.closeJoinModal(); }
+ backdrop(event: MouseEvent): void {
+  const d = this.dialog.nativeElement, r = d.getBoundingClientRect();
+  if (event.target === d && (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom)) this.closeJoinModal();
+ }
+ primaryColor(draft:CampaignDraft):string {return (draft.layout.simpleStudio as any)?.theme?.primary || draft.layout?.theme?.secondaryColor || '#217365';}
   showJoinModal = false;
   joinStatus: 'idle' | 'loading' | 'success' | 'error' = 'idle';
   joinForm     = { fullName: '', phone: '', email: '', goalAmount: null as number | null, slug: '' };
@@ -61,10 +85,11 @@ export class CampaignJoinDialogComponent implements OnInit {
     this.joinGoalDisplay = formatted;
   }
 
-  closeJoinModal(): void { this.showJoinModal = false; this.closed.emit(); }
+  closeJoinModal(): void { if (this.joinStatus === 'loading') return; this.dialog.nativeElement.close(); this.showJoinModal = false; this.closed.emit(); }
 
   submitJoin(draft: CampaignDraft): void {
     if (!this.joinForm.fullName.trim() || this.joinStatus === 'loading' || !this.joinSlugAvailable) return;
+    this.joinError = '';
     this.joinStatus = 'loading';
     this.ambassadorSvc.selfRegister(draft.slug!, {
       fullName: this.joinForm.fullName,
@@ -78,9 +103,13 @@ export class CampaignJoinDialogComponent implements OnInit {
         this.joinStatus   = 'success';
         this.joined.emit(res);
       },
-      error: (err: { error?: { error?: string } }) => {
+      error: (err: { status?: number; error?: { error?: string } }) => {
         this.joinStatus = 'error';
-        this.joinError  = err?.error?.error || 'אירעה שגיאה. נסה שוב.';
+        if (err.status === 409) {
+          this.joinSlugAvailable = false;
+          this.slugField?.markTaken();
+          this.joinError = 'הכתובת תפוסה. יש לבחור כתובת אחרת ולנסות שוב.';
+        } else { this.joinError = err?.error?.error || 'אירעה שגיאה. נסה שוב.'; }
       },
     });
   }

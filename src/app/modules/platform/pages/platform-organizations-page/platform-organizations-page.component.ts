@@ -1,3 +1,5 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
+import { ManagementPaginationComponent } from '../../../../shared/components/management-pagination/management-pagination.component';
 import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -41,7 +43,7 @@ const SORT_FIELDS: SortField[] = ['name', 'status', 'created_at', 'campaigns', '
 
 @Component({
   selector: 'app-platform-organizations-page', standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, ColumnPickerComponent],
+  imports: [DropdownComponent, DropdownOptionComponent, ManagementPaginationComponent, CommonModule, FormsModule, RouterLink, ColumnPickerComponent],
   templateUrl: './platform-organizations-page.component.html',
   styleUrl: './platform-organizations-page.component.css',
 })
@@ -100,7 +102,12 @@ export class PlatformOrganizationsPageComponent implements OnInit, OnDestroy {
     };
   }
 
+  directoryCounts: (number | null)[] = [];
+
   ngOnInit(): void {
+    this.platformService.getDirectoryCounts('organizations').subscribe(counts => {
+      this.directoryCounts = counts;
+    });
     const qp = this.route.snapshot.queryParamMap;
     const status = qp.get('status');
     if (status === 'all' || status && Object.hasOwn(STATUS_LABELS, status)) this.activeStatus = status;

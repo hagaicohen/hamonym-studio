@@ -1,3 +1,4 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
 // step-payment.component.ts
 
 import { Component, EventEmitter, inject, Output } from '@angular/core';
@@ -11,7 +12,7 @@ import { HmIconComponent } from '../../../../shared/ui/design-system/icon.compon
 @Component({
   selector: 'app-step-payment',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule],
+  imports: [DropdownComponent, DropdownOptionComponent, HmIconComponent, CommonModule, FormsModule],
   templateUrl: './step-payment.component.html',
   styleUrls: ['./step-payment.component.css'],
 })

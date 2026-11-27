@@ -41,6 +41,7 @@
   --hm-info: #1d4ed8;
   --hm-info-bg: #eff6ff;
   --hm-info-border: #bfdbfe;
+  --hm-chart-series-violet: #583cd6;
 
   /* Shape and depth. */
   --hm-radius-sm: 6px;
@@ -80,4 +81,45 @@
   /* Icon boxes; Lucide sizes themselves come from HM_ICON_SIZE. */
   --hm-icon-box-md: 44px;
   --hm-icon-box-lg: 56px;
+}
+
+
+/* The platform can set --hm-platform-admin-color on the document root at
+   runtime. Only management surfaces consume the resulting admin palette. */
+:root {
+  --hm-admin-primary: var(--hm-platform-admin-color, #4e3b99);
+  --hm-admin-primary-hover: color-mix(in srgb, var(--hm-admin-primary), black 10%);
+  --hm-admin-primary-active: color-mix(in srgb, var(--hm-admin-primary), black 18%);
+  --hm-admin-primary-soft: color-mix(in oklab, var(--hm-admin-primary) 10%, white);
+  --hm-admin-primary-subtle: color-mix(in oklab, var(--hm-admin-primary) 6%, white);
+  --hm-admin-primary-tint: color-mix(in srgb, var(--hm-admin-primary) 24%, white);
+  --hm-admin-primary-muted: color-mix(in srgb, var(--hm-admin-primary) 46%, white);
+  --hm-admin-focus-ring: var(--hm-admin-primary);
+  --hm-admin-focus-halo: color-mix(in srgb, var(--hm-admin-primary) 13%, transparent);
+  --hm-admin-selected-border: var(--hm-admin-primary-muted);
+  --hm-admin-on-primary: #fff;
+}
+
+/* Use the same aliases for existing design-system controls in the campaign,
+   organization and platform management layouts. */
+app-layout,
+app-campaign-workspace-shell,
+.shared-header:not(.studio-header) {
+  --hm-brand-50: var(--hm-admin-primary-subtle);
+  --hm-brand-100: var(--hm-admin-primary-soft);
+  --hm-brand-200: var(--hm-admin-primary-tint);
+  --hm-brand-300: var(--hm-admin-primary-muted);
+  --hm-brand-400: color-mix(in srgb, var(--hm-admin-primary) 72%, white);
+  --hm-brand-600: var(--hm-admin-primary);
+  --hm-brand-700: var(--hm-admin-primary-hover);
+  --hm-brand-800: var(--hm-admin-primary-active);
+  --hm-brand-secondary: var(--hm-admin-primary-hover);
+  --hm-color-primary: var(--hm-admin-primary);
+  --hm-color-primary-hover: var(--hm-admin-primary-hover);
+  --hm-control-focus: var(--hm-admin-focus-ring);
+  --hm-select-accent: var(--hm-admin-primary);
+  --hm-admin-header-focus: var(--hm-admin-focus-ring);
+  --hm-category-selected-bg: var(--hm-admin-primary-soft);
+  --hm-category-selected-color: var(--hm-admin-primary);
+  --hm-category-selected-border: var(--hm-admin-selected-border);
 }

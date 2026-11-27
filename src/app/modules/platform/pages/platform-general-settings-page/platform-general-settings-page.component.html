@@ -1,12 +1,45 @@
-<div class="plat-page">
+<div class="plat-page sa-v1 cm-v7">
   <div class="plat-header">
-    <h1 class="plat-title">הגדרות כלליות</h1>
+    <h1 class="plat-title">{{ developerTools ? 'כלי פיתוח ובדיקות' : 'הגדרות כלליות' }}</h1>
   </div>
 
-  <div class="gs-tabs">
-    <button class="gs-tab" [class.gs-tab-active]="tab === 'billing'" (click)="tab = 'billing'">חיוב ומיסוי</button>
-    <button class="gs-tab" [class.gs-tab-active]="tab === 'simulation'" (click)="tab = 'simulation'">סימולציה</button>
-  </div>
+  @if (!developerTools) {
+    <nav class="cm-tabs" aria-label="הגדרות הפלטפורמה">
+      <button type="button" [attr.aria-pressed]="tab === 'billing'" (click)="tab = 'billing'">חיוב ומיסוי</button>
+      <button type="button" [attr.aria-pressed]="tab === 'design'" (click)="tab = 'design'">עיצוב המערכת</button>
+    </nav>
+  }
+  @if (tab === 'design') {
+    <section class="cm-ledger sa-ledger">
+      <h2>צבע דומיננטי</h2>
+      <p class="sa-description">הצבע חל על ממשקי הניהול של הפלטפורמה, העמותות והקמפיינים.</p>
+      <div class="sa-fields">
+        <label>צבע ראשי <input type="color" [ngModel]="previewColor" (ngModelChange)="colorDraft = $event"></label>
+        <label>ערך HEX <input class="cm-input" dir="ltr" maxlength="7" [(ngModel)]="colorDraft"></label>
+      </div>
+      <div class="sa-swatches" role="group" aria-label="פלטת צבעים">
+        @for (color of colorPalette; track color) {
+          <button type="button" [style.background]="color" [attr.aria-label]="color" [attr.aria-pressed]="previewColor.toLowerCase() === color" (click)="colorDraft = color">
+            @if (previewColor.toLowerCase() === color) { <span aria-hidden="true">✓</span> }
+          </button>
+        }
+      </div>
+      <div class="sa-color-preview" [style.--hm-platform-admin-color]="previewColor" aria-label="תצוגה מקדימה">
+        <button class="cm-button cm-primary" type="button">כפתור ראשי</button>
+        <button class="cm-button" type="button">כפתור משני</button>
+        <div class="cm-tabs"><button type="button" aria-pressed="true">לשונית פעילה</button></div>
+        <span class="sa-nav-preview">פריט ניווט פעיל</span>
+      </div>
+      <div class="sa-drawer-actions">
+        <button type="button" class="cm-button" (click)="colorDraft = defaultColor">איפוס לברירת מחדל</button>
+        <button type="button" class="cm-button cm-primary" disabled>שמירה</button>
+      </div>
+      <p class="sa-empty">שמירת צבע לכל ממשקי הניהול דורשת תמיכה בהגדרות הפלטפורמה בצד השרת.</p>
+    </section>
+    <section class="cm-ledger sa-ledger">
+      <h2>קטגוריות</h2><a class="cm-button" routerLink="/platform/settings/categories">ניהול קטגוריות</a>
+    </section>
+  }
 
   @if (tab === 'billing') {
     <div class="plat-card">
@@ -45,6 +78,7 @@
   }
 
   @if (tab === 'simulation') {
+    <div class="sa-tool-grid">
     <!-- A. שעון עסקי -->
     <div class="plat-card sim-clock-card">
       <div class="gs-card-title">שעון עסקי</div>
@@ -59,9 +93,7 @@
           <span class="sim-mode-badge" [class.sim-mode-badge-override]="clockStatus.overrideActive">{{ clockModeLabel }}</span>
           <span class="sim-clock-effective">{{ fmtDateTime(clockStatus.businessNow) }}</span>
         </div>
-        @if (clockStatus.overrideActive) {
-          <p class="sim-clock-realtime-note">זמן אמת בפועל: {{ fmtDateTime(clockStatus.realNow) }}</p>
-        }
+        <p class="sim-clock-realtime-note">זמן אמת בפועל: <bdi>{{ fmtDateTime(clockStatus.realNow) }}</bdi></p>
 
         <div class="sim-clock-inputs">
           <label class="ba-field">
@@ -86,16 +118,16 @@
       }
     </div>
 
-    <div class="plat-card">
+    <div class="plat-card sa-danger-panel">
       <div class="gs-card-title">איפוס תרומות לקמפיין</div>
       <label class="ba-field sim-campaign-picker">
         <span>קמפיין</span>
-        <select [ngModel]="selectedCampaignId" (ngModelChange)="selectCampaign($event)" [disabled]="campaignsLoading || !!campaignsError || resetBusy">
-          <option value="">בחר קמפיין</option>
+        <app-dropdown [ngModel]="selectedCampaignId" (ngModelChange)="selectCampaign($event)" [disabled]="campaignsLoading || !!campaignsError || resetBusy">
+          <app-dropdown-option value="">בחר קמפיין</app-dropdown-option>
           @for (campaign of campaigns; track campaign.id) {
-            <option [value]="campaign.id">{{ campaign.title }}{{ campaign.entity_name ? ' — ' + campaign.entity_name : '' }}</option>
+            <app-dropdown-option [value]="campaign.id">{{ campaign.title }}{{ campaign.entity_name ? ' — ' + campaign.entity_name : '' }}</app-dropdown-option>
           }
-        </select>
+        </app-dropdown>
       </label>
       @if (campaignsLoading) { <p class="gs-vat-note">טוען קמפיינים...</p> }
       @if (campaignsError) {
@@ -138,6 +170,14 @@
       }
       @if (resetError) { <p class="ops-action-error" role="alert">{{ resetError }}</p> }
       @if (resetResult) { <p class="sim-result-box" role="status">{{ resetResult }}</p> }
+    </div>
+    <section class="plat-card sa-environment">
+      <h2>מצב סביבת עבודה</h2>
+      @if (clockLoading) { <p role="status">טוען מצב שעון…</p> }
+      @else if (clockStatus) {
+        <dl class="sa-detail-list"><dt>שעון עסקי</dt><dd>{{ clockModeLabel }}</dd><dt>סביבת סליקה</dt><dd>לא ניתן לאמת מהנתונים הזמינים</dd></dl>
+      } @else { <p role="alert">מצב הסביבה לא זמין</p> }
+    </section>
     </div>
   }
 </div>

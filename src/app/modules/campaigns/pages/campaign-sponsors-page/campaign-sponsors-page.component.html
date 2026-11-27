@@ -1,16 +1,91 @@
-<div class="sp-shell">
   <p class="sp-loading" *ngIf="loading">טוען…</p>
 
   <ng-container *ngIf="!loading && draft as d">
-    <div class="sp-main">
-      <button type="button" class="sp-back" (click)="back()">→ חזרה לסקירה כללית</button>
-      <h1 class="sp-title"><app-icon name="handshake" /> חסויות</h1>
-      <p class="sp-subtitle">{{ d.title }} · {{ d.sponsors.length }} חסויות</p>
+    <section class="cm-v7">
+      <header class="cm-heading">
+        <div><h1>שותפים וחסויות</h1><p class="cm-description">ניהול השותפים העסקיים והחסויות של הקמפיין</p></div>
+        @if (tab === 'partners') { <a class="cm-button cm-primary" routerLink="../rewards"><app-icon name="plus" /> שיוך עסק</a> }
+        @if (tab === 'sponsors') { <button class="cm-button cm-primary" type="button" (click)="addSponsor()"><app-icon name="plus" /> הוספת חסות</button> }
+      </header>
+      <div class="cm-summary">
+        <div><small>שותפים עסקיים</small><strong>{{ partnersLoading || partnerError ? '—' : partners.length }}</strong></div>
+        <div><small>חסויות בקמפיין</small><strong>{{ d.sponsors.length }}</strong></div>
+        <div><small>שיוכים גלויים</small><strong>{{ visiblePartnerCount ?? '—' }}</strong></div>
+      </div>
+      <section class="cm-ledger">
+      <div class="cm-tabs" role="group" aria-label="שותפים וחסויות">
+        <button type="button" [attr.aria-pressed]="tab === 'partners'" (click)="tab = 'partners'; search = ''">שותפים עסקיים</button>
+        <button type="button" [attr.aria-pressed]="tab === 'sponsors'" (click)="tab = 'sponsors'; search = ''">חסויות</button>
+      </div>
+      <div class="cm-filters">
+        <input class="cm-input" type="search" aria-label="חיפוש" [placeholder]="tab === 'partners' ? 'חיפוש שותף עסקי' : 'חיפוש חסות'" [(ngModel)]="search">
+        @if (tab === 'partners') {
+          <app-dropdown class="sp-filter" label="סינון נראות" [(ngModel)]="visibilityFilter">
+            <app-dropdown-option value="all">כל הסטטוסים</app-dropdown-option><app-dropdown-option value="visible">גלוי</app-dropdown-option><app-dropdown-option value="hidden">מוסתר</app-dropdown-option>
+          </app-dropdown>
+        }
+      </div>
+      @if (tab === 'partners') {
+      <section class="sp-form-panel">
+        <h2 class="cm-panel-title">שותפים עסקיים</h2>
+        <p class="cm-description">עסקים המספקים תשורות והטבות לתורמים</p>
+        <label>סדר תצוגה
+          <app-dropdown class="sp-filter" [(ngModel)]="sortPartner"><app-dropdown-option value="order">סדר קיים</app-dropdown-option><app-dropdown-option value="name">לפי שם</app-dropdown-option></app-dropdown>
+        </label>
+        @if (partnersLoading) { <p role="status">טוען שותפים…</p> }
+        @if (partnerError) { <p role="alert">{{ partnerError }}</p> }
+        @if (!partnersLoading && !partners.length && !partnerError) { <p class="cm-empty">אין שותפים משויכים</p> }
+        @for (partner of shownPartners; track partner.id) {
+          <div class="partner-row">
+            <strong>{{ partner.partnerDisplayName || 'שותף עסקי' }}</strong>
+            <span>{{ partner.visible ? 'גלוי' : 'מוסתר' }}</span>
+            <span>{{ partner.coupon || '—' }}</span>
+            @if (!partner.partnerDeleted) {
+              <button type="button" [disabled]="savingPartner" (click)="openPartnerEdit(partner)">עריכת שיוך</button>
+              <a [routerLink]="['/campaign-partners', partner.id, 'builder']">עריכת עמוד שותף</a>
+            }
+          </div>
+        }
+        @if (partnerEdit; as edit) {
+          <div class="sp-drawer-overlay" (click)="!savingPartner && (partnerEdit = null)"></div>
+          <fieldset class="sp-drawer cm-drawer" role="dialog" aria-modal="true" aria-label="עריכת שיוך עסקי" [disabled]="savingPartner">
+            @if (partnerError) { <p role="alert">{{ partnerError }}</p> }
+            <header class="cm-drawer-head"><h2>{{ edit.partnerDisplayName }}</h2></header>
+            <div class="cm-drawer-body">
+            <label>תשורה
+              <app-dropdown [(ngModel)]="edit.rewardId">
+                <app-dropdown-option [ngValue]="null">ללא תשורה</app-dropdown-option>
+                @if (edit.rewardId && !hasReward(edit.rewardId, d)) {
+                  <app-dropdown-option [ngValue]="edit.rewardId">תשורה קיימת שאינה בקטלוג</app-dropdown-option>
+                }
+                @for (reward of d.offerings; track reward.id) {
+                  <app-dropdown-option [ngValue]="reward.id">{{ reward.title }}</app-dropdown-option>
+                }
+              </app-dropdown>
+            </label>
+            <label>קופון <input [(ngModel)]="edit.coupon"></label>
+            <label>סדר <input type="number" step="1" [(ngModel)]="edit.order"></label>
+            <label><input type="checkbox" [(ngModel)]="edit.visible">גלוי</label>
+            </div>
+            <footer class="cm-drawer-foot">
+              <button class="cm-button" type="button" (click)="partnerEdit = null">ביטול</button>
+              <button class="cm-button cm-primary" type="button" (click)="savePartner(edit)">שמירה</button>
+            </footer>
+          </fieldset>
+        }
+      </section>
+      } @else {
       <p class="sp-save-error" *ngIf="saveError">{{ saveError }}</p>
 
-      <div class="sp-form-panel">
-        <h2 class="sp-form-title">{{ isEditing ? 'עריכת חסות' : 'חסות חדשה' }}</h2>
-
+      @if (sponsorFormOpen) {
+      <div class="sp-drawer-overlay" (click)="closeSponsorForm()"></div>
+      <div class="sp-form-panel sp-drawer cm-drawer" role="dialog" aria-modal="true" aria-label="פרטי חסות" (keydown.escape)="closeSponsorForm()">
+        <header class="cm-drawer-head">
+          <h2 class="sp-form-title">{{ isEditing ? 'עריכת חסות' : 'חסות חדשה' }}</h2>
+          <button type="button" class="cm-button" (click)="closeSponsorForm()" [disabled]="saving" aria-label="סגירה"><app-icon name="x" /></button>
+        </header>
+        <div class="cm-drawer-body">
+        <p *ngIf="saveError" role="alert">{{ saveError }}</p>
         <div class="sf-field">
           <label class="sf-label">לוגו</label>
           <input id="sp-logo-input" type="file" accept="image/*" style="display:none" (change)="onLogoSelected($event)">
@@ -33,16 +108,18 @@
           <input class="sf-input" type="url" [(ngModel)]="form.link" placeholder="https://...">
         </div>
 
-        <div class="sf-actions">
-          <button type="button" class="sf-btn-clear" (click)="clearForm()"><app-icon name="trash" /> נקה</button>
-          <button type="button" class="sf-btn-save" [disabled]="!form.name.trim()" (click)="save()">
+        </div>
+        <footer class="cm-drawer-foot">
+          <button type="button" class="cm-button" (click)="closeSponsorForm()">ביטול</button>
+          <button type="button" class="cm-button cm-primary" [disabled]="saving || isUploadingLogo || !form.name.trim()" (click)="save()">
             <app-icon name="save" /> {{ isEditing ? 'עדכן חסות' : 'שמור חסות' }}
           </button>
-        </div>
+        </footer>
       </div>
 
+      }
       <div class="sp-list" *ngIf="d.sponsors.length">
-        <div class="sp-card" *ngFor="let s of d.sponsors">
+        <div class="sp-card" *ngFor="let s of shownSponsors(d)">
           <div class="sp-card-logo" *ngIf="s.logoUrl"><img [src]="s.logoUrl" alt=""></div>
           <div class="sp-card-logo sp-card-logo--empty" *ngIf="!s.logoUrl"><app-icon name="building" /></div>
           <div class="sp-card-body">
@@ -56,7 +133,8 @@
         </div>
       </div>
 
-      <p class="sp-empty" *ngIf="!d.sponsors.length">אין עדיין חסויות. חסויות הן רשות — ניתן לדלג.</p>
-    </div>
+      <p class="cm-empty" *ngIf="!d.sponsors.length">אין עדיין חסויות.</p>
+      }
+      </section>
+    </section>
   </ng-container>
-</div>

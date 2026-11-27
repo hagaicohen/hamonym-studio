@@ -1,16 +1,27 @@
-<div class="cdu-panel">
+<div class="cdu-panel" [class.cdu-workspace]="workspaceMode">
   <div class="cdu-header">
-    <span class="cdu-title"><app-icon name="megaphone" /> עדכונים</span>
-    <button type="button" class="cdu-add-btn" *ngIf="!loading && !loadError" (click)="openComposer()">+ הוסף עדכון חדש</button>
+    @if (workspaceMode) {
+      <div><h2 class="cm-panel-title">עדכוני הקמפיין</h2><p class="cm-description">שתפו את התורמים בהתקדמות ובחדשות מהקמפיין</p></div>
+    } @else { <span class="cdu-title"><app-icon name="megaphone" /> עדכונים</span> }
+    <button type="button" class="cdu-add-btn" *ngIf="!workspaceMode && !loading && !loadError" (click)="openComposer()">+ הוסף עדכון חדש</button>
   </div>
 
   <p class="cdu-loading" *ngIf="loading">טוען עדכונים…</p>
   <p class="cdu-error" *ngIf="loadError">{{ loadError }}</p>
+  <p class="cdu-error" *ngIf="saveError" role="alert">{{ saveError }}</p>
 
   <ng-container *ngIf="!loading && !loadError">
     <!-- Reverse-chronological feed — collapsed by default (badge/date/title
          only), click to open. Paged so a campaign with many updates stays
          light. Adding/editing happens in the modal below, not inline. -->
+    @if (workspaceMode) {
+      <div class="cm-filters">
+        <input class="cm-input" type="search" aria-label="חיפוש עדכון" placeholder="חיפוש עדכונים" [(ngModel)]="search">
+        <app-dropdown class="cdu-filter" label="סטטוס עדכון" [(ngModel)]="filter">
+          <app-dropdown-option value="all">כל הסטטוסים</app-dropdown-option><app-dropdown-option value="published">פורסם</app-dropdown-option><app-dropdown-option value="draft">טיוטה</app-dropdown-option>
+        </app-dropdown>
+      </div>
+    }
     <div class="cdu-feed">
       <ng-container *ngFor="let u of visibleUpdates">
         <ng-container *ngTemplateOutlet="cardTpl; context: { u: u, preview: false, expanded: isExpanded(u.id) }"></ng-container>
@@ -20,6 +31,7 @@
         הצג עוד עדכונים
       </button>
 
+      <p class="cdu-empty" *ngIf="updates.length && !visibleUpdates.length">לא נמצאו עדכונים</p>
       <p class="cdu-empty" *ngIf="!updates.length">אין עדיין שיתופים. לחצו על "+ הוסף עדכון חדש" כדי לספר לתורמים מה קורה בקמפיין.</p>
     </div>
 
@@ -27,11 +39,13 @@
          existing item. Was inline at the top of the panel; moved into a
          modal (2026-08-07) so the panel's default state is just the feed. -->
     <div class="cdu-modal-backdrop" *ngIf="showComposer" (click)="closeComposer()">
-      <div class="cdu-modal-box" (click)="$event.stopPropagation()">
-        <button type="button" class="cdu-modal-close" (click)="closeComposer()">✕</button>
-        <h3 class="cdu-modal-heading">{{ isEditing ? 'עריכת עדכון' : 'עדכון חדש' }}</h3>
+      <div class="cdu-modal-box" [class.cm-drawer]="workspaceMode" role="dialog" aria-modal="true" aria-labelledby="update-editor-title" (keydown.escape)="closeComposer()" (click)="$event.stopPropagation()">
+        <header class="cm-drawer-head">
+        <button type="button" aria-label="סגירה" class="cdu-modal-close" (click)="closeComposer()">✕</button>
+        <h3 id="update-editor-title" class="cdu-modal-heading">{{ isEditing ? 'עריכת עדכון' : 'עדכון חדש' }}</h3>
 
-        <div class="cdu-composer">
+        </header>
+        <div class="cdu-composer cm-drawer-body">
           <div class="cdu-text-fields">
             <div class="cdu-title-editor">
               <span class="cdu-field-label">כותרת</span>
@@ -58,26 +72,19 @@
             <button type="button" class="cdu-remove-image" (click)="removeComposerImage()">✕</button>
           </div>
 
-          <div class="cdu-composer-actions">
-            <input id="cdu-image-input" type="file" accept="image/*" style="display:none" (change)="onImageSelected($event)">
-            <label for="cdu-image-input" class="cdu-photo-btn"><app-icon [name]="isUploadingImage ? 'hourglass' : 'camera'" /> {{ isUploadingImage ? 'מעלה…' : 'הוסף תמונה' }}</label>
-
-            <div class="cdu-composer-buttons">
-              <button type="button" class="cdu-cancel-btn" (click)="cancelEdit()">ביטול</button>
-              <button type="button" class="cdu-draft-btn" [disabled]="!canSave || saving" (click)="saveDraft()">שמירה כטיוטה</button>
-              <button type="button" class="cdu-publish-btn" [disabled]="!canSave || saving" (click)="publish()">
-                {{ isEditing ? 'עדכון' : 'פרסום' }}
-              </button>
-            </div>
+          <label class="cdu-photo-btn"><app-icon name="cloud-upload" /> {{ isUploadingImage ? 'מעלה…' : imageName || 'בחרו תמונה' }}
+            <input class="cdu-file" type="file" accept="image/*" [disabled]="isUploadingImage" (change)="onImageSelected($event)">
+          </label>
+          <div class="cdu-preview-section" *ngIf="hasPreviewContent">
+            <span class="cdu-preview-label"><app-icon name="eye" /> תצוגה מקדימה</span>
+            <ng-container *ngTemplateOutlet="cardTpl; context: { u: previewUpdate, preview: true, expanded: true }"></ng-container>
           </div>
         </div>
-
-        <!-- Live preview — same card markup as the real feed, always
-             expanded and in sync with the composer while typing. -->
-        <div class="cdu-preview-section" *ngIf="hasPreviewContent">
-          <span class="cdu-preview-label"><app-icon name="eye" /> תצוגה מקדימה</span>
-          <ng-container *ngTemplateOutlet="cardTpl; context: { u: previewUpdate, preview: true, expanded: true }"></ng-container>
-        </div>
+        <footer class="cm-drawer-foot cdu-composer-buttons">
+          <button type="button" class="cdu-cancel-btn" (click)="cancelEdit()">ביטול</button>
+          <button type="button" class="cdu-draft-btn" [disabled]="!canSave || saving || isUploadingImage" (click)="saveDraft()">שמירה כטיוטה</button>
+          <button type="button" class="cdu-publish-btn" [disabled]="!canSave || saving || isUploadingImage" (click)="publish()">{{ isEditing ? 'עדכון' : 'פרסום' }}</button>
+        </footer>
       </div>
     </div>
 
@@ -88,7 +95,7 @@
          published. -->
     <ng-template #cardTpl let-u="u" let-preview="preview" let-expanded="expanded">
       <div class="cdu-card" [class.cdu-card--draft]="!preview && !isPublished(u)" [class.cdu-card--preview]="preview"
-        [class.cdu-card--clickable]="!preview" (click)="!preview && toggleExpand(u.id)">
+        [class.cdu-card--clickable]="!preview">
         <div class="cdu-card-media" *ngIf="u.mediaUrl">
           <img class="cdu-card-image" [src]="u.mediaUrl" alt="">
           <span class="cdu-badge cdu-badge--floating" *ngIf="!preview" [class.cdu-badge--draft]="!isPublished(u)">
@@ -101,11 +108,12 @@
               <app-icon [name]="isPublished(u) ? 'check' : 'pencil-line'" /> {{ isPublished(u) ? 'פורסם' : 'טיוטה' }}
             </span>
             <span class="cdu-card-date">{{ formatDate(u.date) }}</span>
-            <span class="cdu-card-chevron" *ngIf="!preview">{{ expanded ? '▲' : '▼' }}</span>
+            <button type="button" class="cdu-card-chevron cm-row-link" *ngIf="!preview" [attr.aria-expanded]="expanded" (click)="toggleExpand(u.id)">{{ expanded ? 'סגירה' : 'פרטים' }}</button>
           </div>
           <div class="cdu-card-title" [class.cdu-card-title--clamp]="!expanded" [innerHTML]="safeHtml(u.title)"></div>
           <ng-container *ngIf="expanded">
             <div class="cdu-card-desc" *ngIf="u.description" [innerHTML]="safeHtml(u.description)"></div>
+          </ng-container>
             <div class="cdu-card-actions" *ngIf="!preview" (click)="$event.stopPropagation()">
               <button type="button" class="cdu-icon-btn" (click)="edit(u)" title="עריכה"><app-icon name="pencil" /></button>
               <button type="button" class="cdu-icon-btn" (click)="togglePublish(u)"
@@ -114,7 +122,6 @@
               </button>
               <button type="button" class="cdu-icon-btn cdu-icon-btn--danger" (click)="delete(u.id)" title="מחיקה"><app-icon name="trash" /></button>
             </div>
-          </ng-container>
         </div>
       </div>
     </ng-template>

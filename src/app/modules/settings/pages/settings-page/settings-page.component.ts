@@ -51,7 +51,10 @@ export class SettingsPageComponent {
   accountError = '';
   accountSuccess = false;
 
-  startEditAccount(): void {
+  accountDrawer: 'profile' | 'password' = 'profile';
+
+  startEditAccount(mode: 'profile' | 'password' = 'profile'): void {
+    this.accountDrawer = mode;
     this.nameDraft       = this.currentUser()?.full_name ?? '';
     this.newPassword     = '';
     this.confirmPassword = '';
@@ -68,14 +71,14 @@ export class SettingsPageComponent {
     this.accountError = '';
 
     const trimmedName = this.nameDraft.trim();
-    if (!trimmedName) {
+    if (this.accountDrawer === 'profile' && !trimmedName) {
       this.accountError = 'נא להזין שם מלא';
       return;
     }
 
     // Password fields are optional — filling them in changes the password,
     // leaving them blank just updates the name.
-    const wantsPasswordChange = this.newPassword.length > 0 || this.confirmPassword.length > 0;
+    const wantsPasswordChange = this.accountDrawer === 'password';
     if (wantsPasswordChange) {
       if (this.newPassword.length < 8) {
         this.accountError = 'הסיסמה החדשה חייבת להכיל לפחות 8 תווים';
@@ -89,10 +92,9 @@ export class SettingsPageComponent {
 
     this.accountSaving = true;
 
-    const requests: Observable<unknown>[] = [this.authService.updateProfile(trimmedName)];
-    if (wantsPasswordChange) {
-      requests.push(this.authService.changePassword(this.newPassword));
-    }
+    const requests: Observable<unknown>[] = [
+      wantsPasswordChange ? this.authService.changePassword(this.newPassword) : this.authService.updateProfile(trimmedName),
+    ];
 
     forkJoin(requests).subscribe({
       next: () => {

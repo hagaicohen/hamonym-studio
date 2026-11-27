@@ -1,4 +1,4 @@
-﻿/* entity-profile-section-edit.component.css */
+/* entity-profile-section-edit.component.css */
 @import "../../../styles/settings-section-actions.css";
 .section-title-row {
   display: flex;
@@ -33,7 +33,7 @@
 
   font-weight: 800;
 
-  color: #6D5DF6;
+  color: var(--hm-admin-primary);
 
   line-height: 1.2;
 }
@@ -163,9 +163,9 @@
 }
 
 .tag.selectable.selected {
-  background: #6D5DF6;
+  background: var(--hm-admin-primary);
 
-  border-color: #6D5DF6;
+  border-color: var(--hm-admin-primary);
 
   color: white;
 }

@@ -39,9 +39,12 @@ exports.getCampaignPerformance = async (entityId, { sortBy, sortDir, search, sta
   let rangeClause = '';
   if (from && to) {
     rangeParams.push(from, to);
-    rangeClause = `AND d.completed_at >= $${params.length + 1} AND d.completed_at < $${params.length + 2}`;
+    rangeClause = `AND d.completed_at >= ($${params.length + 1}::date::timestamp AT TIME ZONE 'Asia/Jerusalem') AND d.completed_at < ($${params.length + 2}::date::timestamp AT TIME ZONE 'Asia/Jerusalem')`;
   }
 
+  const donorCount = campaignId
+    ? "COUNT(DISTINCT COALESCE(NULLIF(d.donor_email, ''), NULLIF(d.donor_phone, '')))"
+    : 'COUNT(*)';
   const { rows } = await db.query(
     `SELECT c.id, c.title, c.slug, c.status, c.cover_image_url, c.target_amount::float, c.current_amount::float,
             c.supporters_count, c.created_at, c.start_date, c.end_date,
@@ -49,7 +52,7 @@ exports.getCampaignPerformance = async (entityId, { sortBy, sortDir, search, sta
             COALESCE(r.donors_in_range, 0)::int   AS donors_in_range
      FROM campaigns c
      LEFT JOIN LATERAL (
-       SELECT SUM(d.amount_ils) AS raised_in_range, COUNT(*) AS donors_in_range
+       SELECT SUM(d.amount_ils) AS raised_in_range, ${donorCount} AS donors_in_range
        FROM donations d
        WHERE d.campaign_id = c.id AND d.status = 'paid' ${rangeClause}
      ) r ON TRUE
@@ -135,15 +138,17 @@ exports.getMarketingSources = async (entityId, { from, to, campaignId } = {}) =>
   }
   if (from && to) {
     scopeParams.push(from, to);
-    scopeClause += ` AND completed_at >= $${scopeParams.length - 1} AND completed_at < $${scopeParams.length}`;
+    scopeClause += ` AND completed_at >= ($${scopeParams.length - 1}::date::timestamp AT TIME ZONE 'Asia/Jerusalem') AND completed_at < ($${scopeParams.length}::date::timestamp AT TIME ZONE 'Asia/Jerusalem')`;
   }
 
+  const source = "COALESCE(NULLIF(utm_params->>'utm_source', ''), NULLIF(utm_params->>'source', ''))";
+  const medium = "COALESCE(NULLIF(utm_params->>'utm_medium', ''), NULLIF(utm_params->>'medium', ''))";
   const [channelRes, utmRes, totalRes] = await Promise.all([
     db.query(
       `SELECT
          CASE
            WHEN ambassador_id IS NOT NULL THEN 'שגריר'
-           WHEN utm_params->>'source' IS NOT NULL THEN utm_params->>'source'
+           WHEN COALESCE(NULLIF(utm_params->>'utm_source', ''), NULLIF(utm_params->>'source', '')) IS NOT NULL THEN COALESCE(NULLIF(utm_params->>'utm_source', ''), NULLIF(utm_params->>'source', ''))
            ELSE 'ישיר / לא מזוהה'
          END AS channel,
          COUNT(*)::int AS count,
@@ -156,20 +161,20 @@ exports.getMarketingSources = async (entityId, { from, to, campaignId } = {}) =>
     ),
     db.query(
       `SELECT
-         utm_params->>'source' AS source,
-         utm_params->>'medium' AS medium,
+         COALESCE(NULLIF(utm_params->>'utm_source', ''), NULLIF(utm_params->>'source', '')) AS source,
+         COALESCE(NULLIF(utm_params->>'utm_medium', ''), NULLIF(utm_params->>'medium', '')) AS medium,
          COUNT(*)::int AS count,
          COALESCE(SUM(amount_ils), 0)::float AS total
        FROM donations
-       WHERE ${scopeClause} AND status = 'paid' AND utm_params IS NOT NULL
-       GROUP BY utm_params->>'source', utm_params->>'medium'
+       WHERE ${scopeClause} AND status = 'paid' AND ${source} IS NOT NULL
+       GROUP BY COALESCE(NULLIF(utm_params->>'utm_source', ''), NULLIF(utm_params->>'source', '')), COALESCE(NULLIF(utm_params->>'utm_medium', ''), NULLIF(utm_params->>'medium', ''))
        ORDER BY total DESC`,
       scopeParams
     ),
     db.query(
       `SELECT
          COUNT(*)::int AS total_count,
-         COUNT(*) FILTER (WHERE utm_params IS NOT NULL)::int AS with_utm_count,
+         COUNT(*) FILTER (WHERE ${source} IS NOT NULL)::int AS with_utm_count,
          COALESCE(SUM(amount_ils), 0)::float AS total_raised
        FROM donations
        WHERE ${scopeClause} AND status = 'paid'`,
@@ -206,6 +211,7 @@ exports.getTrends = async (entityId, { from, to, campaignId } = {}) => {
   const campaignClauseYear = campaignId ? `AND campaign_id = $2` : '';
 
   const hasRange = !!(from && to);
+  const allTime = Boolean(campaignId && !hasRange);
   const rangeFrom = hasRange ? from : null;
   const rangeTo   = hasRange ? to   : null;
   let prevFrom = null, prevTo = null;
@@ -230,8 +236,8 @@ exports.getTrends = async (entityId, { from, to, campaignId } = {}) => {
               COALESCE(AVG(amount_ils), 0)::float AS avg
        FROM donations
        WHERE entity_id = $1 AND status = 'paid' ${campaignClause}
-         AND completed_at >= COALESCE($2::date, date_trunc('month', NOW()))
-         AND ($3::date IS NULL OR completed_at < $3::date)`,
+         AND (${allTime ? 'TRUE OR ' : ''}completed_at >= COALESCE(($2::date::timestamp AT TIME ZONE 'Asia/Jerusalem'), date_trunc('month', NOW())))
+         AND ($3::date IS NULL OR completed_at < ($3::date::timestamp AT TIME ZONE 'Asia/Jerusalem'))`,
       thisMonthParams
     ),
     db.query(
@@ -239,18 +245,18 @@ exports.getTrends = async (entityId, { from, to, campaignId } = {}) => {
               COALESCE(AVG(amount_ils), 0)::float AS avg
        FROM donations
        WHERE entity_id = $1 AND status = 'paid' ${campaignClause}
-         AND completed_at >= COALESCE($2::date, date_trunc('month', NOW() - INTERVAL '1 month'))
-         AND completed_at  < COALESCE($3::date, date_trunc('month', NOW()))`,
+         AND completed_at >= COALESCE(($2::date::timestamp AT TIME ZONE 'Asia/Jerusalem'), date_trunc('month', NOW() - INTERVAL '1 month'))
+         AND completed_at  < COALESCE(($3::date::timestamp AT TIME ZONE 'Asia/Jerusalem'), date_trunc('month', NOW()))`,
       lastMonthParams
     ),
     db.query(
       `SELECT
-         EXTRACT(YEAR FROM completed_at)::int  AS year,
-         EXTRACT(MONTH FROM completed_at)::int AS month,
+         EXTRACT(YEAR FROM completed_at AT TIME ZONE 'Asia/Jerusalem')::int  AS year,
+         EXTRACT(MONTH FROM completed_at AT TIME ZONE 'Asia/Jerusalem')::int AS month,
          COALESCE(SUM(amount_ils), 0)::float AS total
        FROM donations
        WHERE entity_id = $1 AND status = 'paid' ${campaignClauseYear}
-         AND completed_at >= date_trunc('year', NOW() - INTERVAL '1 year')
+         AND completed_at >= (date_trunc('year', (NOW() AT TIME ZONE 'Asia/Jerusalem') - INTERVAL '1 year') AT TIME ZONE 'Asia/Jerusalem')
        GROUP BY 1, 2
        ORDER BY 1, 2`,
       yearParams
@@ -259,9 +265,9 @@ exports.getTrends = async (entityId, { from, to, campaignId } = {}) => {
 
   const now  = thisMonthRes.rows[0];
   const prev = lastMonthRes.rows[0];
-  const pctChange = (a, b) => (b > 0 ? Math.round(((a - b) / b) * 100) : null);
+  const pctChange = (a, b) => (!allTime && b > 0 ? Math.round(((a - b) / b) * 100) : null);
 
-  const currentYear = new Date().getFullYear();
+  const currentYear = Number(new Intl.DateTimeFormat('en', { timeZone: 'Asia/Jerusalem', year: 'numeric' }).format(new Date()));
   const lastYear    = currentYear - 1;
   const thisYearSeries = new Array(12).fill(0);
   const lastYearSeries = new Array(12).fill(0);
@@ -273,7 +279,7 @@ exports.getTrends = async (entityId, { from, to, campaignId } = {}) => {
   return {
     kpi: {
       thisMonth: { total: now.total, count: now.count, avg: now.avg },
-      lastMonth: { total: prev.total, count: prev.count, avg: prev.avg },
+      lastMonth: allTime ? null : { total: prev.total, count: prev.count, avg: prev.avg },
       pctChange: {
         total: pctChange(now.total, prev.total),
         count: pctChange(now.count, prev.count),
@@ -324,20 +330,20 @@ exports.getFailures = async (entityId, { search, status, sortBy, sortDir, from, 
     idx++;
   }
   if (from && to) {
-    where.push(`d.updated_at >= $${idx++} AND d.updated_at < $${idx++}`);
+    where.push(`d.updated_at >= ($${idx++}::date::timestamp AT TIME ZONE 'Asia/Jerusalem') AND d.updated_at < ($${idx++}::date::timestamp AT TIME ZONE 'Asia/Jerusalem')`);
     params.push(from, to);
   }
 
   const sortCol = FAILURES_SORT[sortBy] || 'd.updated_at';
   const sortOrd = sortDir === 'asc' ? 'ASC' : 'DESC';
 
-  const kpiRangeClause = from && to ? `updated_at >= $2 AND updated_at < $3` : `updated_at >= date_trunc('month', NOW())`;
-  const kpiPaidRangeClause = from && to ? `completed_at >= $2 AND completed_at < $3` : `completed_at >= date_trunc('month', NOW())`;
+  const kpiRangeClause = from && to ? `updated_at >= ($2::date::timestamp AT TIME ZONE 'Asia/Jerusalem') AND updated_at < ($3::date::timestamp AT TIME ZONE 'Asia/Jerusalem')` : campaignId ? 'TRUE' : `updated_at >= date_trunc('month', NOW())`;
+  const kpiPaidRangeClause = from && to ? `completed_at >= ($2::date::timestamp AT TIME ZONE 'Asia/Jerusalem') AND completed_at < ($3::date::timestamp AT TIME ZONE 'Asia/Jerusalem')` : campaignId ? 'TRUE' : `completed_at >= date_trunc('month', NOW())`;
   const kpiParams = from && to ? [entityId, from, to] : [entityId];
   const kpiCampaignClause = campaignId ? `AND campaign_id = $${kpiParams.length + 1}` : '';
   if (campaignId) kpiParams.push(campaignId);
 
-  const reasonsRangeClause = from && to ? `AND updated_at >= $2 AND updated_at < $3` : '';
+  const reasonsRangeClause = from && to ? `AND updated_at >= ($2::date::timestamp AT TIME ZONE 'Asia/Jerusalem') AND updated_at < ($3::date::timestamp AT TIME ZONE 'Asia/Jerusalem')` : '';
   const reasonsParams = from && to ? [entityId, from, to] : [entityId];
   const reasonsCampaignClause = campaignId ? `AND campaign_id = $${reasonsParams.length + 1}` : '';
   if (campaignId) reasonsParams.push(campaignId);

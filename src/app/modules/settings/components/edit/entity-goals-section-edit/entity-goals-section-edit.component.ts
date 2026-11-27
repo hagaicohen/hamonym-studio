@@ -10,7 +10,7 @@ import { SectionSaveState } from '../../../models/section-save-state.model';
   imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './entity-goals-section-edit.component.html',
 
-  styleUrls: ['./entity-goals-section-edit.component.css'],
+  styleUrls: ['./entity-goals-section-edit.component.css', '../../entity-settings/entity-settings-section.css'],
 })
 export class EntityGoalsSectionEditComponent {
   @Input()

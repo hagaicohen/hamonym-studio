@@ -1,4 +1,4 @@
-﻿@import "../../../styles/settings-section-actions.css";
+@import "../../../styles/settings-section-actions.css";
 
 /* entity-basic-info-section-edit.component.css */
 
@@ -27,7 +27,7 @@
 
   font-weight: 700;
 
-  color: #6D5DF6;
+  color: var(--hm-admin-primary);
 }
 
 .card-description {

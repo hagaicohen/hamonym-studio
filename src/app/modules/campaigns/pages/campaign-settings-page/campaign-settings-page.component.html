@@ -1,90 +1,77 @@
-<div class="csp-shell">
-  <p class="csp-loading" *ngIf="loading">טוען…</p>
-
-  <ng-container *ngIf="!loading && draft as d">
-    <div class="csp-main">
-      <button type="button" class="csp-back" (click)="back()">→ חזרה לסקירה כללית</button>
-      <div class="csp-title-row">
-        <h1 class="csp-title"><app-icon name="settings" /> הגדרות קמפיין</h1>
+@if (loading) { <p role="status">טוען…</p> }
+@if (!loading && draft; as d) {
+  <section class="cm-v7">
+    <header class="cm-heading">
+      <div><h1>הגדרות קמפיין</h1><p class="cm-description">פרטי הקמפיין, יעד הגיוס והמיקום</p></div>
+      <small class="save-state" role="status">{{ saving ? 'שומר…' : dirty ? 'שינויים שלא נשמרו' : saved ? 'השינויים נשמרו' : '' }}</small>
+    </header>
+    <fieldset class="settings-form" [disabled]="saving">
+      <section class="setting-panel">
+        <header class="section-title"><span class="section-icon"><app-icon name="settings" /></span><h2>פרטי הקמפיין</h2></header>
+        <div class="fields">
+          <label class="cm-field wide">שם הקמפיין<input class="cm-input" [ngModel]="d.title" (change)="patchText('title', $any($event.target).value)"></label>
+          <label class="cm-field wide">תיאור קצר<textarea class="cm-input text-input" [ngModel]="d.shortDescription" (change)="patchText('shortDescription', $any($event.target).value)"></textarea></label>
+          <div class="cm-field">
+            <span>קטגוריה</span>
+            <button type="button" class="cm-button select-button" (click)="openCategory()"><app-icon name="list" /> {{ selectedCategoryLabel }}</button>
+          </div>
+          <label class="cm-field">שם מנהל<input class="cm-input" [ngModel]="d.managerName" (change)="patchText('managerName', $any($event.target).value)"></label>
+          <label class="cm-field wide">כתובת הקמפיין
+            <input class="cm-input slug-input" [value]="d.slug" dir="ltr" readonly>
+            <small>הכתובת הקיימת משמשת קישורים שכבר שותפו.</small>
+          </label>
+        </div>
+      </section>
+      <section class="setting-panel">
+        <header class="section-title"><span class="section-icon"><app-icon name="target" /></span><h2>גיוס ומועדים</h2></header>
+        <div class="fields">
+          <label class="cm-field">יעד גיוס (₪)<input class="cm-input" type="text" appMoneyInput min="0" [ngModel]="d.targetAmount" (ngModelChange)="patchTarget($event)"></label>
+          <label class="cm-field ongoing"><input type="checkbox" [checked]="isOngoing" (change)="setLifecycle($any($event.target).checked)"> קמפיין מתמשך</label>
+          @if (!isOngoing) {
+            <label class="cm-field">תאריך התחלה<input class="cm-input" type="date" [value]="d.startDate" (change)="patchDate('startDate', $any($event.target).value)"></label>
+            <label class="cm-field">תאריך סיום<input class="cm-input" type="date" [value]="d.endDate" (change)="patchDate('endDate', $any($event.target).value)"></label>
+          }
+        </div>
+      </section>
+      <section class="setting-panel">
+        <header class="section-title"><span class="section-icon"><app-icon name="map-pin" /></span><h2>מיקום הקמפיין</h2></header>
+        <div class="location-options">
+          @for (opt of LOCATION_TYPES; track opt.type) {
+            <label><input type="radio" name="campaign-location" [checked]="d.layout.campaignLocation?.type === opt.type" (change)="setLocationType(opt.type)">{{ opt.label }}</label>
+          }
+        </div>
+        @if (d.layout.campaignLocation?.type === 'region' || d.layout.campaignLocation?.type === 'custom') {
+          <label class="cm-field location-label">מיקום<input class="cm-input" maxlength="40" [ngModel]="d.layout.campaignLocation?.label || ''" (change)="setLocationLabel($any($event.target).value)"></label>
+        }
+        @if (d.layout.campaignLocation) { <button type="button" class="cm-button" (click)="clearLocation()">ניקוי מיקום</button> }
+      </section>
+      <section class="setting-panel">
+        <header class="section-title"><span class="section-icon"><app-icon name="link" /></span><h2>הגדרות קשורות</h2></header>
+        <div class="related-grid">
+          <a class="cm-button" [routerLink]="builderLink"><app-icon name="pencil" /> עריכת דף הקמפיין</a>
+          <a class="cm-button" routerLink="../visibility"><app-icon name="eye" /> נראות לציבור</a>
+          <a class="cm-button" routerLink="../donation"><app-icon name="card" /> טופס תרומה</a>
+        </div>
+      </section>
+      <footer class="savebar">
+        <span role="alert">{{ saveError }}</span>
+        <div><button class="cm-button" type="button" [disabled]="!dirty" (click)="cancel()">ביטול</button>
+          <button class="cm-button cm-primary" type="button" [disabled]="!dirty" (click)="save()">שמירת שינויים</button></div>
+      </footer>
+    </fieldset>
+  </section>
+  @if (categoryOpen) {
+    <div class="cm-drawer-backdrop" (click)="categoryOpen = false"></div>
+    <section class="cm-drawer" role="dialog" aria-modal="true" aria-labelledby="category-title" (keydown.escape)="categoryOpen = false">
+      <header class="cm-drawer-head"><h2 id="category-title">בחירת קטגוריה</h2><button class="cm-button" type="button" aria-label="סגירה" (click)="categoryOpen = false">×</button></header>
+      <div class="cm-drawer-body">
+        <app-category-selector inputId="campaign-settings-category" label="חיפוש קטגוריה"
+          [multiple]="false" [selected]="candidateCategory" (selectedChange)="candidateCategory = $event" />
       </div>
-      <p class="csp-subtitle">{{ d.title }} · כל שינוי נשמר אוטומטית</p>
-
-      <div class="csp-panel">
-        <div class="csp-row">
-          <label class="csp-label"><app-icon name="target" /> יעד גיוס (₪)</label>
-          <input class="csp-input" type="text" inputmode="numeric"
-            [ngModel]="formatMoney(d.targetAmount)" (input)="formatTargetInput($event)" (change)="patchTarget($any($event.target).value)">
-        </div>
-
-        <div class="csp-row">
-          <label class="csp-label"><app-icon name="map-pin" /> מיקום הקמפיין</label>
-          <div class="csp-location-types">
-            <button type="button" *ngFor="let opt of LOCATION_TYPES"
-              class="csp-location-btn" [class.active]="d.layout.campaignLocation?.type === opt.type"
-              (click)="setLocationType(opt.type)">
-              {{ opt.label }}
-            </button>
-          </div>
-          <input *ngIf="d.layout.campaignLocation?.type === 'region' || d.layout.campaignLocation?.type === 'custom'"
-            class="csp-input" type="text" maxlength="40"
-            [ngModel]="d.layout.campaignLocation?.label || ''"
-            (change)="setLocationLabel($any($event.target).value)"
-            [placeholder]="d.layout.campaignLocation?.type === 'region' ? 'לדוגמה: בית שמש והסביבה' : 'לדוגמה: יישובי עוטף עזה'">
-          <button *ngIf="d.layout.campaignLocation" type="button" class="csp-location-clear" (click)="clearLocation()">
-            ✕ ללא מיקום
-          </button>
-          <p class="csp-note" *ngIf="!d.layout.campaignLocation">רשות — מוצג כתגית על ה-Hero כשמוגדר.</p>
-        </div>
-
-        <div class="csp-row csp-row--pair" *ngIf="!isOngoing">
-          <div>
-            <label class="csp-label"><app-icon name="calendar" /> תאריך התחלה</label>
-            <input class="csp-input" type="date" [ngModel]="d.startDate" (change)="patchDate('startDate', $any($event.target).value)">
-          </div>
-          <div>
-            <label class="csp-label"><app-icon name="calendar" /> תאריך סיום</label>
-            <input class="csp-input" type="date" [ngModel]="d.endDate" (change)="patchDate('endDate', $any($event.target).value)">
-          </div>
-        </div>
-        <p class="csp-note" *ngIf="isOngoing">קמפיין מתמשך — ללא תאריך סיום.</p>
-
-        <div class="csp-setup">
-          <span class="csp-setup-label">פרטי קמפיין (נדיר לשינוי)</span>
-
-          <div class="csp-row">
-            <label class="csp-label">שם קמפיין</label>
-            <input class="csp-input" type="text" [ngModel]="d.title" (change)="patchText('title', $any($event.target).value)">
-          </div>
-
-          <div class="csp-row">
-            <label class="csp-label">קטגוריה</label>
-            <select class="csp-input" [ngModel]="d.category" (change)="patchText('category', $any($event.target).value)">
-              <option value="">— ללא קטגוריה —</option>
-              <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.label }}</option>
-            </select>
-          </div>
-
-          <div class="csp-row">
-            <label class="csp-label">שם מנהל</label>
-            <input class="csp-input" type="text" [ngModel]="d.managerName" (change)="patchText('managerName', $any($event.target).value)">
-          </div>
-
-          <div class="csp-row">
-            <label class="csp-label">כתובת (Slug)</label>
-            <input class="csp-input csp-input--readonly" type="text" [value]="d.slug" readonly
-              title="שינוי כתובת שובר קישורים משותפים קיימים — לא ניתן לעריכה כאן">
-            <p class="csp-note"><app-icon name="lock" /> לא ניתן לשינוי — הכתובת כבר משותפת (קישורים, פרסומים), ושינוי שלה ישבור אותם.</p>
-          </div>
-        </div>
-
-        <div class="csp-save-bar">
-          <button type="button" class="csp-save-btn" [disabled]="saving" (click)="saveNow()">
-            <app-icon name="save" /> {{ saving ? 'שומר...' : 'שמור שינויים' }}
-          </button>
-          <span class="csp-status csp-status--saved" *ngIf="saved && !saving">✓ נשמר בהצלחה</span>
-          <span class="csp-status csp-status--error" *ngIf="saveError && !saving">{{ saveError }}</span>
-        </div>
-      </div>
-    </div>
-  </ng-container>
-</div>
+      <footer class="cm-drawer-foot">
+        <button class="cm-button" type="button" (click)="categoryOpen = false">ביטול</button>
+        <button class="cm-button cm-primary" type="button" (click)="applyCategory()">בחירת קטגוריה</button>
+      </footer>
+    </section>
+  }
+}

@@ -1,3 +1,5 @@
+import { solidIcon } from '../../modules/campaigns/simple-studio/vendor-v462/core/category-catalog';
+import { CAMPAIGN_CATEGORY_CATALOG } from './campaign-categories';
 import { ENTITY_CATEGORIES, EntityCategory } from './entity-categories';
 export { ENTITY_CATEGORIES } from './entity-categories';
 export { CAMPAIGN_CATEGORY_CATALOG } from './campaign-categories';
@@ -33,4 +35,11 @@ export function categoryLabel(category: CategoryOption): string {
 }
 export function categoryEmoji(category: CategoryOption): string {
   return EMOJI[category.id] || category.emoji || ICON_EMOJI[category.icon || ''] || '🏷️';
+}
+
+export function categorySolidIcon(option: CategoryOption) {
+  const label = option.label.trim().toLocaleLowerCase();
+  const purpose = CAMPAIGN_CATEGORY_CATALOG.find(category => category.id === option.id)
+    ?? CAMPAIGN_CATEGORY_CATALOG.find(category => [category.label, ...category.sub].some(name => name.trim().toLocaleLowerCase() === label));
+  return solidIcon(option.icon || purpose?.icon || 'ellipsis');
 }

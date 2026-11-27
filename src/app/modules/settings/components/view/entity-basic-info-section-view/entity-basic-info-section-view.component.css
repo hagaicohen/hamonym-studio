@@ -53,7 +53,7 @@
 
   font-weight: 700;
 
-  color: #6D5DF6;
+  color: var(--hm-admin-primary);
 }
 
 .card-description {
@@ -123,7 +123,7 @@
 
   background: #ede9fe;
 
-  color: #6D5DF6;
+  color: var(--hm-admin-primary);
 
   font-size: 14px;
 

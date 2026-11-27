@@ -14,45 +14,6 @@
       <div class="card-description">פרטים בסיסיים של היישות</div>
     </div>
 
-    <div class="card-actions">
-      <button
-        class="cancel-btn"
-        type="button"
-        [disabled]="saveState.isSaving"
-        (click)="cancel.emit()"
-      >
-        ביטול
-      </button>
-
-      <button
-        [class.success]="saveState.saveCompleted"
-        [class.error]="saveState.saveFailed"
-        class="save-btn"
-        type="button"
-        [disabled]="saveState.isSaving || identityCheck.status === 'duplicate'"
-        (click)="identityCheck.status !== 'duplicate' && save.emit()"
-      >
-        @if (
-          !saveState.isSaving &&
-          !saveState.saveCompleted &&
-          !saveState.saveFailed
-        ) {
-          שמירה
-        }
-
-        @if (saveState.isSaving) {
-          <div class="btn-spinner"></div>
-        }
-
-        @if (!saveState.isSaving && saveState.saveCompleted) {
-          <div class="save-success">✓ נשמר</div>
-        }
-
-        @if (!saveState.isSaving && saveState.saveFailed) {
-          <div class="save-failed">✕ נכשל</div>
-        }
-      </button>
-    </div>
   </div>
 
   <!-- BODY -->
@@ -64,11 +25,11 @@
       <div class="field">
         <label> סוג יישות </label>
 
-        <select disabled>
-          <option>
+        <app-dropdown disabled>
+          <app-dropdown-option>
             {{ entityTypeLabel }}
-          </option>
-        </select>
+          </app-dropdown-option>
+        </app-dropdown>
       </div>
 
       <!-- DISPLAY NAME -->
@@ -204,7 +165,6 @@
             }}
 
             <input
-              hidden
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
               (change)="onAssociationCertificateSelected($event)"
@@ -261,7 +221,6 @@
             {{ entity?.tax_document_name ? "החלף קובץ" : "העלה אישור סעיף 46" }}
 
             <input
-              hidden
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
               (change)="onTaxDocumentSelected($event)"
@@ -280,4 +239,43 @@
       </div>
     </div>
   </div>
+    <div class="savebar">
+      <button
+        class="cancel-btn"
+        type="button"
+        [disabled]="saveState.isSaving"
+        (click)="cancel.emit()"
+      >
+        ביטול
+      </button>
+
+      <button
+        [class.success]="saveState.saveCompleted"
+        [class.error]="saveState.saveFailed"
+        class="save-btn"
+        type="button"
+        [disabled]="saveState.isSaving || identityCheck.status === 'duplicate'"
+        (click)="identityCheck.status !== 'duplicate' && save.emit()"
+      >
+        @if (
+          !saveState.isSaving &&
+          !saveState.saveCompleted &&
+          !saveState.saveFailed
+        ) {
+          שמירה
+        }
+
+        @if (saveState.isSaving) {
+          <div class="btn-spinner"></div>
+        }
+
+        @if (!saveState.isSaving && saveState.saveCompleted) {
+          <div class="save-success">✓ נשמר</div>
+        }
+
+        @if (!saveState.isSaving && saveState.saveFailed) {
+          <div class="save-failed">✕ נכשל</div>
+        }
+      </button>
+    </div>
 </div>

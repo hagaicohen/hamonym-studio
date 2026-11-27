@@ -77,7 +77,7 @@
     "organizations": "ארגונים",
     "campaigns": "קמפיינים",
     "donations": "תרומות",
-    "registrations": "הרשמות",
+    "registrations": "מירוצים",
     "donors": "תורמים",
     "ambassadors": "שגרירים",
     "partners": "שותפים",
@@ -87,6 +87,14 @@
     "platformOrganizations": "ארגונים",
     "platformUsers": "משתמשים",
     "platformCollectionOps": "ניהול גבייה",
+    "platformManagementGroup": "ניהול",
+    "platformFinanceGroup": "כספים",
+    "platformSystemGroup": "מערכת",
+    "platformTasks": "מרכז משימות וחריגות",
+    "platformBusinessReports": "דוחות עסקיים",
+    "platformPortal": "ניהול הפורטל",
+    "platformAudit": "יומן פעילות",
+    "platformDeveloperTools": "כלי פיתוח ובדיקות",
     "platformSettings": "הגדרות כלליות",
     "platformCategorySuggestions": "הצעות קטגוריה"
   }

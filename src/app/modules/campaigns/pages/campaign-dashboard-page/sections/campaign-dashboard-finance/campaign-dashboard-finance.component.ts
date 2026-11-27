@@ -1,8 +1,11 @@
-import { Component, Input, inject } from '@angular/core';
+import { DropdownComponent, DropdownOptionComponent } from '../../../../../../shared/ui/dropdown/dropdown.component';
+import { Component, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../../../../environments/environment';
+import { CampaignApiService } from '../../../../services/campaign-api.service';
+import { CampaignWorkspaceContextService } from '../../../../services/campaign-workspace-context.service';
 import { CampaignDraft } from '../../../../services/campaign-studio-state.service';
 
 import { HmIconComponent } from '../../../../../../shared/ui/design-system/icon.component';
@@ -19,15 +22,21 @@ type ManualSource = 'bank_transfer' | 'check' | 'cash' | 'other';
 @Component({
   selector: 'app-campaign-dashboard-finance',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule],
+  imports: [DropdownComponent, DropdownOptionComponent, HmIconComponent, CommonModule, FormsModule],
   templateUrl: './campaign-dashboard-finance.component.html',
   styleUrl: './campaign-dashboard-finance.component.css',
 })
-export class CampaignDashboardFinanceComponent {
+export class CampaignDashboardFinanceComponent implements OnInit {
+  @Input() openOnEntry = false;
+
+  ngOnInit(): void { if (this.openOnEntry) this.openModal(); }
   @Input() draft!: CampaignDraft;
   @Input() campaignId = '';
+  @Output() recorded = new EventEmitter<void>();
 
   private http = inject(HttpClient);
+  private campaignApi = inject(CampaignApiService);
+  private workspace = inject(CampaignWorkspaceContextService);
 
   readonly sourceOptions: { value: ManualSource; label: string }[] = [
     { value: 'bank_transfer', label: 'העברה בנקאית' },
@@ -117,10 +126,13 @@ export class CampaignDashboardFinanceComponent {
       `${environment.apiUrl}/api/donations/entity/${this.draft.entityId}/manual`, body, { headers },
     ).subscribe({
       next: () => {
-        this.draft.currentAmount   = (this.draft.currentAmount ?? 0) + (this.form.amount ?? 0);
-        this.draft.supportersCount = (this.draft.supportersCount ?? 0) + this.form.supportersCount;
+        this.campaignApi.getById(this.campaignId).subscribe({
+          next: draft => this.workspace.setDraft(draft),
+          error: () => {},
+        });
         this.saving = false;
         this.modalOpen = false;
+        this.recorded.emit();
       },
       error: (err) => {
         this.error = err.error?.code === 'IDEMPOTENCY_KEY_MISMATCH'

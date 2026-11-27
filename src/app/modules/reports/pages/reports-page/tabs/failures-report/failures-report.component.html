@@ -4,7 +4,7 @@
   <div class="don-card"><div class="don-loading"><div class="don-spinner"></div></div></div>
 } @else {
 
-  <div class="don-kpi-row">
+  <div class="don-kpi-row" [class.cm-summary]="true">
     <div class="don-kpi-card">
       <div class="kpi-label">נכשלו בתקופה</div>
       <div class="kpi-value danger">{{ kpi.failedCount | number }}</div>
@@ -14,7 +14,7 @@
       <div class="kpi-value danger">{{ fmtMoney(kpi.failedAmount) }}</div>
     </div>
     <div class="don-kpi-card">
-      <div class="kpi-label">ממתינות</div>
+      <div class="kpi-label">ממתינות · כל הזמנים</div>
       <div class="kpi-value">{{ kpi.pendingCount | number }}</div>
     </div>
     <div class="don-kpi-card">
@@ -41,11 +41,11 @@
       (input)="onSearch()"
     />
 
-    <select class="don-select" [(ngModel)]="statusFilter" (change)="onFilterChange()">
-      <option value="all">הכל</option>
-      <option value="failed">נכשל</option>
-      <option value="pending">ממתין</option>
-    </select>
+    <app-dropdown class="don-select" [(ngModel)]="statusFilter" (selectionChange)="onFilterChange()">
+      <app-dropdown-option value="all">הכל</app-dropdown-option>
+      <app-dropdown-option value="failed">נכשל</app-dropdown-option>
+      <app-dropdown-option value="pending">ממתין</app-dropdown-option>
+    </app-dropdown>
 
     <button class="don-export-btn" (click)="exportCsv()" [disabled]="exporting || recent.length === 0">
       <app-icon name="download" /> {{ exporting ? 'מייצא...' : 'ייצוא CSV' }}

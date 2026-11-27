@@ -1,3 +1,4 @@
+import { catchError, forkJoin, of } from 'rxjs';
 import { OrganizationLifecycleEventsService } from '../../../core/services/organization-lifecycle-events.service';
 // src/app/modules/platform/services/platform.service.ts
 
@@ -14,6 +15,19 @@ function authHeaders(): HttpHeaders {
 export class PlatformService {
   private http = inject(HttpClient);
   private lifecycle = inject(OrganizationLifecycleEventsService);
+
+  getDirectoryCounts(directory: 'organizations' | 'campaigns' | 'users' | 'partners'): Observable<(number | null)[]> {
+    const requests = {
+      organizations: () => [undefined, 'active', 'pending_review', 'changes_requested'].map(status => this.getOrganizations({ status, limit: 1 })),
+      campaigns: () => [this.getCampaigns({ limit: 1 }), this.getCampaigns({ status: 'published', limit: 1 }), this.getCampaigns({ featuredOnly: true, limit: 1 })],
+      users: () => [undefined, 'active', 'super_admin', 'disabled'].map(status => this.getUsers({ status, limit: 1 })),
+      partners: () => [this.getPartners({ limit: 1 }), this.getPartners({ noCampaigns: true, limit: 1 }), this.getPartners({ newSince: 7, limit: 1 }), this.getPartners({ hidden: true, limit: 1 })],
+    };
+    return forkJoin(requests[directory]().map(request => request.pipe(
+      map(result => typeof result.total === 'number' ? result.total : null),
+      catchError(() => of(null)),
+    )));
+  }
 
   getOrganizationFilterOptions(): Observable<{ id: string; name: string }[]> {
     return this.readFilterOptions(page => this.getOrganizations({ page, limit: 100 }), 'organizations', 'display_name');

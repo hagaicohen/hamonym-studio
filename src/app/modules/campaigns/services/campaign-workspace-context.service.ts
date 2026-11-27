@@ -53,12 +53,15 @@ export class CampaignWorkspaceContextService {
     // own independent HTTP request instead of sharing the one in flight.
     const request$ = this.campaignApi.getById(id).pipe(
       tap(draft => {
+        if (this.campaignId() !== id) return;
         this._draft.set(draft);
         this._loading.set(false);
       }),
       catchError(err => {
-        this._loading.set(false);
-        this.inFlight = null;
+        if (this.campaignId() === id) {
+          this._loading.set(false);
+          this.inFlight = null;
+        }
         return throwError(() => err);
       }),
       shareReplay({ bufferSize: 1, refCount: false }),
@@ -70,7 +73,15 @@ export class CampaignWorkspaceContextService {
   // Called by a page right after it successfully saves a change, so every
   // other page sharing this campaign's context sees the fresh value on its
   // next visit instead of the value going stale until the next full reload.
+  clear(id: string): void {
+    if (this.campaignId() !== id) return;
+    this.campaignId.set(null);
+    this._draft.set(null);
+    this._loading.set(false);
+    this.inFlight = null;
+  }
+
   setDraft(draft: CampaignDraft): void {
-    this._draft.set(draft);
+    if (draft.id === this.campaignId()) this._draft.set(draft);
   }
 }

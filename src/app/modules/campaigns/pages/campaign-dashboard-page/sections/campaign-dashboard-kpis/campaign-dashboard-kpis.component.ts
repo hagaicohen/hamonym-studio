@@ -14,12 +14,17 @@ import { CampaignDraft } from '../../../../services/campaign-studio-state.servic
 export class CampaignDashboardKpisComponent {
   @Input({ required: true }) draft!: CampaignDraft;
 
+  @Input() confirmedTransactions: number | null = null;
+  @Input() identifiedDonors: number | null = null;
+  @Input() activeRewards: number | null = null;
+  @Input() activeAmbassadors: number | null = null;
+
   get isOngoing(): boolean { return this.draft.campaignLifecycle === 'ongoing'; }
 
   get progressPct(): number {
     const target = this.draft.targetAmount || 0;
     if (!target) return 0;
-    return Math.round(((this.draft.currentAmount ?? 0) / target) * 100);
+    return ((this.draft.currentAmount ?? 0) / target) * 100;
   }
 
   get remaining(): number {
@@ -35,6 +40,6 @@ export class CampaignDashboardKpisComponent {
   }
 
   formatMoney(n: number | null | undefined): string {
-    return '₪' + (n ?? 0).toLocaleString('he-IL');
+    return n == null ? '—' : '₪' + n.toLocaleString('he-IL');
   }
 }

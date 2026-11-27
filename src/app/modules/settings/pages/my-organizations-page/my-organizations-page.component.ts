@@ -9,7 +9,7 @@ import { CurrentContextService } from '../../../../core/services/current-context
 import { IncompleteRegistrationsComponent } from '../../../../shared/components/incomplete-registrations/incomplete-registrations.component';
 import { registeredOrganizations, registrationDrafts } from '../../../../core/utils/organization-registration-status';
 
-import { LucideAngularModule, Flag, Users, Settings, Eye, EyeOff, Trash2, Building2 } from 'lucide-angular';
+import { LucideAngularModule, Flag, Users, Eye, EyeOff, Trash2, Building2 } from 'lucide-angular';
 
 // Promoted out of SettingsPageComponent (2026-09-28, "הישויות שלי" ->
 // "ארגונים" main-nav item) — an organization/nonprofit is a primary
@@ -32,7 +32,6 @@ export class MyOrganizationsPageComponent implements OnInit {
 
   readonly FlagIcon = Flag;
   readonly UsersIcon = Users;
-  readonly SettingsIcon = Settings;
   readonly EyeIcon = Eye;
   readonly EyeOffIcon = EyeOff;
   readonly TrashIcon = Trash2;
@@ -41,6 +40,7 @@ export class MyOrganizationsPageComponent implements OnInit {
   entities: any[] = [];
   drafts: any[] = [];
   loading = true;
+  loadError = '';
   readonly failedLogos = new Set<string>();
 
   ngOnInit(): void {
@@ -59,6 +59,7 @@ export class MyOrganizationsPageComponent implements OnInit {
       },
       error: (err) => {
         console.error(err);
+        this.loadError = 'לא ניתן לטעון את רשימת הארגונים.';
         this.loading = false;
       },
     });
@@ -82,6 +83,12 @@ export class MyOrganizationsPageComponent implements OnInit {
         return 'הגדרה לא הושלמה';
       case 'pending_review':
         return 'ממתינה לאישור';
+      case 'changes_requested':
+        return 'נדרשת השלמה';
+      case 'rejected':
+        return 'נדחתה';
+      case 'suspended':
+        return 'מושעית';
       default:
         return '';
     }
@@ -104,6 +111,20 @@ export class MyOrganizationsPageComponent implements OnInit {
 
   // ── HIDE / UNHIDE FROM CARD ──
   hidingEntityId: string | null = null;
+  visibilityTarget: any = null;
+  visibilityError = '';
+
+  openVisibilityConfirmation(entity: any): void {
+    if (this.hidingEntityId) return;
+    this.visibilityTarget = entity;
+    this.visibilityError = '';
+  }
+
+  closeOrganizationDrawer(): void {
+    if (this.hidingEntityId || this.isDeletingEntityCard) return;
+    this.visibilityTarget = null;
+    this.closeDeleteEntityCardModal();
+  }
 
   toggleEntityCardVisibility(event: Event, entity: any): void {
     event.stopPropagation();
@@ -116,10 +137,12 @@ export class MyOrganizationsPageComponent implements OnInit {
     this.entitiesService.setVisibility(entity.id, nextHidden).subscribe({
       next: () => {
         entity.is_hidden = nextHidden;
+        this.visibilityTarget = null;
         this.hidingEntityId = null;
       },
       error: () => {
         this.hidingEntityId = null;
+        this.visibilityError = 'שינוי הנראות נכשל. יש לנסות שוב.';
       },
     });
   }

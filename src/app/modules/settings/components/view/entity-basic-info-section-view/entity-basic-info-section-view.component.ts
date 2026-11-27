@@ -29,7 +29,7 @@ import { LucideAngularModule, Building2, Pencil, TriangleAlert } from 'lucide-an
 
   templateUrl: './entity-basic-info-section-view.component.html',
 
-  styleUrl: './entity-basic-info-section-view.component.css',
+  styleUrls: ['./entity-basic-info-section-view.component.css', '../../entity-settings/entity-settings-section.css'],
 })
 export class EntityBasicInfoSectionViewComponent implements OnChanges {
   private entitiesService = inject(EntitiesService);

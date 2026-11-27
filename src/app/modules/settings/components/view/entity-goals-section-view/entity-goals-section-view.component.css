@@ -42,7 +42,7 @@
 
   font-weight: 800;
 
-  color: #6D5DF6;
+  color: var(--hm-admin-primary);
 }
 
 .card-description {

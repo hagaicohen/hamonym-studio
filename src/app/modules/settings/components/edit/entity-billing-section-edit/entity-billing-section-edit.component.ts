@@ -1,3 +1,4 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../../shared/ui/dropdown/dropdown.component';
 // entity-billing-section-edit.component.ts
 
 import {
@@ -53,7 +54,7 @@ type BillingMethod = 'credit-card' | 'masav';
 
   standalone: true,
 
-  imports: [HmIconComponent, 
+  imports: [DropdownComponent, DropdownOptionComponent, HmIconComponent,
     CommonModule,
     FormsModule,
     LucideAngularModule,
@@ -62,7 +63,7 @@ type BillingMethod = 'credit-card' | 'masav';
 
   templateUrl: './entity-billing-section-edit.component.html',
 
-  styleUrls: ['./entity-billing-section-edit.component.css'],
+  styleUrls: ['./entity-billing-section-edit.component.css', '../../entity-settings/entity-settings-section.css'],
 })
 export class EntityBillingSectionEditComponent implements OnInit, OnChanges {
   private billingService = inject(BillingService);

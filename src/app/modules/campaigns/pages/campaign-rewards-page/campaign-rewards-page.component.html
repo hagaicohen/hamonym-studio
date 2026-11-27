@@ -1,16 +1,84 @@
-<div class="rw-shell">
   <p class="rw-loading" *ngIf="loading">טוען…</p>
 
   <ng-container *ngIf="!loading && draft as d">
-    <div class="rw-main">
-      <button type="button" class="rw-back" (click)="back()">→ חזרה לסקירה כללית</button>
-      <h1 class="rw-title"><app-icon name="gift" /> תשורות</h1>
-      <p class="rw-subtitle">{{ d.title }} · {{ d.offerings.length }} תשורות</p>
-      <p class="rw-save-error" *ngIf="saveError">{{ saveError }}</p>
-
-      <div class="rw-form-panel">
-        <h2 class="rw-form-title">{{ isEditing ? 'עריכת תשורה' : 'תשורה חדשה' }}</h2>
-
+    <section class="cm-v7">
+      <header class="cm-heading">
+        <div><h1>תשורות ורכישות</h1><p class="cm-description">ניהול קטלוג התשורות והמעקב אחר רכישות</p></div>
+        @if (activeTab === 'catalog') { <button type="button" class="cm-button cm-primary" (click)="newOffering()"><app-icon name="plus" /> תשורה חדשה</button> }
+      </header>
+      <div class="cm-summary">
+        <div><small>תשורות בקטלוג</small><strong>{{ d.offerings.length }}</strong></div>
+        <div><small>מומלצות</small><strong>{{ featuredCount }}</strong></div>
+        <div><small>אזלו מהמלאי</small><strong>{{ outOfStockCount ?? '—' }}</strong></div>
+      </div>
+      <section class="cm-ledger">
+        <div class="cm-tabs" role="group" aria-label="תשורות ורכישות">
+          <button type="button" [attr.aria-pressed]="activeTab === 'catalog'" (click)="activeTab = 'catalog'">קטלוג תשורות</button>
+          <button type="button" [attr.aria-pressed]="activeTab === 'orders'" (click)="activeTab = 'orders'">רכישות תשורות</button>
+        </div>
+        @if (activeTab === 'orders') {
+          <app-donations-page [purchasesOnly]="true" />
+        } @else {
+          <div class="cm-heading rw-titlebar">
+            <div><h2 class="cm-panel-title">התשורות בקמפיין</h2><p class="cm-description">עריכה, שכפול וניהול המלאי</p></div>
+            <div class="view-modes" role="group" aria-label="תצוגת תשורות">
+              <button type="button" aria-label="רשת" [attr.aria-pressed]="viewMode === 'grid'" (click)="viewMode = 'grid'; resetView()"><app-icon name="columns" /></button>
+              <button type="button" aria-label="רשימה" [attr.aria-pressed]="viewMode === 'list'" (click)="viewMode = 'list'; resetView()"><app-icon name="list" /></button>
+            </div>
+          </div>
+          <div class="cm-filters">
+            <input class="cm-input" type="search" aria-label="חיפוש תשורות" placeholder="חיפוש תשורות" [(ngModel)]="searchTerm" (ngModelChange)="resetView()">
+            <app-dropdown label="סינון מלאי" [(ngModel)]="stockFilter" (ngModelChange)="resetView()">
+              <app-dropdown-option value="all">כל מצבי המלאי</app-dropdown-option><app-dropdown-option value="available" [disabled]="!claims">מלאי זמין</app-dropdown-option>
+              <app-dropdown-option value="unlimited">ללא הגבלה</app-dropdown-option><app-dropdown-option value="out" [disabled]="!claims">אזל המלאי</app-dropdown-option>
+            </app-dropdown>
+          </div>
+          @if (claimsError) { <p role="alert">טעינת נתוני המלאי נכשלה</p> }
+          @let matches = filteredOfferings(d);
+          @let visible = pagedOfferings(d);
+          <div class="reward-grid" [class.list]="viewMode === 'list'">
+            @for (reward of visible; track reward.id) {
+              <article class="reward-card">
+                <div class="reward-top">
+                  <div class="reward-image">@if (reward.imageUrl) { <img [src]="reward.imageUrl" alt=""> } @else { <app-icon name="gift" /> }</div>
+                  <div class="reward-price"><bdi>{{ reward.minimumAmount | currency:'ILS':'symbol':'1.0-2' }}</bdi><small>סכום מינימלי</small></div>
+                </div>
+                <div>
+                  <h3 class="reward-title">{{ reward.title }}</h3>
+                  @if (reward.description) { <p class="reward-desc">{{ reward.description }}</p> }
+                </div>
+                @if (reward.featured) { <span class="recommend"><app-icon name="star" /> מומלצת</span> }
+                <div class="reward-stats">
+                  <div><small>מלאי זמין</small>{{ reward.stock === null ? 'ללא הגבלה' : availableStock(reward) ?? '—' }}</div>
+                  <div><small>יחידות שנרכשו</small>{{ claimed(reward) ?? '—' }}</div>
+                  <div><small>עסק משויך</small>{{ linkedPartnerFor(reward.id)?.partnerDisplayName || '—' }}</div>
+                </div>
+                <div class="reward-actions">
+                  <button type="button" class="cm-button edit" [disabled]="saving" (click)="editOffering(reward)"><app-icon name="pencil" /> עריכה</button>
+                  <button type="button" class="cm-button rw-icon" [disabled]="saving" (click)="duplicateOffering(reward)" aria-label="שכפול"><app-icon name="copy" /></button>
+                  <button type="button" class="cm-button rw-icon danger" [disabled]="saving" (click)="deleteOffering(reward.id)" aria-label="מחיקה"><app-icon name="trash" /></button>
+                </div>
+              </article>
+            } @empty { <p>לא נמצאו תשורות</p> }
+          </div>
+          @if (matches.length > pageSize) {
+            <div class="rw-pagination">
+              <button type="button" [disabled]="page === 0" (click)="page = page - 1">הקודם</button>
+              <span>{{ matches.length }} תשורות</span>
+              <button type="button" [disabled]="(page + 1) * pageSize >= matches.length" (click)="page = page + 1">הבא</button>
+            </div>
+          }
+        }
+      </section>
+      <p role="alert" class="rw-save-error" *ngIf="saveError">{{ saveError }}</p>
+      @if (formOpen) {
+      <div class="cm-drawer-backdrop" (click)="closeForm()"></div>
+      <section class="rw-form-panel cm-drawer" role="dialog" aria-modal="true" aria-labelledby="reward-form-title" (keydown.escape)="closeForm()">
+        <header class="cm-drawer-head">
+          <h2 class="rw-form-title" id="reward-form-title">{{ isEditing ? 'עריכת תשורה' : 'תשורה חדשה' }}</h2>
+          <button type="button" class="cm-button" aria-label="סגירה" (click)="closeForm()"><app-icon name="x" /></button>
+        </header>
+        <div class="cm-drawer-body">
         <div class="rw-form-grid">
           <div class="rf-field">
             <label class="rf-label">כותרת התשורה *</label>
@@ -19,7 +87,7 @@
 
           <div class="rf-field">
             <label class="rf-label">סכום מינימלי (₪) *</label>
-            <input class="rf-input" type="text" inputmode="numeric" [value]="minimumAmountInput" (keydown)="allowDigitsOnly($event)" (input)="onAmountInput($event)" placeholder="250">
+            <input class="rf-input" type="text" appMoneyInput min="0" [(ngModel)]="offering.minimumAmount">
           </div>
 
           <div class="rf-field">
@@ -75,60 +143,16 @@
             <span><app-icon name="star" /> תשורה מומלצת</span>
           </div>
 
-          <div class="rf-actions">
-            <button type="button" class="rf-btn-clear" (click)="clearForm()"><app-icon name="trash" /> נקה</button>
-            <button type="button" class="rf-btn-save" [disabled]="!isFormValid" (click)="save()"><app-icon name="save" /> {{ isEditing ? 'עדכן תשורה' : 'שמור תשורה' }}</button>
-          </div>
         </div>
-      </div>
-
-      <!-- Reward list — same visual language as the live campaign page's
-           own reward cards (icon circle, price top, title/description),
-           just with management actions instead of "לבחירה". Carousel
-           (horizontal scroll + arrows) instead of a long vertical list, same
-           scroll-by-one-card pattern as the public page's own reward
-           slider. -->
-      <div class="rw-list-section" *ngIf="d.offerings.length">
-        <div class="rw-list-header">
-          <h2 class="rw-list-title">תשורות בקמפיין ({{ filteredOfferings(d).length }})</h2>
-          <input class="rw-search" type="text" [(ngModel)]="searchTerm" placeholder="חיפוש תשורה…">
+        <p class="rw-save-error" role="alert" *ngIf="saveError">{{ saveError }}</p>
         </div>
-
-        <div class="rw-carousel-wrap" *ngIf="filteredOfferings(d).length">
-          <button type="button" class="rw-arrow" (click)="scrollCarousel(carousel, 'prev')">‹</button>
-          <div class="rw-carousel" #carousel>
-            <div class="rw-carousel-track">
-              <article class="rw-reward-card" *ngFor="let o of filteredOfferings(d)">
-                <div class="rw-reward-top">
-                  <div class="rw-reward-icon-wrap">
-                    <img *ngIf="o.imageUrl" [src]="o.imageUrl" alt="">
-                    <span *ngIf="!o.imageUrl" class="rw-reward-icon"><app-icon name="gift" /></span>
-                  </div>
-                  <div class="rw-reward-price">₪{{ o.minimumAmount.toLocaleString('he-IL') }}</div>
-                </div>
-                <span class="rw-reward-badge" *ngIf="o.featured"><app-icon name="star" /> מומלץ</span>
-                <div class="rw-reward-body">
-                  <div class="rw-reward-title">{{ o.title }}</div>
-                  <p class="rw-reward-desc" *ngIf="o.description">{{ o.description }}</p>
-                  <span class="rw-reward-out" *ngIf="o.stock === 0">אזל המלאי</span>
-                  <div class="rw-reward-partner" *ngIf="linkedPartnerFor(o.id) as cp"><app-icon name="handshake" /> {{ cp.partnerDisplayName }}</div>
-                </div>
-                <div class="rw-reward-actions">
-                  <button type="button" class="rw-icon-btn" (click)="editOffering(o)" title="עריכה"><app-icon name="pencil" /></button>
-                  <button type="button" class="rw-icon-btn" (click)="duplicateOffering(o)" title="שכפל"><app-icon name="copy" /></button>
-                  <button type="button" class="rw-icon-btn rw-icon-btn--danger" (click)="deleteOffering(o.id)" title="מחיקה"><app-icon name="trash" /></button>
-                </div>
-              </article>
-            </div>
-          </div>
-          <button type="button" class="rw-arrow" (click)="scrollCarousel(carousel, 'next')">›</button>
-        </div>
-
-        <p class="rw-empty" *ngIf="!filteredOfferings(d).length">לא נמצאו תשורות התואמות לחיפוש "{{ searchTerm }}"</p>
-      </div>
-
-      <p class="rw-empty" *ngIf="!d.offerings.length">אין עדיין תשורות. הוסיפו את הראשונה למעלה.</p>
-    </div>
+        <footer class="cm-drawer-foot">
+          <button type="button" class="cm-button" (click)="closeForm()" [disabled]="saving || isUploadingImage">ביטול</button>
+          <button type="button" class="cm-button cm-primary" [disabled]="!isFormValid || saving || isUploadingImage" (click)="save()">{{ isEditing ? 'עדכון תשורה' : 'שמירת תשורה' }}</button>
+        </footer>
+      </section>
+      }
+    </section>
 
     <app-partner-link-modal
       *ngIf="linkModalRewardId"
@@ -141,4 +165,3 @@
       (closed)="onLinkModalClosed()">
     </app-partner-link-modal>
   </ng-container>
-</div>

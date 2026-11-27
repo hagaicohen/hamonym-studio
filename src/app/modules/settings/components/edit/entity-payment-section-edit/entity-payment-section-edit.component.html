@@ -11,7 +11,93 @@
 
       <div class="card-description">חיבור והגדרות ספק הסליקה</div>
     </div>
-    <div class="card-actions">
+  </div>
+
+  <div class="fields">
+  <!-- PROVIDER -->
+
+  <div class="field-block">
+    <label for="org-provider">ספק סליקה</label>
+
+    <app-dropdown inputId="org-provider" [(ngModel)]="model.billing_provider">
+      <app-dropdown-option value="cardcom">קארדקום</app-dropdown-option>
+    </app-dropdown>
+  </div>
+
+    <!-- TERMINAL -->
+
+    <div class="field-block">
+      <label for="org-cardcom-terminal">מספר מסוף</label>
+
+      <input
+        type="text"
+        class="base-input"
+        id="org-cardcom-terminal" dir="ltr" [(ngModel)]="model.cardcom_terminal_number"
+        placeholder="1234567"
+      />
+    </div>
+
+    <!-- USERNAME -->
+
+    <div class="field-block">
+      <label for="org-cardcom-username">משתמש API</label>
+
+      <input
+        type="text"
+        class="base-input"
+        id="org-cardcom-username" dir="ltr" [(ngModel)]="model.cardcom_api_username"
+        placeholder="username"
+      />
+    </div>
+
+    <!-- PASSWORD -->
+
+    <div class="field-block">
+      <label for="org-cardcom-password">סיסמת API</label>
+
+      <input
+        type="password"
+        class="base-input"
+        id="org-cardcom-password" dir="ltr" [(ngModel)]="model.cardcom_api_password_encrypted"
+        placeholder="••••••••"
+      />
+    </div>  </div>
+  <div class="payment-verification">
+    <!-- STATUS -->
+
+    <div class="connection-status" [ngClass]="statusClass">
+      {{ statusLabel }}
+    </div>
+
+    <!-- ERROR -->
+    <!--
+    <div
+      class="connection-error"
+      *ngIf="
+        model.cardcom_connection_status === 'failed'
+        && model.cardcom_last_error
+      ">
+
+      {{ model.cardcom_last_error }}
+
+    </div>
+-->
+    <!-- TEST -->
+
+    <button
+      type="button"
+      class="test-connection-btn"
+      [disabled]="isCheckingConnection"
+      (click)="testConnection.emit(model)"
+    >
+      <span *ngIf="isCheckingConnection" class="btn-spinner"> </span>
+
+      <span>
+        {{ isCheckingConnection ? "בודק חיבור..." : "בדוק חיבור" }}
+      </span>
+    </button>
+  </div>
+    <div class="savebar">
       <button
         class="cancel-btn"
         type="button"
@@ -50,90 +136,4 @@
         }
       </button>
     </div>
-  </div>
-
-  <!-- PROVIDER -->
-
-  <div class="field-block">
-    <label> ספק סליקה </label>
-
-    <select [(ngModel)]="model.billing_provider" class="base-input">
-      <option value="cardcom">קארדקום</option>
-    </select>
-  </div>
-
-  <ng-container>
-    <!-- TERMINAL -->
-
-    <div class="field-block">
-      <label> מספר מסוף </label>
-
-      <input
-        type="text"
-        class="base-input"
-        [(ngModel)]="model.cardcom_terminal_number"
-        placeholder="1234567"
-      />
-    </div>
-
-    <!-- USERNAME -->
-
-    <div class="field-block">
-      <label> משתמש API </label>
-
-      <input
-        type="text"
-        class="base-input"
-        [(ngModel)]="model.cardcom_api_username"
-        placeholder="username"
-      />
-    </div>
-
-    <!-- PASSWORD -->
-
-    <div class="field-block">
-      <label> סיסמת API </label>
-
-      <input
-        type="password"
-        class="base-input"
-        [(ngModel)]="model.cardcom_api_password_encrypted"
-        placeholder="••••••••"
-      />
-    </div>
-
-    <!-- STATUS -->
-
-    <div class="connection-status" [ngClass]="statusClass">
-      {{ statusLabel }}
-    </div>
-
-    <!-- ERROR -->
-    <!--
-    <div
-      class="connection-error"
-      *ngIf="
-        model.cardcom_connection_status === 'failed'
-        && model.cardcom_last_error
-      ">
-
-      {{ model.cardcom_last_error }}
-
-    </div>
--->
-    <!-- TEST -->
-
-    <button
-      type="button"
-      class="test-connection-btn"
-      [disabled]="isCheckingConnection"
-      (click)="testConnection.emit(model)"
-    >
-      <span *ngIf="isCheckingConnection" class="btn-spinner"> </span>
-
-      <span>
-        {{ isCheckingConnection ? "בודק חיבור..." : "בדוק חיבור" }}
-      </span>
-    </button>
-  </ng-container>
 </div>

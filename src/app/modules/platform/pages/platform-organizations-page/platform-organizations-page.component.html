@@ -1,5 +1,12 @@
-<main class="plat-page" dir="rtl">
-  <header class="plat-header"><div><h1 class="plat-title">עמותות</h1><p class="plat-subtitle">איתור עמותות, בדיקת השלמות וכניסה לניהול</p></div>@if (!loading) { <span class="results-count">{{ total | number }} עמותות{{ hasFilters ? ' בתצוגה זו' : '' }}</span> }</header>
+<main class="plat-page sa-v1 cm-v7" dir="rtl">
+  <header class="plat-header"><div><h1 class="plat-title">ארגונים</h1><p class="plat-subtitle">איתור עמותות, בדיקת השלמות וכניסה לניהול</p></div>@if (!loading) { <span class="results-count">{{ total | number }} עמותות{{ hasFilters ? ' בתצוגה זו' : '' }}</span> }</header>
+<div class="cm-summary sa-summary" aria-label="מדדים מרכזיים">
+  <div><small>כל הארגונים</small><strong>{{ directoryCounts[0] == null ? '—' : (directoryCounts[0] | number) }}</strong></div>
+  <div><small>ארגונים פעילים</small><strong>{{ directoryCounts[1] == null ? '—' : (directoryCounts[1] | number) }}</strong></div>
+  <div><small>ממתינים לאישור</small><strong>{{ directoryCounts[2] == null ? '—' : (directoryCounts[2] | number) }}</strong></div>
+  <div><small>נדרשות השלמות</small><strong>{{ directoryCounts[3] == null ? '—' : (directoryCounts[3] | number) }}</strong></div>
+</div>
+<section class="cm-ledger sa-ledger"><h2>רשימת ארגונים</h2>
   <div class="plat-filters">
     <label class="search-field"><span class="sr-only">חיפוש עמותה</span><input class="plat-search" type="search" [placeholder]="extendedOrganizationDataAvailable ? 'חיפוש לפי שם עמותה, מספר עמותה או מנהל' : 'חיפוש לפי שם עמותה'" [(ngModel)]="searchQuery" (input)="onSearch()" /></label>
     <app-column-picker [columns]="columns" storageKey="platformColumns_organizations" (visibleChange)="onVisibleColumnsChange($event)"></app-column-picker>
@@ -11,7 +18,7 @@
   </nav>
   <div class="plat-filters-row"><details class="additional-filters"><summary>סינון נוסף @if (selectedFilters.size) { <span class="filter-count">{{ selectedFilters.size }}</span> }</summary><div class="filter-panel"><div class="plat-chips">
     @for (chip of filterChips; track chip.key) { <button class="plat-chip" [class.active]="selectedFilters.has(chip.key)" [attr.aria-pressed]="selectedFilters.has(chip.key)" (click)="toggleFilter(chip.key)">{{ chip.label }}</button> }
-  </div><label class="sort-control">מיון לפי <select [ngModel]="sortField" (ngModelChange)="sortBy($event)"><option value="created_at">תאריך הרשמה</option><option value="name">שם העמותה</option><option value="status">סטטוס</option><option value="campaigns">קמפיינים</option><option value="raised">סכום שגויס</option><option value="activity" [disabled]="!extendedOrganizationDataAvailable">עדכון פרטים אחרון</option></select><button class="clear-filters" (click)="sortBy(sortField)" [attr.aria-label]="sortDir === 'asc' ? 'מיון בסדר יורד' : 'מיון בסדר עולה'">{{ sortDir === 'asc' ? '↑' : '↓' }}</button></label></div></details>@if (hasFilters) { <button class="clear-filters" (click)="clearFilters()">נקה סינון</button> }</div>
+  </div><label class="sort-control">מיון לפי <app-dropdown [ngModel]="sortField" (ngModelChange)="sortBy($event)"><app-dropdown-option value="created_at">תאריך הרשמה</app-dropdown-option><app-dropdown-option value="name">שם העמותה</app-dropdown-option><app-dropdown-option value="status">סטטוס</app-dropdown-option><app-dropdown-option value="campaigns">קמפיינים</app-dropdown-option><app-dropdown-option value="raised">סכום שגויס</app-dropdown-option><app-dropdown-option value="activity" [disabled]="!extendedOrganizationDataAvailable">עדכון פרטים אחרון</app-dropdown-option></app-dropdown><button class="clear-filters" (click)="sortBy(sortField)" [attr.aria-label]="sortDir === 'asc' ? 'מיון בסדר יורד' : 'מיון בסדר עולה'">{{ sortDir === 'asc' ? '↑' : '↓' }}</button></label></div></details>@if (hasFilters) { <button class="clear-filters" (click)="clearFilters()">נקה סינון</button> }</div>
   @if (error) { <div class="plat-error" role="alert"><span>{{ error }}</span><button (click)="load()" [disabled]="loading || refreshing">נסה שוב</button></div> }
   <section class="plat-card" aria-label="רשימת עמותות" [attr.aria-busy]="loading || refreshing">
     @if (loading) {
@@ -49,8 +56,10 @@
             <td class="actions-cell"><button class="row-menu-trigger" [attr.aria-label]="'פעולות עבור ' + orgName(org)" aria-haspopup="true" [attr.aria-expanded]="actionOrganization?.id === org.id" (click)="openActionMenu(org, $event)">⋯</button></td>
           </tr>}</tbody></table>
       </div>
-      <footer class="plat-footer"><span>{{ total | number }} עמותות{{ hasFilters ? ' בתצוגה זו' : '' }}</span><nav class="plat-pager" aria-label="דפדוף עמותות"><button (click)="prevPage()" [disabled]="page === 0 || refreshing" aria-label="עמוד קודם">→</button><span>{{ page + 1 }} מתוך {{ totalPages }}</span><button (click)="nextPage()" [disabled]="page + 1 >= totalPages || refreshing" aria-label="עמוד הבא">←</button></nav></footer>
+      @if (total > 0) { <app-management-pagination [page]="page" [total]="total" [pageSize]="limit" (pageChange)="page = $event; load()" /> }
     }
   </section>
   @if (actionOrganization; as org) { <div class="row-menu" [style.top.px]="menuPosition.top" [style.right.px]="menuPosition.right" (click)="$event.stopPropagation()"><a id="organization-row-action" [routerLink]="['/platform/organizations', org.id]" [queryParams]="listQuery" (click)="closeMenu()">{{ actionLabel(org) }} ←</a></div> }
+
+</section>
 </main>

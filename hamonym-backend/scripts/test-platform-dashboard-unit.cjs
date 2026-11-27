@@ -120,6 +120,7 @@ if (require.main === module) {
         } };
         if (name === '../payment/donation-provider') return { getDonationProvider() { throw new Error('Blocked payment provider'); } };
         if (name === '../email/email.service') return {};
+        if (name === '../currency/currency.config' || name === '../currency/exchange-rate.service') return {};
         throw new Error('Blocked import: ' + name);
       },
     });

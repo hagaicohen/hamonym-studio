@@ -8,7 +8,7 @@ import { LucideAngularModule, TrendingUp, Pencil, TriangleAlert } from 'lucide-a
   imports: [CommonModule, LucideAngularModule],
   templateUrl: './entity-goals-section-view.component.html',
 
-  styleUrls: ['./entity-goals-section-view.component.css'],
+  styleUrls: ['./entity-goals-section-view.component.css', '../../entity-settings/entity-settings-section.css'],
 })
 export class EntityGoalsSectionViewComponent {
   @Input()

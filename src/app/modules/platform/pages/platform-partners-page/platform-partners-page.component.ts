@@ -1,3 +1,4 @@
+import { ManagementPaginationComponent } from '../../../../shared/components/management-pagination/management-pagination.component';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -46,7 +47,7 @@ type SortDir = 'asc' | 'desc';
 @Component({
   selector: 'app-platform-partners-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ColumnPickerComponent, AdminDetailsDrawerComponent],
+  imports: [ManagementPaginationComponent, CommonModule, FormsModule, ColumnPickerComponent, AdminDetailsDrawerComponent],
   templateUrl: './platform-partners-page.component.html',
   styleUrl: './platform-partners-page.component.css',
 })
@@ -60,6 +61,7 @@ export class PlatformPartnersPageComponent implements OnInit, OnDestroy {
     this.visibleColumns = v;
   }
 
+  activeTab: 'partners' | 'sponsors' = 'partners';
   partners: Partner[] = [];
   total = 0;
   page = 0;
@@ -83,7 +85,13 @@ export class PlatformPartnersPageComponent implements OnInit, OnDestroy {
 
   get totalPages(): number { return Math.max(1, Math.ceil(this.total / this.limit)); }
 
+  directoryCounts: (number | null)[] = [];
+
   ngOnInit(): void {
+    this.platformService.getDirectoryCounts('partners').subscribe(counts => {
+      const [all, unassigned, recent, hidden] = counts;
+      this.directoryCounts = [all, all != null && unassigned != null ? all - unassigned : null, recent, hidden];
+    });
     this.load();
   }
 

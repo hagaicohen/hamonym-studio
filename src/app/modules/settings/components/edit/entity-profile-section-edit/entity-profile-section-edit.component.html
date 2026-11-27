@@ -18,45 +18,6 @@
         </div>
       </div>
     </div>
-    <div class="card-actions">
-      <button
-        class="cancel-btn"
-        type="button"
-        [disabled]="saveState.isSaving"
-        (click)="cancel.emit()"
-      >
-        ביטול
-      </button>
-
-      <button
-        class="save-btn"
-        type="button"
-        [class.success]="saveState.saveCompleted"
-        [class.error]="saveState.saveFailed"
-        [disabled]="saveState.isSaving"
-        (click)="save.emit()"
-      >
-        @if (
-          !saveState.isSaving &&
-          !saveState.saveCompleted &&
-          !saveState.saveFailed
-        ) {
-          שמירה
-        }
-
-        @if (saveState.isSaving) {
-          <div class="btn-spinner"></div>
-        }
-
-        @if (!saveState.isSaving && saveState.saveCompleted) {
-          <div class="save-success">✓ נשמר</div>
-        }
-
-        @if (!saveState.isSaving && saveState.saveFailed) {
-          <div class="save-failed">✕ נכשל</div>
-        }
-      </button>
-    </div>
   </div>
 
   <!-- BODY -->
@@ -88,14 +49,10 @@
 
           <div class="tags">
             @for (type of campaignTypes; track type.id) {
-              <button
-                type="button"
-                class="tag selectable"
-                [class.selected]="entity?.campaign_types?.includes(type.id)"
-                (click)="toggleCampaignType(type.id)"
-              >
+              <label class="campaign-type-check">
+                <input type="checkbox" [checked]="entity?.campaign_types?.includes(type.id)" (change)="toggleCampaignType(type.id)">
                 {{ type.title }}
-              </button>
+              </label>
             }
           </div>
           @if (!hasCampaignTypes) {
@@ -122,7 +79,6 @@
             העלאת לוגו
 
             <input
-              hidden
               type="file"
               accept="image/*"
               (change)="onLogoSelected($event)"
@@ -162,4 +118,43 @@
       />
     </div>
   </div>
+    <div class="savebar">
+      <button
+        class="cancel-btn"
+        type="button"
+        [disabled]="saveState.isSaving"
+        (click)="cancel.emit()"
+      >
+        ביטול
+      </button>
+
+      <button
+        class="save-btn"
+        type="button"
+        [class.success]="saveState.saveCompleted"
+        [class.error]="saveState.saveFailed"
+        [disabled]="saveState.isSaving"
+        (click)="save.emit()"
+      >
+        @if (
+          !saveState.isSaving &&
+          !saveState.saveCompleted &&
+          !saveState.saveFailed
+        ) {
+          שמירה
+        }
+
+        @if (saveState.isSaving) {
+          <div class="btn-spinner"></div>
+        }
+
+        @if (!saveState.isSaving && saveState.saveCompleted) {
+          <div class="save-success">✓ נשמר</div>
+        }
+
+        @if (!saveState.isSaving && saveState.saveFailed) {
+          <div class="save-failed">✕ נכשל</div>
+        }
+      </button>
+    </div>
 </div>

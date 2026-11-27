@@ -1,4 +1,6 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
 import { Component, ElementRef, ViewChild, inject, OnInit, OnDestroy, effect, untracked } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
@@ -8,7 +10,7 @@ import { AmbassadorService, AmbassadorCampaignSummary } from '../../services/amb
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
-import { LucideAngularModule, Trash2, Eye, EyeOff, Users, Pencil, Link, Sparkles } from 'lucide-angular';
+import { LucideAngularModule, Trash2, Eye, EyeOff, Users, Pencil, Link, Sparkles, LayoutGrid } from 'lucide-angular';
 import { CampaignDraft, FUNDING_TYPE_LABELS } from '../../services/campaign-studio-state.service';
 import { CampaignPublicationService } from '../../services/campaign-publication.service';
 import { ToastService } from '../../../../core/services/toast.service';
@@ -20,7 +22,7 @@ import { MediaStoreService } from '../../simple-studio/vendor-v462/media/media-s
 @Component({
   selector: 'app-campaigns-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, LucideAngularModule],
+  imports: [FormsModule, DropdownComponent, DropdownOptionComponent, HmIconComponent, CommonModule, LucideAngularModule],
   templateUrl: './campaigns-page.component.html',
   styleUrls: ['./campaigns-page.component.css'],
 })
@@ -71,15 +73,40 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
   private readonly failedCovers = new Set<string>();
 
   coverFailed(url: string): void { this.failedCovers.add(url); }
+  campaignQuery = '';
+  campaignStatusFilter = '';
+  campaignOrder: 'existing' | 'name' | 'raised' | 'raised-asc' = 'existing';
+
+  readonly statusOptions: Record<string, string> = {
+    '': 'כל הסטטוסים', published: 'פורסם', draft: 'טיוטה', paused: 'מושהה', ended: 'הסתיים',
+  };
+  readonly orderOptions = {
+    existing: 'סדר קיים', name: 'לפי שם', raised: 'גיוס — מהגבוה לנמוך', 'raised-asc': 'גיוס — מהנמוך לגבוה',
+  };
+  readonly filterOptionKeys = Object.keys;
+  readonly orderOptionKeys = Object.keys(this.orderOptions) as (keyof typeof this.orderOptions)[];
+
+  filterCampaigns(rows: CampaignDraft[]): (CampaignDraft & { id: string })[] {
+    const query = this.campaignQuery.trim().toLocaleLowerCase();
+    const matches = rows.filter((campaign): campaign is CampaignDraft & { id: string } => !!campaign.id && (!query || campaign.title.toLocaleLowerCase().includes(query))
+      && (!this.campaignStatusFilter || campaign.status === this.campaignStatusFilter));
+    if (this.campaignOrder === 'name') return matches.sort((a, b) => a.title.localeCompare(b.title, 'he'));
+    if (this.campaignOrder === 'raised') return matches.sort((a, b) => (b.currentAmount ?? 0) - (a.currentAmount ?? 0));
+    if (this.campaignOrder === 'raised-asc') return matches.sort((a, b) => (a.currentAmount ?? 0) - (b.currentAmount ?? 0));
+    return matches;
+  }
+
   viewMode: 'grid' | 'list' = 'grid';
   campaigns: any[] = [];
-  isLoading  = true;
+  isLoading = true;
+  loadError = '';
   deletingId: string | null = null;
   hidingId:   string | null = null;
 
   private dataSub?: Subscription;
   private readonly welcome = inject(CampaignsWelcomeService);
 
+  readonly GridIcon = LayoutGrid;
   readonly TrashIcon  = Trash2;
   readonly EyeIcon    = Eye;
   readonly EyeOffIcon = EyeOff;
@@ -139,6 +166,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
         this.isLoading          = true;
         this.ambassadorCampaigns = [];
         this.campaigns           = [];
+        this.loadError = '';
         this.loader.show();
 
         if (isAmb) {
@@ -149,7 +177,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
         } else {
           this.dataSub = this.campaignApi.list(entityId).subscribe({
             next: (data) => { this.campaigns = data; this.isLoading = false; this.loader.hide(); this.welcome.visible.set(this.showWelcome); },
-            error: ()    => { this.isLoading = false; this.loader.hide(); },
+            error: () => { this.loadError = 'לא ניתן לטעון את הקמפיינים. יש לנסות לרענן את הדף.'; this.isLoading = false; this.loader.hide(); },
           });
         }
       });
@@ -186,7 +214,7 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
   }
 
   get showWelcome(): boolean {
-    return !this.isLoading && !this.isAmbassadorMode && this.campaigns.length === 0;
+    return !this.isLoading && !this.loadError && !this.isAmbassadorMode && this.campaigns.length === 0;
   }
 
   get entityAwaitingApproval(): boolean {
@@ -304,6 +332,15 @@ export class CampaignsPageComponent implements OnInit, OnDestroy {
 
   viewCampaign(slug: string): void {
     this.router.navigate(['/campaigns', slug, 'view']);
+  }
+
+  async copyCampaignLink(campaign: CampaignDraft): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(this.publisher.url(campaign));
+      this.toasts.show('success', 'הקישור לקמפיין הועתק');
+    } catch {
+      this.toasts.show('error', 'לא ניתן להעתיק את הקישור לקמפיין');
+    }
   }
 
   openReports(id: string): void {

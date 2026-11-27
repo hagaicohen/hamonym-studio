@@ -1,3 +1,4 @@
+import { AuthService } from '../../../../core/services/auth.service';
 import { registeredOrganizations, registrationDrafts } from '../../../../core/utils/organization-registration-status';
 import { OrganizationEntryService } from '../../../../core/services/organization-entry.service';
 import { LoadingOverlayComponent } from '../../../../shared/components/loading-overlay/loading-overlay.component';
@@ -55,6 +56,7 @@ declare const google: any;
 })
 export class LoginComponent implements OnInit {
   private readonly zone = inject(NgZone);
+  private readonly auth = inject(AuthService);
   private organizationEntry = inject(OrganizationEntryService);
   loginForm: FormGroup;
 
@@ -157,9 +159,7 @@ export class LoginComponent implements OnInit {
       .pipe(timeout(30000))
       .subscribe({
         next: (res) => {
-          localStorage.setItem('token', res.token);
-
-          localStorage.setItem('user', JSON.stringify(res.user));
+          this.auth.setSession(res.token, res.user);
 
           localStorage.setItem('hasEntities', String(res.hasEntities));
 
@@ -259,9 +259,7 @@ export class LoginComponent implements OnInit {
       .pipe(timeout(30000))
       .subscribe({
         next: (res) => {
-          localStorage.setItem('token', res.token);
-
-          localStorage.setItem('user', JSON.stringify(res.user));
+          this.auth.setSession(res.token, res.user);
 
           localStorage.setItem('hasEntities', String(res.hasEntities));
 

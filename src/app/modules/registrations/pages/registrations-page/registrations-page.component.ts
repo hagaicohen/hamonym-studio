@@ -1,14 +1,17 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
+import { ManagementPaginationComponent } from '../../../../shared/components/management-pagination/management-pagination.component';
 import { Component, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { CampaignApiService } from '../../../campaigns/services/campaign-api.service';
-import { RegistrationOption } from '../../../campaigns/services/campaign-studio-state.service';
-
+import { CampaignDraft, RegistrationOption } from '../../../campaigns/services/campaign-studio-state.service';
+
+
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 interface Participant {
   id:              string;
@@ -51,7 +54,7 @@ const SHIRT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 @Component({
   selector: 'app-registrations-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule],
+  imports: [DropdownComponent, DropdownOptionComponent, ManagementPaginationComponent, RouterLink, HmIconComponent, CommonModule, FormsModule],
   templateUrl: './registrations-page.component.html',
   styleUrl: './registrations-page.component.css',
 })
@@ -89,6 +92,36 @@ export class RegistrationsPageComponent {
   campaignId = this.route.snapshot.paramMap.get('id') || this.route.snapshot.queryParamMap.get('campaignId') || '';
   campaignTitle: string | null = null;
   isOngoing = false;
+  raceTab: 'races' | 'participants' = this.campaignScoped || this.campaignId ? 'participants' : 'races';
+  raceCatalog: CampaignDraft[] = [];
+  participantCampaignFilter = '';
+  organizationParticipantCount: number | null = null;
+
+  get racesWithCourses(): number { return this.raceCatalog.filter(race => race.registrationOptions.length > 0).length; }
+  get configuredCourses(): number { return this.raceCatalog.reduce((sum, race) => sum + race.registrationOptions.length, 0); }
+
+  selectedParticipant: Participant | null = null;
+  raceCatalogLoading = false;
+  raceCatalogError = false;
+
+  private loadRaceCatalog(entityId: string): void {
+    this.raceCatalog = [];
+    this.raceCatalogLoading = true;
+    this.raceCatalogError = false;
+    this.campaignApi.list(entityId).subscribe({
+      next: campaigns => {
+        if (this.currentEntity.currentEntity()?.id !== entityId) return;
+        this.raceCatalog = campaigns.filter(campaign => campaign.layout.preset === 'race' || campaign.registrationOptions.length > 0);
+        this.raceCatalogLoading = false;
+      },
+      error: () => {
+        if (this.currentEntity.currentEntity()?.id !== entityId) return;
+        this.raceCatalogLoading = false;
+        this.raceCatalogError = true;
+      },
+    });
+  }
+
   registrationOptions: RegistrationOption[] = [];
 
   readonly sourceOptions: { value: ManualSource; label: string }[] = [
@@ -112,7 +145,12 @@ export class RegistrationsPageComponent {
       const id = this.currentEntity.currentEntity()?.id ?? null;
       if (id === this.lastLoadedEntityId) return;
       this.lastLoadedEntityId = id;
-      untracked(() => this.load());
+      this.organizationParticipantCount = null;
+      this.participantCampaignFilter = '';
+      untracked(() => {
+        this.load();
+        if (id && !this.campaignScoped) this.loadRaceCatalog(id);
+      });
     });
 
     if (this.campaignId) {
@@ -145,10 +183,6 @@ export class RegistrationsPageComponent {
   prevPage(): void { if (this.page > 0) { this.page--; this.load(); } }
   nextPage(): void { if (this.page < this.totalPages - 1) { this.page++; this.load(); } }
 
-  onLimitChange(): void {
-    this.page = 0;
-    this.load();
-  }
 
   private fetch(params: HttpParams, headers: HttpHeaders) {
     const entity = this.currentEntity.currentEntity();
@@ -169,13 +203,16 @@ export class RegistrationsPageComponent {
     let params = new HttpParams()
       .set('page',  String(this.page))
       .set('limit', String(this.limit));
-    if (this.campaignId)         params = params.set('campaignId', this.campaignId);
+    const filterCampaign = this.campaignId || this.participantCampaignFilter;
+    if (filterCampaign) params = params.set('campaignId', filterCampaign);
     if (this.searchQuery.trim()) params = params.set('search', this.searchQuery.trim());
 
+    const isOrgTotal = !this.campaignScoped && !filterCampaign && !this.searchQuery.trim();
     this.fetch(params, headers).subscribe({
       next: (res) => {
         this.participants = res.participants ?? [];
         this.total         = res.total ?? 0;
+        if (isOrgTotal && this.currentEntity.currentEntity()?.id === entity.id) this.organizationParticipantCount = res.total ?? null;
         this.loading    = false;
         this.refreshing = false;
         this.loader.hide();
@@ -197,7 +234,8 @@ export class RegistrationsPageComponent {
     this.exporting = true;
     const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
     let params = new HttpParams().set('page', '0').set('limit', '10000');
-    if (this.campaignId)         params = params.set('campaignId', this.campaignId);
+    const filterCampaign = this.campaignId || this.participantCampaignFilter;
+    if (filterCampaign) params = params.set('campaignId', filterCampaign);
     if (this.searchQuery.trim()) params = params.set('search', this.searchQuery.trim());
 
     this.fetch(params, headers).subscribe({

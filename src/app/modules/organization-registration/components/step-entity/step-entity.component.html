@@ -69,22 +69,22 @@
 
       <label class="field-label"> סוג הישות * </label>
 
-      <select [(ngModel)]="entityType" [class.placeholder]="!entityType">
-        <option value="" disabled>בחר סוג ישות</option>
+      <app-dropdown [(ngModel)]="entityType" [class.placeholder]="!entityType">
+        <app-dropdown-option value="" disabled>בחר סוג ישות</app-dropdown-option>
 
-        <option value="association">עמותה</option>
+        <app-dropdown-option value="association">עמותה</app-dropdown-option>
 
-        <option value="chalatz">חל״צ</option>
+        <app-dropdown-option value="chalatz">חל״צ</app-dropdown-option>
 
-        <option value="political_party_new">מפלגה פוליטית חדשה</option>
+        <app-dropdown-option value="political_party_new">מפלגה פוליטית חדשה</app-dropdown-option>
 
-        <option value="political_party_registered">מפלגה פוליטית רשומה</option>
+        <app-dropdown-option value="political_party_registered">מפלגה פוליטית רשומה</app-dropdown-option>
 
-        <option value="sole_exempt">עוסק פטור</option>
+        <app-dropdown-option value="sole_exempt">עוסק פטור</app-dropdown-option>
 
-        <option value="sole_registered">עוסק מורשה</option>
-        <option value="company">חברה בע״מ</option>
-      </select>
+        <app-dropdown-option value="sole_registered">עוסק מורשה</app-dropdown-option>
+        <app-dropdown-option value="company">חברה בע״מ</app-dropdown-option>
+      </app-dropdown>
     </div>
 
     @if (entityType) {

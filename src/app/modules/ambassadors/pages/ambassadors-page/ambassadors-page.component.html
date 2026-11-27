@@ -1,4 +1,4 @@
-<div class="don-page">
+<div class="don-page cm-v7 org-v1">
 
   @if (error) {
     <div class="don-error">{{ error }}</div>
@@ -6,13 +6,13 @@
 
   <!-- ══ HEADER ══ -->
   <div class="don-header">
-    <h1 class="don-title">שגרירים</h1>
+    <div><h1 class="don-title">שגרירים</h1><p class="cm-description">מעקב אחר יעדי גיוס אישיים וביצועי השגרירים בכל הקמפיינים</p></div>
   </div>
 
   <!-- ══ KPI ROW ══ -->
-  <div class="don-kpi-row">
+  <div class="don-kpi-row cm-summary">
     <div class="don-kpi-card">
-      <div class="kpi-label">סה"כ גויס</div>
+      <div class="kpi-label">סך גיוס באמצעות שגרירים</div>
       <div class="kpi-value primary">{{ fmtMoney(kpi.totalRaised) }}</div>
     </div>
     <div class="don-kpi-card">
@@ -30,7 +30,9 @@
   </div>
 
   <!-- ══ FILTERS ══ -->
-  <div class="don-filters">
+  <section class="cm-ledger" aria-labelledby="org-ambassadors-list">
+  <h2 class="cm-panel-title" id="org-ambassadors-list">רשימת שגרירים</h2>
+  <div class="don-filters cm-filters">
     <input
       class="don-search"
       type="search"
@@ -39,19 +41,19 @@
       (input)="onSearch()"
     />
 
-    <select class="don-select don-select--campaign" [(ngModel)]="campaignFilter" (change)="onFilterChange()">
-      <option value="">כל הקמפיינים</option>
+    <app-dropdown class="don-select don-select--campaign" [(ngModel)]="campaignFilter" (selectionChange)="onFilterChange()">
+      <app-dropdown-option value="">כל הקמפיינים</app-dropdown-option>
       @for (c of campaigns; track c.id) {
-        <option [value]="c.id">{{ c.title }}</option>
+        <app-dropdown-option [value]="c.id">{{ c.title }}</app-dropdown-option>
       }
-    </select>
+    </app-dropdown>
 
-    <select class="don-select" [(ngModel)]="statusFilter" (change)="onFilterChange()">
-      <option value="all">כל הסטטוסים</option>
-      <option value="active">פעיל</option>
-      <option value="pending">ממתין</option>
-      <option value="inactive">לא פעיל</option>
-    </select>
+    <app-dropdown class="don-select" [(ngModel)]="statusFilter" (selectionChange)="onFilterChange()">
+      <app-dropdown-option value="all">כל הסטטוסים</app-dropdown-option>
+      <app-dropdown-option value="active">פעיל</app-dropdown-option>
+      <app-dropdown-option value="pending">ממתין</app-dropdown-option>
+      <app-dropdown-option value="inactive">לא פעיל</app-dropdown-option>
+    </app-dropdown>
 
     <button class="don-export-btn" (click)="exportCsv()" [disabled]="exporting">
       <app-icon name="download" /> {{ exporting ? 'מייצא...' : 'ייצוא CSV' }}
@@ -117,14 +119,14 @@
           <tbody>
             @for (a of ambassadors; track a.id) {
               <tr class="don-row" (click)="openDrawer(a)">
-                <td class="don-name">{{ a.full_name }}</td>
-                @if (isColVisible('campaign')) { <td class="don-campaign col-secondary">{{ a.campaign_title }}</td> }
-                @if (isColVisible('email'))    { <td class="don-campaign ltr-col col-secondary">{{ a.email || '—' }}</td> }
-                @if (isColVisible('phone'))    { <td class="don-campaign ltr-col col-secondary">{{ a.phone || '—' }}</td> }
-                @if (isColVisible('goal'))     { <td class="don-date col-secondary">{{ a.goal_amount ? fmtMoney(a.goal_amount) : '—' }}</td> }
-                <td class="don-amount">{{ fmtMoney(a.raised_total) }}</td>
-                @if (isColVisible('donors'))   { <td class="don-date col-secondary">{{ a.donor_count | number }}</td> }
-                @if (isColVisible('status'))   { <td class="col-secondary"><span class="status-badge status-{{ a.status }}">{{ statusLabel(a.status) }}</span></td> }
+                <td class="don-name"><button type="button" class="cm-row-link" (click)="$event.stopPropagation(); openDrawer(a)">{{ a.full_name }}</button></td>
+                @if (isColVisible('campaign')) { <td class="don-campaign col-secondary" data-label="קמפיין">{{ a.campaign_title }}</td> }
+                @if (isColVisible('email'))    { <td class="don-campaign ltr-col col-secondary" data-label="אימייל">{{ a.email || '—' }}</td> }
+                @if (isColVisible('phone'))    { <td class="don-campaign ltr-col col-secondary" data-label="טלפון">{{ a.phone || '—' }}</td> }
+                @if (isColVisible('goal'))     { <td class="don-date col-secondary" data-label="יעד אישי">{{ a.goal_amount ? fmtMoney(a.goal_amount) : '—' }}</td> }
+                <td class="don-amount" data-label="גויס">{{ fmtMoney(a.raised_total) }}</td>
+                @if (isColVisible('donors'))   { <td class="don-date col-secondary" data-label="תורמים">{{ a.donor_count | number }}</td> }
+                @if (isColVisible('status'))   { <td class="col-secondary" data-label="סטטוס"><span class="status-badge status-{{ a.status }}">{{ statusLabel(a.status) }}</span></td> }
               </tr>
             }
           </tbody>
@@ -132,21 +134,10 @@
       </div>
 
       <!-- Pagination -->
-      <div class="don-pagination">
-        <label class="pag-limit">
-          שורות בעמוד:
-          <select [(ngModel)]="limit" (change)="onLimitChange()">
-            <option [ngValue]="10">10</option>
-            <option [ngValue]="25">25</option>
-            <option [ngValue]="50">50</option>
-          </select>
-        </label>
-        <button class="pag-btn" (click)="prevPage()" [disabled]="page === 0">הקודם</button>
-        <span class="pag-info">עמוד {{ page + 1 }} מתוך {{ totalPages }}</span>
-        <button class="pag-btn" (click)="nextPage()" [disabled]="page >= totalPages - 1">הבא</button>
-      </div>
+      <app-management-pagination [page]="page" [total]="kpi.totalAmbassadors" [pageSize]="limit" (pageChange)="page = $event; load()" />
     }
   </div>
+  </section>
 
   }
 </div>

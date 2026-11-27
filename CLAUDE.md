@@ -1,5 +1,7 @@
 # Hamonym Studio — Claude Context
 
+Apply the repository's [agent instructions](AGENTS.md) alongside the project conventions below. See the [master plan](docs/HAMONYM_MASTER_PLAN.md) for task tracking and acceptance status.
+
 ## Project Structure
 
 This is a monorepo with two separate roots:

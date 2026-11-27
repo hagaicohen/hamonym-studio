@@ -1,3 +1,5 @@
+import { DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
+import { ManagementPaginationComponent } from '../../../../shared/components/management-pagination/management-pagination.component';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -69,7 +71,7 @@ interface PendingAction {
 @Component({
   selector: 'app-platform-campaigns-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ColumnPickerComponent, RouterLink, AdminDetailsDrawerComponent, EntityComboboxComponent],
+  imports: [DropdownOptionComponent, ManagementPaginationComponent, CommonModule, FormsModule, ColumnPickerComponent, RouterLink, AdminDetailsDrawerComponent, EntityComboboxComponent],
   templateUrl: './platform-campaigns-page.component.html',
   styleUrl: './platform-campaigns-page.component.css',
 })
@@ -100,6 +102,25 @@ export class PlatformCampaignsPageComponent implements OnInit, OnDestroy {
   get hasFilters(): boolean { return this.activeChip !== 'all' || !!this.searchQuery.trim() || !!this.entityFilter || !!this.dateFrom || !!this.dateTo; }
   clearFilters(): void { this.activeChip = 'all'; this.searchQuery = ''; this.entityFilter = ''; this.dateFrom = ''; this.dateTo = ''; this.page = 0; this.load(); }
   ngOnDestroy(): void { clearTimeout(this.searchTimer); this.requestId++; this.request?.unsubscribe(); this.detailRequest?.unsubscribe(); this.optionsRequest?.unsubscribe(); }
+  runCampaignMenu(campaign: Campaign, action: string): void {
+    if (action === 'details') { this.openCampaign(campaign); return; }
+    if (action === 'view') { window.open(this.campaignUrl(campaign), '_blank', 'noopener'); return; }
+    if (action === 'copy') { this.copyCampaignLink(campaign); return; }
+    if (!this.context.hasPlatformSection('campaigns')) return;
+    switch (action) {
+      case 'featured': this.toggleFeatured(campaign); break;
+      case 'lock': this.toggleLock(campaign); break;
+      case 'slug': this.requestSlugChange(campaign); break;
+      case 'duplicate': this.duplicate(campaign); break;
+      case 'delete': this.requestDelete(campaign); break;
+      case 'restore': this.restore(campaign); break;
+      default: {
+        const status = action.slice('status:'.length);
+        if (action.startsWith('status:') && this.availableStatuses(campaign).includes(status)) this.onStatusChange(campaign, status);
+      }
+    }
+  }
+
   openCampaign(campaign: Campaign): void {
     this.detailRequest?.unsubscribe();
     this.selectedCampaign = campaign; this.campaignDetail = null; this.detailError = null; this.detailLoading = true;
@@ -163,7 +184,12 @@ export class PlatformCampaignsPageComponent implements OnInit, OnDestroy {
 
   get totalPages(): number { return Math.max(1, Math.ceil(this.total / this.limit)); }
 
+  directoryCounts: (number | null)[] = [];
+
   ngOnInit(): void {
+    this.platformService.getDirectoryCounts('campaigns').subscribe(counts => {
+      this.directoryCounts = counts;
+    });
     const params = this.route.snapshot.queryParamMap;
     this.searchQuery = params.get('search') || '';
     this.entityFilter = params.get('entityId') || '';

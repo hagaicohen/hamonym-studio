@@ -27,9 +27,6 @@ button:focus-visible, a:focus-visible, summary:focus-visible, [tabindex='-1']:fo
 .dashboard-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
 .panel { background: #fff; border: 0; box-shadow: 0 2px 12px #0f172a0b; border-radius: 12px; padding: 16px; min-width: 0; }
 .section-header { margin-bottom: 12px; flex-wrap: wrap; }
-.range-switch { display: flex; gap: 3px; padding: 3px; background: #f5f5f9; border-radius: 8px; }
-.range-switch button { border: 0; background: none; border-radius: 6px; padding: 6px 10px; font-size: 12px; color: #64748b; }
-.range-switch button.selected { color: #583cd6; background: #fff; box-shadow: 0 1px 4px #0f172a12; font-weight: 600; }
 .chart-summary { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .chart-summary strong { font-size: 25px; font-variant-numeric: tabular-nums; }
 .chart-summary > span { font-size: 12px; color: #64748b; }
@@ -41,7 +38,7 @@ button:focus-visible, a:focus-visible, summary:focus-visible, [tabindex='-1']:fo
 .chart-line { fill: none; stroke: #7051df; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 .chart-guide { stroke: #c4b5fd; stroke-dasharray: 3 3; }
 .chart-dot { fill: #583cd6; stroke: white; stroke-width: 2; }
-.chart-axis { display: flex; justify-content: space-between; color: #94a3b8; font-size: 11px; }
+.chart-axis { padding-inline: 1.43%; display: flex; justify-content: space-between; color: #94a3b8; font-size: 11px; }
 .chart-tooltip { position: absolute; top: 4px; inset-inline-start: 12px; background: #1e293b; color: white; padding: 7px 10px; border-radius: 7px; font-size: 12px; pointer-events: none; }
 .chart-details { margin-top: 14px; font-size: 12px; color: #64748b; }
 .chart-details summary { cursor: pointer; width: fit-content; }
@@ -98,3 +95,22 @@ td:nth-child(2), td:nth-child(3) { white-space: nowrap; font-variant-numeric: ta
 @media (max-width: 1350px) { .kpi-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } .kpi-card strong { font-size: 34px; } }
 @media (max-width: 1000px) { .dashboard-grid { grid-template-columns: minmax(0, 1fr); } .attention-panel { grid-row: 2; } }
 @media (max-width: 600px) { .plat-page { padding: 16px; } .plat-header { margin-bottom: 16px; } h1 { font-size: 24px; } .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .kpi-card { padding: 14px 12px; } .kpi-card strong { font-size: 30px; } .panel { padding: 16px; } .section-header { gap: 12px; } .activity-list > li { flex-wrap: wrap; gap: 3px 10px; } .activity-list time { margin-inline-start: 18px; } .donor-drawer { padding: 20px 16px; } }
+
+.chart-wrap { --chart-amount-axis: clamp(64px, 20%, 116px); padding-left: var(--chart-amount-axis); }
+.chart-amount-axis {
+  position: absolute;
+  left: 0;
+  top: 11.25px;
+  height: 146.25px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: var(--chart-amount-axis);
+  padding-right: 6px;
+  box-sizing: border-box;
+  color: #64748b;
+  font-size: 11px;
+  pointer-events: none;
+  transform: translateY(-.75em);
+}

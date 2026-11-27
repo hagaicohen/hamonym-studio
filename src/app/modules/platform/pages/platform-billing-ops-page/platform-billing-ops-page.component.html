@@ -559,16 +559,16 @@
              what's actually shown in that row. -->
         <label class="ba-field">
           <span>מצב</span>
-          <select [(ngModel)]="filterStatus" (ngModelChange)="loadStatements()">
-            <option value="">הכל</option>
-            <option value="draft">ממתין לאישור</option>
-            <option value="pending_collection">ממתין לגבייה</option>
-            <option value="collection_failed">הגבייה נכשלה</option>
-            <option value="paid">שולם</option>
-            <option value="abandoned">בוטל (טיוטה)</option>
-            <option value="cancelled">מבוטל</option>
-            <option value="written_off">נמחק כחוב אבוד</option>
-          </select>
+          <app-dropdown [(ngModel)]="filterStatus" (ngModelChange)="loadStatements()">
+            <app-dropdown-option value="">הכל</app-dropdown-option>
+            <app-dropdown-option value="draft">ממתין לאישור</app-dropdown-option>
+            <app-dropdown-option value="pending_collection">ממתין לגבייה</app-dropdown-option>
+            <app-dropdown-option value="collection_failed">הגבייה נכשלה</app-dropdown-option>
+            <app-dropdown-option value="paid">שולם</app-dropdown-option>
+            <app-dropdown-option value="abandoned">בוטל (טיוטה)</app-dropdown-option>
+            <app-dropdown-option value="cancelled">מבוטל</app-dropdown-option>
+            <app-dropdown-option value="written_off">נמחק כחוב אבוד</app-dropdown-option>
+          </app-dropdown>
         </label>
         <app-column-picker
           [columns]="allStatementsColumns"

@@ -68,12 +68,12 @@
 }
 
 .rep-tab:hover:not(.active) { background: #f8fafc; color: #1e293b; }
-.rep-tab:hover:not(.active) lucide-angular { color: #583cd6; }
+.rep-tab:hover:not(.active) lucide-angular { color: var(--hm-admin-primary); }
 
 .rep-tab.active {
-  background: #583cd6;
+  background: var(--hm-admin-primary);
   color: #fff;
-  box-shadow: 0 4px 14px rgba(88,60,214,.28);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--hm-admin-primary) 28%, transparent);
 }
 
 .rep-tab.active lucide-angular { color: #fff; }
@@ -118,7 +118,7 @@
   color: #1e293b;
 }
 
-.kpi-value.primary { color: #583cd6; }
+.kpi-value.primary { color: var(--hm-admin-primary); }
 .kpi-value.danger  { color: #ef4444; }
 .kpi-value.good    { color: #0EA65A; }
 
@@ -233,7 +233,7 @@
   width: 14px;
   height: 14px;
   flex-shrink: 0;
-  accent-color: #583cd6;
+  accent-color: var(--hm-admin-primary);
   cursor: pointer;
 }
 
@@ -295,7 +295,7 @@
   width: 28px;
   height: 28px;
   border: 3px solid #e5e7eb;
-  border-top-color: #583cd6;
+  border-top-color: var(--hm-admin-primary);
   border-radius: 50%;
   animation: don-spin 0.7s linear infinite;
 }
@@ -346,7 +346,7 @@
 }
 
 .don-table th.sortable:hover { color: #1e293b; }
-.don-table th.sortable.active { color: #583cd6; }
+.don-table th.sortable.active { color: var(--hm-admin-primary); }
 
 .sort-arrow { font-size: 10px; opacity: 0.25; transition: opacity 0.12s; }
 .don-table th.sortable:hover .sort-arrow  { opacity: 0.55; }
@@ -389,7 +389,7 @@
 }
 .progress-bar-fill {
   height: 100%;
-  background: #583cd6;
+  background: var(--hm-admin-primary);
   border-radius: 999px;
   transition: width 0.2s;
 }

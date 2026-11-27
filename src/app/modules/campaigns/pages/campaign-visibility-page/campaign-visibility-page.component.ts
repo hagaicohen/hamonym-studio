@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignWorkspaceContextService } from '../../services/campaign-workspace-context.service';
 import {
@@ -11,7 +11,8 @@ import {
   StatKey,
 } from '../../services/campaign-studio-state.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-
+
+
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 type ContentBlockType = 'sponsors' | 'ambassadors' | 'updates';
 
@@ -26,7 +27,7 @@ type ContentBlockType = 'sponsors' | 'ambassadors' | 'updates';
 @Component({
   selector: 'app-campaign-visibility-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule],
+  imports: [RouterLink, HmIconComponent, CommonModule],
   templateUrl: './campaign-visibility-page.component.html',
   styleUrl: './campaign-visibility-page.component.css',
 })
@@ -108,7 +109,7 @@ export class CampaignVisibilityPageComponent implements OnInit {
     if (!this.draft) return;
     const previous = this.draft;
     this.draft = { ...this.draft, offeringsEnabled: !this.draft.offeringsEnabled };
-    this.persist(previous);
+    this.persist(previous, { rewards_enabled: this.draft.offeringsEnabled });
   }
 
   private findBlock(type: ContentBlockType | 'stats'): CampaignBlock | undefined {
@@ -125,10 +126,21 @@ export class CampaignVisibilityPageComponent implements OnInit {
     const previous = this.draft;
     const block = this.findBlock(type);
     if (!block) return;
-    const blocks = this.draft.blocks.map(b => b.id === block.id ? { ...b, visible: !b.visible } : b);
+    const blocks = this.draft.blocks.map(b => b.id === block.id ? { ...b, visible: b.visible === false } : b);
     this.draft = { ...this.draft, blocks };
-    this.persist(previous);
+    this.persist(previous, { workspace_visibility: { blockId: block.id, visible: block.visible === false } });
   }
+
+  readonly contentOptions = [
+    { key: 'sponsors', label: 'חסויות', description: 'הצגת לוגואים של נותני החסות' },
+    { key: 'ambassadors', label: 'שגרירים', description: 'הצגת רשימת השגרירים' },
+    { key: 'updates', label: 'עדכונים', description: 'הצגת עדכוני הקמפיין' },
+  ] as const;
+
+  get fundraisingItems(): StatItem[] { return this.statItems.filter(item => !this.isDateStat(item.key)); }
+  get dateItems(): StatItem[] { return this.statItems.filter(item => this.isDateStat(item.key)); }
+
+  private isDateStat(key: StatKey): boolean { return key === 'start_date' || key === 'end_date' || key === 'days_remaining'; }
 
   get statsBlock(): CampaignBlock | undefined {
     return this.findBlock('stats');
@@ -137,7 +149,7 @@ export class CampaignVisibilityPageComponent implements OnInit {
   get statItems(): StatItem[] {
     const block = this.statsBlock;
     if (!block) return [];
-    return [...(block.data as StatsBlockData).items].sort((a, b) => a.order - b.order);
+    return [...((block.data as StatsBlockData).items ?? [])].sort((a, b) => a.order - b.order);
   }
 
   toggleStatItem(key: StatKey): void {
@@ -146,20 +158,28 @@ export class CampaignVisibilityPageComponent implements OnInit {
     const block = this.statsBlock;
     if (!block) return;
     const data = block.data as StatsBlockData;
-    const items = data.items.map(i => i.key === key ? { ...i, visible: !i.visible } : i);
+    const selected = data.items.find(item => item.key === key);
+    if (!selected) return;
+    const visible = !selected.visible;
+    const items = data.items.map(i => i.key === key ? { ...i, visible } : i);
     const blocks = this.draft.blocks.map(b => b.id === block.id ? { ...b, data: { ...data, items } } : b);
     this.draft = { ...this.draft, blocks };
-    this.persist(previous);
+    this.persist(previous, { workspace_visibility: { blockId: block.id, statKey: key, visible } });
   }
 
-  private persist(previous: CampaignDraft): void {
+  private persist(previous: CampaignDraft, fields: Parameters<CampaignApiService['updateWorkspaceFields']>[1]): void {
     if (!this.draft) return;
     const attempted = this.draft;
     this.saving = true;
     this.saved = false;
     this.saveError = null;
-    this.campaignApi.update(this.campaignId, attempted).subscribe({
-      next: (updated) => { this.saving = false; this.saved = true; this.ctx.setDraft(updated); },
+    this.campaignApi.updateWorkspaceFields(this.campaignId, fields).subscribe({
+      next: (updated) => {
+        this.saving = false;
+        this.saved = true;
+        this.draft = updated;
+        this.ctx.setDraft(updated);
+      },
       error: (err) => {
         // Revert the optimistic toggle so the UI doesn't show an unsaved
         // state as if it had actually saved -- previously this failed

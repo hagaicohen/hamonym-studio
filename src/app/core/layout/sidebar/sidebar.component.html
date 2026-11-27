@@ -4,10 +4,12 @@
 
   <nav class="sidebar-nav">
 
-    <ng-container *ngIf="platformNavItems().length">
-      <div class="sidebar-section-label">{{ 'shell.sidebar.platform' | transloco }}</div>
-      <ng-container *ngFor="let item of platformNavItems()" [ngTemplateOutlet]="navItemTpl" [ngTemplateOutletContext]="{ item }"></ng-container>
-    </ng-container>
+    @for (group of platformNavigationGroups(); track group.label) {
+      <div class="sidebar-section-label"><app-icon [name]="group.icon" /> {{ group.label | transloco }}</div>
+      @for (item of group.items; track item.route) {
+        <ng-container [ngTemplateOutlet]="navItemTpl" [ngTemplateOutletContext]="{ item }"></ng-container>
+      }
+    }
 
     <ng-container *ngIf="platformNavItems().length && navItems().length">
       <div class="sidebar-section-label">{{ 'shell.sidebar.myOrganization' | transloco }}</div>

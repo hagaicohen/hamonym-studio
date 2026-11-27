@@ -113,3 +113,32 @@
   padding: 8px 18px; font-size: 13px; font-weight: 700; cursor: pointer;
 }
 .pl-delete-confirm-btn:disabled { opacity: 0.5; cursor: default; }
+
+.pl-page .pl-header { align-items: center; margin: 0; }
+.pl-page .pl-description { margin-top: 5px; color: var(--campaign-muted); font-size: 13px; }
+.pl-page .pl-return-banner { margin: 0; }
+.pl-page .partner-ledger { padding: 14px 16px; }
+.partner-ledger .cm-tabs { margin: 0; }
+.partner-ledger .partner-filters { margin: 10px 0; gap: 8px; }
+.partner-filters input { width: auto; }
+.partner-filters select { max-width: min(100%, 250px); }
+.partner-table { width: 100%; border-collapse: collapse; text-align: start; }
+.partner-table th, .partner-table td { padding: 9px 8px; text-align: start; overflow-wrap: anywhere; border-bottom: 1px solid var(--campaign-border); }
+.partner-table th { font-size: 12px; color: var(--campaign-muted); background: #f5f7fa; }
+.partner-table tbody tr:last-child td { border-bottom: 0; }
+.partner-identity { display: inline-flex; align-items: center; gap: 8px; }
+.partner-identity img { width: 30px; height: 30px; object-fit: contain; border: 1px solid var(--campaign-border); border-radius: 5px; }
+.partner-table .pl-card-actions { width: auto; justify-content: flex-start; }
+.partner-table .pl-row-delete { color: #b42318; }
+.partner-empty { margin: 0; padding: 16px 8px; text-align: center; color: var(--campaign-muted); background: #f8fafb; border: 1px solid var(--campaign-border); border-radius: 7px; }
+.partner-ledger app-management-pagination { display: block; margin-top: 8px; }
+
+@media (max-width: 700px) {
+  .pl-page .partner-ledger { padding: 10px 12px; }
+  .partner-table, .partner-table tbody { display: block; }
+  .partner-table thead { display: none; }
+  .partner-table tr { display: grid; gap: 4px; margin-bottom: 8px; padding: 9px; border: 1px solid var(--campaign-border); border-radius: 8px; }
+  .partner-table td { display: block; padding: 2px 0; border: 0; }
+  .partner-table td[data-label] { display: flex; justify-content: space-between; gap: 8px; }
+  .partner-table td[data-label]::before { content: attr(data-label); color: var(--campaign-muted); }
+}

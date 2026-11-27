@@ -1,4 +1,4 @@
-﻿@import "../../../styles/settings-section-actions.css";
+@import "../../../styles/settings-section-actions.css";
 .section-title-row {
   display: flex;
   align-items: center;
@@ -30,7 +30,7 @@
 
   font-weight: 700;
 
-  color: #6D5DF6;
+  color: var(--hm-admin-primary);
 
   line-height: 1.2;
 
@@ -105,7 +105,7 @@
 .base-input:focus {
   outline: none;
 
-  border-color: #6D5DF6;
+  border-color: var(--hm-admin-primary);
 
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
 }
@@ -163,7 +163,7 @@ select.base-input {
 
   margin: 0;
 
-  accent-color: #6D5DF6;
+  accent-color: var(--hm-admin-primary);
 }
 
 /* STATUS */
@@ -405,7 +405,7 @@ select.base-input {
 
   border-radius: 12px;
 
-  background: #6D5DF6;
+  background: var(--hm-admin-primary);
 
   color: #ffffff;
 

@@ -1,3 +1,5 @@
+import { DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
+import { ManagementPaginationComponent } from '../../../../shared/components/management-pagination/management-pagination.component';
 import type { HmIconName, HmIconTone } from '../../../../shared/ui/design-system/icon.component';
 import { Component, OnDestroy, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -71,7 +73,7 @@ interface PendingAction {
 @Component({
   selector: 'app-platform-users-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule, ColumnPickerComponent, RouterLink, AdminDetailsDrawerComponent, EntityComboboxComponent],
+  imports: [DropdownOptionComponent, ManagementPaginationComponent, HmIconComponent, CommonModule, FormsModule, ColumnPickerComponent, RouterLink, AdminDetailsDrawerComponent, EntityComboboxComponent],
   templateUrl: './platform-users-page.component.html',
   styleUrl: './platform-users-page.component.css',
 })
@@ -240,7 +242,12 @@ export class PlatformUsersPageComponent implements OnInit, OnDestroy {
 
   get totalPages(): number { return Math.max(1, Math.ceil(this.total / this.limit)); }
 
+  directoryCounts: (number | null)[] = [];
+
   ngOnInit(): void {
+    this.platformService.getDirectoryCounts('users').subscribe(counts => {
+      this.directoryCounts = counts;
+    });
     const params = this.route.snapshot.queryParamMap;
     this.searchQuery = params.get('search') || '';
     const roleId = params.get('roleId');

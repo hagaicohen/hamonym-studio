@@ -21,7 +21,7 @@ import { LucideAngularModule, ImageIcon } from 'lucide-angular';
   ],
   templateUrl: './entity-profile-section-edit.component.html',
 
-  styleUrls: ['./entity-profile-section-edit.component.css'],
+  styleUrls: ['./entity-profile-section-edit.component.css', '../../entity-settings/entity-settings-section.css'],
 })
 export class EntityProfileSectionEditComponent {
   @Input()

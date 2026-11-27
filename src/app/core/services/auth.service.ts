@@ -96,6 +96,12 @@ export class AuthService {
     );
   }
 
+  setSession(token: string, user: CurrentUser): void {
+    this.saveToken(token);
+    localStorage.setItem('user', JSON.stringify(user));
+    this.currentUser.set(user);
+  }
+
   saveToken(token: string): void {
     localStorage.setItem('token', token);
   }

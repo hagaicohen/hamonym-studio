@@ -148,6 +148,10 @@ exports.getEntityDonations = async (req, res) => {
       || (currency !== undefined && !['ILS', 'USD', 'EUR'].includes(currency))) {
       return res.status(400).json({ error: 'Invalid transaction filter' });
     }
+    if (req.query.inventory === '1') {
+      if (typeof campaignId !== 'string' || !campaignId) return res.status(400).json({ error: 'Campaign required' });
+      return res.json({ rewards: await donationsService.getCampaignRewardClaims(entityId, campaignId) });
+    }
     if (ambassadorName !== undefined && (typeof ambassadorName !== 'string' || ambassadorName.length > 120)) {
       return res.status(400).json({ error: 'Invalid ambassador filter' });
     }

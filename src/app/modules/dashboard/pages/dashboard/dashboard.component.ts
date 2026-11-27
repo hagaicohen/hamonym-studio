@@ -1,3 +1,4 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
 import {
   Component, OnInit, OnDestroy,
   ElementRef, ViewChild, inject, effect, untracked,
@@ -56,7 +57,7 @@ interface DashboardData {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, LucideAngularModule, OrganizationStatusCardComponent, DateRangePickerComponent, OtherOrganizationsComponent],
+  imports: [DropdownComponent, DropdownOptionComponent, CommonModule, RouterLink, LucideAngularModule, OrganizationStatusCardComponent, DateRangePickerComponent, OtherOrganizationsComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css', './organization-card-heading.css', '../../../../shared/styles/new-campaign-button.css'],
 })
@@ -243,7 +244,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   get displayAmbassadors()     { return this.data?.topAmbassadors ?? []; }
-  get displayDonations()       { return this.data?.recentDonations ?? []; }
+  donationSort: 'date' | 'amount' | 'donor' | 'campaign' = 'date';
+  donationDescending = true;
+
+  setDonationSort(field: 'date' | 'amount' | 'donor' | 'campaign'): void {
+    this.donationDescending = field === this.donationSort ? !this.donationDescending : field === 'date' || field === 'amount';
+    this.donationSort = field;
+  }
+
+  get displayDonations() {
+    return [...(this.data?.recentDonations ?? [])].sort((a, b) => {
+      const cmp = this.donationSort === 'amount' ? a.amount - b.amount
+        : this.donationSort === 'donor' ? (a.donor_name || '').localeCompare(b.donor_name || '', 'he')
+        : this.donationSort === 'campaign' ? (a.campaign_title || '').localeCompare(b.campaign_title || '', 'he')
+        : Date.parse(a.completed_at) - Date.parse(b.completed_at);
+      return (this.donationDescending ? -cmp : cmp) || a.id.localeCompare(b.id);
+    });
+  }
   get displayFailedPayments()  { return this.data?.failedPayments ?? []; }
   get displayFailedTotal(): number {
     return this.data?.kpi?.failedPayments?.totalLost ?? 0;

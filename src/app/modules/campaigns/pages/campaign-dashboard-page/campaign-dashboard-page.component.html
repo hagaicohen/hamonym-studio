@@ -1,17 +1,101 @@
-<div class="cdp-shell">
-  <p class="cdp-loading" *ngIf="loading">טוען קמפיין…</p>
-  <p class="cdp-error" *ngIf="loadError">{{ loadError }}</p>
-
-  <ng-container *ngIf="!loading && !loadError && draft as d">
-    <div class="cdp-main">
-      <app-campaign-dashboard-status [draft]="d" [campaignId]="campaignId" />
-      <app-campaign-dashboard-kpis [draft]="d" />
-      <div id="updates">
-        <app-campaign-dashboard-updates [campaignId]="campaignId" />
+@if (loading) { <p role="status">טוען קמפיין…</p> }
+@else if (loadError) { <p role="alert">{{ loadError }}</p> }
+@else if (draft) {
+  <section class="cm-v7" aria-labelledby="overview-title">
+    <div class="cm-heading">
+      <div>
+        <h1 id="overview-title">סקירה כללית</h1>
+        <p>תמונת מצב של הקמפיין והפעילות האחרונה</p>
       </div>
-      <app-campaign-dashboard-attention [draft]="d" [campaignId]="campaignId" />
-      <app-campaign-dashboard-management [draft]="d" [campaignId]="campaignId" />
-      <app-campaign-dashboard-finance [draft]="d" [campaignId]="campaignId" />
+      <app-date-range-picker [campaign]="true" />
     </div>
-  </ng-container>
-</div>
+
+    <app-campaign-dashboard-kpis [draft]="draft" [confirmedTransactions]="confirmedTransactions"
+      [identifiedDonors]="identifiedDonors" [activeAmbassadors]="activeAmbassadors" [activeRewards]="activeRewards" />
+
+    <div class="columns">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>מגמת גיוס</h2>
+            <p>תרומות מאושרות לפי חודש השלמה · בש״ח</p>
+          </div>
+          <a class="quiet" routerLink="../reports"><app-icon name="chart" /> לדוחות</a>
+        </div>
+        @if (trendLoading) { <p role="status">טוען מגמה…</p> }
+        @else if (trendError) { <p role="alert">טעינת המגמה נכשלה</p> }
+        @else if (!trend.length) { <p>אין נתוני גיוס חודשיים בשנה זו</p> }
+        @else {
+          <div class="chart-total"><bdi>{{ trendTotal | currency:'ILS':'symbol':'1.0-2' }}</bdi><small>גויסו בשנת {{ trendYear }}</small></div>
+          <div class="plot">
+            <div class="axis" aria-label="ציר סכומים בשקלים">
+              @for (step of axisSteps; track step) {
+                <bdi>{{ trendMaximum * step | currency:'ILS':'symbol':'1.0-2' }}</bdi>
+              }
+            </div>
+            <div class="graph">
+              <div class="gridlines" aria-hidden="true"></div>
+              <div class="bars">
+                @for (month of monthLabels; track month; let index = $index) {
+                  @let point = trend[index];
+                  <div class="bar-cell">
+                    <div class="bar-area" role="img" [attr.aria-label]="month + (point ? ' · ₪' + (point.total | number) : ' · אין נתון')" [attr.title]="point ? month + ' · ₪' + (point.total | number) : null">
+                      @if (!point) { <span class="future">–</span> }
+                      @else if (point.height) { <div class="bar" [style.height.%]="point.height"><span>{{ point.total | currency:'ILS':'symbol':'1.0-2' }}</span></div> }
+                      @else { <i class="zero" aria-label="אפס שקלים"></i> }
+                    </div>
+                    <span>{{ month }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+          <div class="legend"><i aria-hidden="true"></i> סכום תרומות מאושרות</div>
+        }
+      </section>
+      <section class="panel recent">
+        <div class="panel-head">
+          <div><h2>עסקאות אחרונות</h2><p>פעילות אחרונה בקמפיין</p></div>
+          <a class="quiet" routerLink="../donations">לכל העסקאות ←</a>
+        </div>
+        @if (recentLoading) { <p role="status">טוען עסקאות…</p> }
+        @else if (recentError) { <p role="alert">טעינת העסקאות נכשלה</p> }
+        @else if (!recentTransactions.length) { <p>אין עסקאות בטווח שנבחר</p> }
+        @else {
+          <table>
+            <thead><tr><th scope="col">תורם</th><th scope="col">סכום</th><th scope="col">סטטוס</th><th scope="col">תאריך</th></tr></thead>
+            <tbody>
+              @for (row of recentTransactions; track row.id) {
+                <tr>
+                  <td>{{ row.is_anonymous ? 'אנונימי' : row.donor_name || '—' }}</td>
+                  <td><bdi>{{ row.currency ? (row.amount | currency:row.currency:'symbol':'1.0-2') : (row.amount | number) }}</bdi></td>
+                  <td><span class="pill" [class.paid]="row.status === 'paid'" [class.pending]="row.status === 'pending'" [class.failed]="row.status === 'failed'">{{ transactionStatuses[row.status] || row.status }}</span></td>
+                  <td><bdi>{{ row.created_at | date:'dd/MM/yy' }}</bdi></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (unconvertedPaidCount) {
+            <p>{{ unconvertedPaidCount }} תרומות מאושרות ממתינות לשער המרה.</p>
+          }
+          @if (periodTotal !== null && hasSelectedRange) {
+            <p>סה״כ בטווח לפי נתוני השרת <bdi>{{ periodTotal | currency:'ILS':'symbol':'1.0-2' }}</bdi></p>
+          }
+        }
+      </section>
+    </div>
+
+    <section class="panel" id="updates">
+      <h2>פעולות מהירות</h2>
+      <div class="quick">
+        <a routerLink="../donations" [queryParams]="{ action: 'manual' }"><app-icon name="card" /> רישום תרומה ידנית <span aria-hidden="true">←</span></a>
+        <a routerLink="../ambassadors"><app-icon name="users" /> ניהול שגרירים <span aria-hidden="true">←</span></a>
+        <a routerLink="../updates" [queryParams]="{ action: 'new' }"><app-icon name="megaphone" /> הוספת עדכון <span aria-hidden="true">←</span></a>
+        <a routerLink="../reports"><app-icon name="chart" /> דוחות הקמפיין <span aria-hidden="true">←</span></a>
+      </div>
+    </section>
+
+    <app-campaign-dashboard-management [draft]="draft" [campaignId]="campaignId" [ambassadorCount]="activeAmbassadors" />
+    <app-campaign-dashboard-attention [draft]="draft" [campaignId]="campaignId" />
+  </section>
+}

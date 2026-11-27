@@ -1,3 +1,4 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
 import { Component, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -15,7 +16,8 @@ import {
   MASAV_PENDING_STATUS_SUBLABEL,
 } from '../../../../shared/constants/masav.constants';
 import { ISRAELI_BANKS, IsraeliBank } from '../../../../shared/constants/israeli-banks.constants';
-
+
+
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 // Hamonym's standard default fee rate for a newly provisioned organization
 // (product decision, 2026-09-20) -- pre-fills the field below, always
@@ -40,7 +42,7 @@ const DEFAULT_FEE_RATE = 0.03;
 @Component({
   selector: 'app-billing-entity-setup',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule],
+  imports: [DropdownComponent, DropdownOptionComponent, HmIconComponent, CommonModule, FormsModule],
   templateUrl: './billing-entity-setup.component.html',
   styleUrl: './billing-entity-setup.component.css',
 })

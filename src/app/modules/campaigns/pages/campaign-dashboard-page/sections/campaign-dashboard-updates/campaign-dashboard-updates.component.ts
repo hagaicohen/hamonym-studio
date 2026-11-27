@@ -1,3 +1,4 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../../../shared/ui/dropdown/dropdown.component';
 import { Component, Input, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -43,11 +44,13 @@ import { HmIconComponent } from '../../../../../../shared/ui/design-system/icon.
 @Component({
   selector: 'app-campaign-dashboard-updates',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule, RichTextEditorComponent],
+  imports: [DropdownComponent, DropdownOptionComponent, HmIconComponent, CommonModule, FormsModule, RichTextEditorComponent],
   templateUrl: './campaign-dashboard-updates.component.html',
   styleUrl: './campaign-dashboard-updates.component.css',
 })
 export class CampaignDashboardUpdatesComponent implements OnInit {
+  @Input() workspaceMode = false;
+  @Input() composeOnLoad = false;
   @Input() campaignId = '';
 
   private campaignApi = inject(CampaignApiService);
@@ -60,6 +63,8 @@ export class CampaignDashboardUpdatesComponent implements OnInit {
   loading = true;
   loadError = '';
   saving = false;
+  saveError = '';
+  private mediaChanged = false;
 
   composerTitle = '';
   composerBody = '';
@@ -74,6 +79,7 @@ export class CampaignDashboardUpdatesComponent implements OnInit {
   showComposer = false;
 
   openComposer(): void {
+    this.imageName = '';
     this.resetComposer();
     this.showComposer = true;
   }
@@ -94,11 +100,25 @@ export class CampaignDashboardUpdatesComponent implements OnInit {
   private shownCount = this.PAGE_SIZE;
   private expandedIds = new Set<string>();
 
+  get publishedCount(): number | string { return this.loading || this.loadError ? '—' : this.updates.filter(update => this.isPublished(update)).length; }
+  get draftCount(): number | string { return this.loading || this.loadError ? '—' : this.updates.filter(update => !this.isPublished(update)).length; }
+
   get isEditing(): boolean { return this.editingId !== null; }
 
-  get visibleUpdates(): CampaignUpdate[] { return this.updates.slice(0, this.shownCount); }
-  get canShowMore(): boolean { return this.shownCount < this.updates.length; }
-  showMore(): void { this.shownCount = Math.min(this.shownCount + this.PAGE_SIZE, this.updates.length); }
+  filter: 'all' | 'published' | 'draft' = 'all';
+  search = '';
+  imageName = '';
+
+  get filteredUpdates(): CampaignUpdate[] {
+    const query = this.search.trim().toLowerCase();
+    return this.updates.filter(update =>
+      (this.filter === 'all' || (this.filter === 'published') === this.isPublished(update))
+      && (!query || this.plainText(update.title + ' ' + (update.description || '')).toLowerCase().includes(query)));
+  }
+
+  get visibleUpdates(): CampaignUpdate[] { return this.filteredUpdates.slice(0, this.shownCount); }
+  get canShowMore(): boolean { return this.shownCount < this.filteredUpdates.length; }
+  showMore(): void { this.shownCount = Math.min(this.shownCount + this.PAGE_SIZE, this.filteredUpdates.length); }
 
   isExpanded(id: string): boolean { return this.expandedIds.has(id); }
   toggleExpand(id: string): void {
@@ -141,6 +161,7 @@ export class CampaignDashboardUpdatesComponent implements OnInit {
         this.fullDraft = draft;
         this.updates = [...(draft.updates ?? [])].sort((a, b) => b.date.localeCompare(a.date));
         this.loading = false;
+        if (this.composeOnLoad) this.openComposer();
       },
       error: () => { this.loadError = 'שגיאה בטעינת העדכונים'; this.loading = false; },
     });
@@ -151,14 +172,16 @@ export class CampaignDashboardUpdatesComponent implements OnInit {
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
+    this.imageName = file.name;
     this.isUploadingImage = true;
     this.uploadService.upload(file, 'campaigns/updates').subscribe({
-      next: url => { this.composerImageUrl = url; this.isUploadingImage = false; },
+      next: url => { this.mediaChanged = true; this.composerImageUrl = url; this.isUploadingImage = false; },
       error: () => { this.isUploadingImage = false; },
     });
   }
 
   removeComposerImage(): void {
+    this.mediaChanged = true;
     this.composerImageUrl = null;
   }
 
@@ -173,7 +196,13 @@ export class CampaignDashboardUpdatesComponent implements OnInit {
     if (this.isEditing) {
       this.updates = this.updates.map(u =>
         u.id === this.editingId
-          ? { ...u, title, description, mediaType: this.composerImageUrl ? 'image' : 'none', mediaUrl: this.composerImageUrl ?? '', status }
+          ? {
+            ...u, title, description, status,
+            ...(this.mediaChanged ? {
+              mediaType: this.composerImageUrl ? 'image' : 'none',
+              mediaUrl: this.composerImageUrl ?? '',
+            } : {}),
+          }
           : u
       );
     } else {
@@ -197,7 +226,8 @@ export class CampaignDashboardUpdatesComponent implements OnInit {
     this.editingId = u.id;
     this.composerTitle = u.title;
     this.composerBody = u.description ?? '';
-    this.composerImageUrl = u.mediaUrl || null;
+    this.mediaChanged = false;
+    this.composerImageUrl = u.mediaType === 'image' ? u.mediaUrl || null : null;
     this.showComposer = true;
   }
 
@@ -207,13 +237,14 @@ export class CampaignDashboardUpdatesComponent implements OnInit {
 
   private resetComposer(): void {
     this.editingId = null;
+    this.mediaChanged = false;
     this.composerTitle = '';
     this.composerBody = '';
     this.composerImageUrl = null;
   }
 
   delete(id: string): void {
-    if (!confirm('למחוק את השיתוף הזה?')) return;
+    if (this.saving || !confirm('למחוק את השיתוף הזה?')) return;
     this.updates = this.updates.filter(u => u.id !== id);
     if (this.editingId === id) this.resetComposer();
     this.persist();
@@ -222,6 +253,7 @@ export class CampaignDashboardUpdatesComponent implements OnInit {
   // Doc §5 — publish is a deliberate action, so is reversing it; no silent
   // auto-transition anywhere.
   togglePublish(u: CampaignUpdate): void {
+    if (this.saving) return;
     this.updates = this.updates.map(x =>
       x.id === u.id ? { ...x, status: (x.status ?? 'published') === 'published' ? 'draft' : 'published' } : x
     );
@@ -239,14 +271,18 @@ export class CampaignDashboardUpdatesComponent implements OnInit {
   private persist(onSuccess?: () => void): void {
     if (!this.fullDraft) return;
     this.saving = true;
-    const payload: CampaignDraft = { ...this.fullDraft, updates: this.updates };
-    this.campaignApi.update(this.campaignId, payload).subscribe({
+    this.saveError = '';
+    this.campaignApi.updateWorkspaceFields(this.campaignId, { updates: this.updates }).subscribe({
       next: saved => {
         this.fullDraft = saved;
         this.saving = false;
         onSuccess?.();
       },
-      error: () => { this.saving = false; },
+      error: () => {
+        this.updates = [...(this.fullDraft?.updates ?? [])].sort((a, b) => b.date.localeCompare(a.date));
+        this.saveError = 'שמירת העדכון נכשלה';
+        this.saving = false;
+      },
     });
   }
 

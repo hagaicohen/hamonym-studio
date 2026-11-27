@@ -5,7 +5,8 @@ import { CommonModule } from '@angular/common';
 import { LucideAngularModule, CreditCard, Pencil, TriangleAlert } from 'lucide-angular';
 
 import { ISRAELI_BANKS } from '../../../../../shared/constants/israeli-banks.constants';
-
+
+
 import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
 @Component({
   selector: 'app-entity-billing-section-view',
@@ -16,7 +17,7 @@ import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.com
 
   templateUrl: './entity-billing-section-view.component.html',
 
-  styleUrls: ['./entity-billing-section-view.component.css'],
+  styleUrls: ['./entity-billing-section-view.component.css', '../../entity-settings/entity-settings-section.css'],
 })
 export class EntityBillingSectionViewComponent {
   @Input()

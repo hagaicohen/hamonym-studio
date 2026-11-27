@@ -1,3 +1,8 @@
+import { AnalyticsRangeService, CAMPAIGN_RANGE_DEFAULT } from '../../../../core/services/analytics-range.service';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { catchError, map, of, startWith, switchMap } from 'rxjs';
+import { DateRangePickerComponent, shiftCivilDate } from '../../../../shared/components/date-range-picker/date-range-picker.component';
+import { DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -40,9 +45,10 @@ type ReportPeriodMode = 'period' | 'range' | 'all';
 // report) -- no new write path, no new financial logic, anywhere in this
 // page.
 @Component({
+  providers: [AnalyticsRangeService, { provide: CAMPAIGN_RANGE_DEFAULT, useValue: 'month' }],
   selector: 'app-platform-collection-ops-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule, RouterModule, EntityComboboxComponent],
+  imports: [DateRangePickerComponent, DropdownOptionComponent, HmIconComponent, CommonModule, FormsModule, RouterModule, EntityComboboxComponent],
   templateUrl: './platform-collection-ops-page.component.html',
   styleUrl: './platform-collection-ops-page.component.css',
 })
@@ -50,6 +56,17 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
   private billingOps = inject(BillingOpsService);
   private financeOps = inject(FinanceOpsService);
   private collectionOps = inject(CollectionOpsService);
+  private readonly analyticsRange = inject(AnalyticsRangeService);
+  readonly periodReview$ = toObservable(this.analyticsRange.activeRange).pipe(
+    switchMap(({ from, to }) => this.collectionOps.getReportPreview({
+      dateFrom: from || undefined,
+      dateTo: to ? shiftCivilDate(to, -1) : undefined,
+    }).pipe(
+      map(response => ({ rows: response.rows, loading: false, error: false })),
+      catchError(() => of({ rows: [], loading: false, error: true })),
+      startWith({ rows: [], loading: true, error: false }),
+    )),
+  );
   private billingProvisioning = inject(BillingProvisioningService);
   private simulationClock = inject(SimulationClockService);
   private router = inject(Router);
@@ -148,6 +165,24 @@ export class PlatformCollectionOpsPageComponent implements OnInit {
 
   get monthPickerValue(): string {
     return `${this.selectedYear}-${String(this.selectedMonth).padStart(2, '0')}`;
+  }
+
+  get billingMonthPresets(): readonly { key: string; label: string }[] {
+    const now = this.clockStatus ? new Date(this.clockStatus.businessNow) : new Date();
+    const monthKey = (offset: number) => {
+      const month = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+      return `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`;
+    };
+    return [
+      { key: monthKey(0), label: 'חודש חיוב נוכחי' },
+      { key: monthKey(-1), label: 'חודש חיוב קודם' },
+    ];
+  }
+
+  get billingMonthRangeText(): string {
+    const days = new Date(this.selectedYear, this.selectedMonth, 0).getDate();
+    const suffix = `${String(this.selectedMonth).padStart(2, '0')}/${this.selectedYear}`;
+    return `01/${suffix} – ${days}/${suffix}`;
   }
 
   private readonly HEBREW_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];

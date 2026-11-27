@@ -19,7 +19,7 @@
   flex: 1; padding: 8px 12px; border: none; background: #f1f5f9; border-radius: 8px 8px 0 0;
   cursor: pointer; font-size: 13px; font-weight: 700; color: #64748b;
 }
-.plm-tab--active { background: #583cd6; color: #fff; }
+.plm-tab--active { background: var(--hm-color-primary); color: #fff; }
 .plm-tab--disabled { opacity: 0.45; cursor: not-allowed; }
 .plm-tab--disabled.plm-tab--active { background: #f1f5f9; color: #64748b; }
 
@@ -41,7 +41,7 @@
 }
 .plm-result-name { flex: 1; font-size: 14px; font-weight: 600; color: #1e293b; }
 .plm-select-btn {
-  background: #583cd6; color: #fff; border: none; border-radius: 6px; padding: 6px 14px;
+  background: var(--hm-color-primary); color: #fff; border: none; border-radius: 6px; padding: 6px 14px;
   font-size: 12px; font-weight: 700; cursor: pointer;
 }
 .plm-select-btn:disabled { opacity: 0.6; cursor: default; }
@@ -50,7 +50,7 @@
 .plm-field { margin-top: 12px; }
 .plm-label { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 4px; }
 .plm-create-btn {
-  width: 100%; margin-top: 16px; padding: 10px; background: #583cd6; color: #fff;
+  width: 100%; margin-top: 16px; padding: 10px; background: var(--hm-color-primary); color: #fff;
   border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer;
 }
 .plm-create-btn:disabled { opacity: 0.6; cursor: default; }
@@ -83,7 +83,7 @@
 }
 .plm-suggestion-row span { flex: 1; }
 .plm-suggestion-add {
-  background: #fff; color: #583cd6; border: 1px solid #583cd6; border-radius: 6px;
+  background: #fff; color: var(--hm-color-primary); border: 1px solid var(--hm-color-primary); border-radius: 6px;
   padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
 }
 .plm-suggestion-add:disabled { opacity: 0.6; cursor: default; }

@@ -1,5 +1,7 @@
 # Hamonym Backend — Claude Context
 
+Apply the repository's [agent instructions](../AGENTS.md) alongside the backend conventions below.
+
 ## Overview
 
 Node.js + Express 5 backend for Hamonym Studio (Hebrew SaaS fundraising platform).
@@ -87,7 +89,7 @@ See `hamonym-app/AI_CAMPAIGN_CREATION_VISION.md` and `AI_CAMPAIGN_CREATION_MVP.m
 
 ## Payment Provider
 
-Set `PAYMENT_PROVIDER=mock` in `.env` to use the mock payment flow instead of Cardcom.
+For authorized payment or collection work, use Cardcom with the appropriate environment credentials and safeguards required by the [agent instructions](../AGENTS.md#hamonym--mandatory-instructions-for-coding-agents). The mock provider and route listed here are legacy code references.
 
 ## Environment Variables
 

@@ -1,3 +1,4 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../../../shared/ui/dropdown/dropdown.component';
 import { Component, Input, OnInit, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -5,7 +6,8 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../../../core/services/current-entity.service';
 import { AnalyticsRangeService } from '../../../../../../core/services/analytics-range.service';
-
+
+
 import { HmIconComponent } from '../../../../../../shared/ui/design-system/icon.component';
 interface CampaignPerf {
   id: string;
@@ -52,7 +54,7 @@ const COLUMNS_STORAGE_KEY = 'reports-campaigns-hidden-columns';
 @Component({
   selector: 'app-campaign-performance-report',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule],
+  imports: [DropdownComponent, DropdownOptionComponent, HmIconComponent, CommonModule, FormsModule],
   templateUrl: './campaign-performance-report.component.html',
   styleUrls: ['./campaign-performance-report.component.css', '../../../../shared/reports-shared.css'],
 })

@@ -274,6 +274,17 @@ export class CurrentContextService {
     localStorage.setItem(ROLES_KEY, JSON.stringify(next));
   }
 
+  /** Called with a campaign from the authenticated ambassador membership API. */
+  addAmbassadorContext(context: UserContext): void {
+    const groups = this.roles();
+    const exists = groups.some(g => g.role === 'ambassador');
+    const next = exists
+      ? groups.map(g => g.role === 'ambassador' ? { ...g, contexts: [...g.contexts.filter(c => c.id !== context.id), context] } : g)
+      : [...groups, { role: 'ambassador' as RoleType, ...ROLE_META.ambassador, contexts: [context] }];
+    this.roles.set(next);
+    localStorage.setItem(ROLES_KEY, JSON.stringify(next));
+  }
+
   switchContext(role: RoleType, contextId: string | null): void {
     const group = this.roles().find((g) => g.role === role);
     if (!group) return;

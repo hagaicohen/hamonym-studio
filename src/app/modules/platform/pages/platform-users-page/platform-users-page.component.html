@@ -1,16 +1,25 @@
-<div class="plat-page">
+<div class="plat-page sa-v1 cm-v7">
 
   @if (error) { <div class="plat-error" role="alert">{{ error }} <button class="secondary-button" (click)="load()">נסה שוב</button></div> }
 
   <div class="plat-header">
-    <h1 class="plat-title">משתמשים</h1>
+    <h1 class="plat-title">משתמשים והרשאות</h1>
     <button class="secondary-button" (click)="openCreateAdmin()">+ הוסף מנהל פלטפורמה</button>
   </div>
 
   @if (actionError) {
     <div class="plat-action-error">{{ actionError }}</div>
+
   }
 
+  <div class="cm-summary sa-summary" aria-label="מדדים מרכזיים">
+  <div><small>כלל המשתמשים</small><strong>{{ directoryCounts[0] == null ? '—' : (directoryCounts[0] | number) }}</strong></div>
+  <div><small>משתמשים פעילים</small><strong>{{ directoryCounts[1] == null ? '—' : (directoryCounts[1] | number) }}</strong></div>
+  <div><small>מנהלי פלטפורמה</small><strong>{{ directoryCounts[2] == null ? '—' : (directoryCounts[2] | number) }}</strong></div>
+  <div><small>חשבונות מושבתים</small><strong>{{ directoryCounts[3] == null ? '—' : (directoryCounts[3] | number) }}</strong></div>
+</div>
+<section class="cm-ledger sa-ledger">
+    <h2>רשימת משתמשים</h2>
   <div class="plat-filters">
     <input
       class="plat-search"
@@ -19,10 +28,8 @@
       [(ngModel)]="searchQuery"
       (input)="onSearch()"
     />
-    <label class="sr-only" for="user-role-filter">תפקיד</label><select id="user-role-filter" [(ngModel)]="roleFilter" (ngModelChange)="onRoleChange()"><option value="">כל התפקידים</option>@for (role of roles; track role.id) { <option [value]="role.id">{{ role.name }}</option> }</select>
+    <label class="sr-only" for="user-role-filter">תפקיד</label><app-dropdown inputId="user-role-filter" [(ngModel)]="roleFilter" (ngModelChange)="onRoleChange()"><app-dropdown-option value="">כל התפקידים</app-dropdown-option>@for (role of roles; track role.id) { <app-dropdown-option [value]="role.id">{{ role.name }}</app-dropdown-option> }</app-dropdown>
     @if (hasFilters) { <button class="text-button" (click)="clearFilters()">נקה סינון</button> }
-    <select aria-label="מיון משתמשים" [ngModel]="sortField" (ngModelChange)="sortBy($event)"><option value="created_at">לפי תאריך הצטרפות</option><option value="name">לפי שם</option><option value="email">לפי אימייל</option><option value="role">לפי תפקיד</option><option value="last_login_at">לפי כניסה אחרונה</option></select>
-    <button class="secondary-button" (click)="sortBy(sortField)" [attr.aria-label]="sortDir === 'asc' ? 'מיון בסדר יורד' : 'מיון בסדר עולה'">{{ sortDir === 'asc' ? '↑' : '↓' }}</button>
     @if (advancedListAvailable && canViewOrganizations()) { <app-entity-combobox [entities]="organizationOptions" [(selectedId)]="entityFilter" (selectedIdChange)="page = 0; load()"></app-entity-combobox> }
     <app-column-picker [columns]="columns" storageKey="platformColumns_users" (visibleChange)="onVisibleColumnsChange($event)"></app-column-picker>
   </div>
@@ -54,14 +61,14 @@
         <table class="plat-table">
           <thead>
             <tr>
-              <th scope="col"><button class="text-button" (click)="sortBy('name')">משתמש</button></th>
+              <th scope="col" [attr.aria-sort]="sortField === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : null"><button class="text-button" type="button" (click)="sortBy('name')">משתמש {{ sortField === 'name' ? (sortDir === 'asc' ? '↑' : '↓') : '' }}</button><button type="button" class="text-button" (click)="sortBy('email')">אימייל {{ sortField === 'email' ? (sortDir === 'asc' ? '↑' : '↓') : '' }}</button></th>
 
-              @if (visibleColumns.has('role')) { <th class="sortable" (click)="sortBy('role')">תפקיד</th> }
+              @if (visibleColumns.has('role')) { <th scope="col" [attr.aria-sort]="sortField === 'role' ? (sortDir === 'asc' ? 'ascending' : 'descending') : null"><button class="text-button" type="button" (click)="sortBy('role')">תפקיד {{ sortField === 'role' ? (sortDir === 'asc' ? '↑' : '↓') : '' }}</button></th> }
               @if (visibleColumns.has('entities')) { <th>עמותות</th> }
               @if (visibleColumns.has('status')) { <th>סטטוס</th> }
               @if (visibleColumns.has('permissions')) { <th>הרשאות פלטפורמה</th> }
-              @if (visibleColumns.has('last_login_at')) { <th class="sortable" (click)="sortBy('last_login_at')">כניסה אחרונה</th> }
-              @if (visibleColumns.has('created_at')) { <th class="sortable" (click)="sortBy('created_at')">נרשם</th> }
+              @if (visibleColumns.has('last_login_at')) { <th scope="col" [attr.aria-sort]="sortField === 'last_login_at' ? (sortDir === 'asc' ? 'ascending' : 'descending') : null"><button class="text-button" type="button" (click)="sortBy('last_login_at')">כניסה אחרונה {{ sortField === 'last_login_at' ? (sortDir === 'asc' ? '↑' : '↓') : '' }}</button></th> }
+              @if (visibleColumns.has('created_at')) { <th scope="col" [attr.aria-sort]="sortField === 'created_at' ? (sortDir === 'asc' ? 'ascending' : 'descending') : null"><button class="text-button" type="button" (click)="sortBy('created_at')">נרשם {{ sortField === 'created_at' ? (sortDir === 'asc' ? '↑' : '↓') : '' }}</button></th> }
               <th class="actions-col">פעולות</th>
             </tr>
           </thead>
@@ -148,16 +155,11 @@
         </table>
       </div>
 
-      <div class="plat-footer">
-        <span>{{ total }} משתמשים</span>
-        <div class="plat-pager">
-          <button (click)="prevPage()" [disabled]="page === 0">←</button>
-          <span>{{ page + 1 }} / {{ totalPages }}</span>
-          <button (click)="nextPage()" [disabled]="page >= totalPages - 1">→</button>
-        </div>
-      </div>
+      @if (total > 0) { <app-management-pagination [page]="page" [total]="total" [pageSize]="limit" (pageChange)="page = $event; load()" /> }
     }
   </div>
+
+  </section>
 
   @if (selectedUser; as u) { <app-admin-details-drawer [heading]="u.full_name || u.email" (closed)="closeUser()">
     <dl class="detail-grid"><dt>אימייל</dt><dd dir="ltr">{{ u.email }}</dd><dt>תפקיד</dt><dd>{{ u.role_name }}</dd><dt>מצב חשבון</dt><dd>{{ statusBadge(u).label }}</dd><dt>הרשאות מיוחדות</dt><dd>{{ u.is_super_admin ? 'מנהל־על · גישה מלאה' : (u.platform_permissions?.length ? 'גישה לאזורי פלטפורמה נבחרים' : 'ללא הרשאות מיוחדות') }}</dd><dt>כניסה אחרונה</dt><dd>{{ u.last_login_at ? fmtDate(u.last_login_at) : 'טרם התחבר' }}</dd><dt>הצטרפות</dt><dd dir="ltr">{{ fmtDate(u.created_at) }}</dd></dl>
@@ -290,5 +292,7 @@
       </div>
     </div>
   }
+
+
 
 </div>

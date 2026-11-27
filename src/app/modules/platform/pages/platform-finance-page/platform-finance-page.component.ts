@@ -1,3 +1,4 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -25,7 +26,7 @@ type MasavFilter = 'all' | 'proposed' | 'approved' | 'exported';
 @Component({
   selector: 'app-platform-finance-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [DropdownComponent, DropdownOptionComponent, CommonModule, FormsModule, RouterModule],
   templateUrl: './platform-finance-page.component.html',
   styleUrl: './platform-finance-page.component.css',
 })

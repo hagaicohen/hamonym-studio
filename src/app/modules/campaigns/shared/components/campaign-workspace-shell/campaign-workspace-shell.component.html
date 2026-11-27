@@ -1,7 +1,15 @@
 <div class="cws-shell">
-  <app-campaign-management-sidebar [campaignId]="campaignId" [isOngoing]="isOngoing" [isMinimalFormat]="isMinimalFormat" />
-
-  <div class="cws-content">
-    <router-outlet></router-outlet>
-  </div>
+  <app-campaign-management-sidebar [campaignId]="campaignId" [isRace]="isRace" [isMinimalFormat]="isMinimalFormat" />
+  <main class="cws-content">
+    @if (draft(); as campaign) {
+      <app-campaign-dashboard-status [draft]="campaign" [campaignId]="campaignId" />
+      @for (id of [campaignId]; track id) {
+        <router-outlet />
+      }
+    } @else if (loadError) {
+      <p role="alert">{{ loadError }}</p>
+    } @else {
+      <p role="status">טוען קמפיין…</p>
+    }
+  </main>
 </div>

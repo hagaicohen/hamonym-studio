@@ -1,47 +1,41 @@
-:host { display: block; }
-
+:host { display: block; min-width: 0; }
 .cds-bar {
-  display: flex; flex-direction: column; gap: 12px;
-  padding: 16px 20px; background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
-  border-radius: 14px; font-family: 'Heebo', sans-serif; direction: rtl;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
+  gap: 16px; padding: 16px 20px; margin-bottom: 18px;
+  background: white; border: 1px solid var(--campaign-border); border-radius: 10px;
 }
-
-.cds-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cds-identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cds-avatar {
+  display: grid; place-items: center; flex: 0 0 52px; height: 52px;
+  border-radius: 8px; background: var(--campaign-soft); color: var(--campaign-accent); font-weight: 700;
+}
+.cds-details { min-width: 0; overflow-wrap: anywhere; }
+.cds-title-group, .cds-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.cds-title { font-size: 19px; font-weight: 700; }
+.cds-status { padding: 3px 8px; border-radius: 5px; font-size: 12px; background: #e8f5ed; color: #17603e; }
+.cds-status--draft { background: #fff3dc; color: #85510a; }
+.cds-subtitle { margin: 2px 0 0; color: var(--campaign-muted); font-size: 12px; }
+.cds-subtitle--gate { color: #85510a; }
 .cds-link {
-  font-size: 13px; font-weight: 700; color: #7c3aed; text-decoration: none;
-  padding: 7px 12px; border: 1.5px solid #ddd6fe; border-radius: 8px;
-  transition: background 0.15s;
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--campaign-border); border-radius: 6px; padding: 8px 13px;
+  text-decoration: none; font-weight: 500; color: var(--campaign-ink);
 }
-.cds-link:hover { background: #faf5ff; }
+.cds-link:hover { border-color: var(--campaign-accent); }
+.cds-link--back { border-color: transparent; color: var(--hm-admin-primary); }
+.cds-link--primary { font-weight: 600; color: var(--hm-admin-on-primary); background: var(--campaign-accent); border-color: var(--campaign-accent); }
+.cds-view-hint { color: var(--campaign-muted); }
 
-.cds-identity { display: flex; flex-direction: column; gap: 4px; }
-.cds-title-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.cds-title { font-size: 22px; font-weight: 800; color: #0f172a; }
-.cds-status {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 12px; font-weight: 700; color: #16a34a; background: #dcfce7;
-  padding: 3px 10px; border-radius: 999px;
-}
-.cds-status-dot { width: 6px; height: 6px; border-radius: 50%; background: #16a34a; }
-.cds-status--draft { color: #92400e; background: #fef3c7; }
-.cds-status--draft .cds-status-dot { background: #92400e; }
-
-.cds-subtitle { font-size: 13px; color: #64748b; margin: 0; }
-.cds-subtitle--gate { color: #92400e; }
-
-.cds-view-hint { color: #94a3b8; font-weight: 500; }
-
-.cds-link--publish { color: #16a34a; border-color: #bbf7d0; }
-.cds-link--publish:hover { background: #f0fdf4; }
-
-@media (max-width: 600px) {
-  /* Was flex-wrap, which split 3-4 buttons across an uneven 2+1 or 2+2
-     wrap. A clean full-width vertical stack reads much better than the
-     button sizes each button wrapping produced. */
-  .cds-actions { flex-direction: column; align-items: stretch; }
-  .cds-link { text-align: center; }
-}
-
-@media (max-width: 480px) {
-  .cds-title { font-size: 18px; }
+.cds-avatar img { width: 52px; height: 52px; border-radius: 8px; object-fit: cover; }
+.cds-link--primary:hover { background: var(--hm-admin-primary-hover); }
+.cds-link--primary:active { background: var(--hm-admin-primary-active); }
+.cds-link:focus-visible { outline: 2px solid var(--hm-admin-focus-ring); outline-offset: 2px; }
+@media (max-width: 700px) {
+  .cds-bar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 12px; margin-bottom: 12px; }
+  .cds-avatar { flex-basis: 44px; height: 44px; }
+  .cds-avatar img { width: 44px; height: 44px; }
+  .cds-title { font-size: 16px; }
+  .cds-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .cds-link { min-height: 40px; padding: 7px; font-size: 12px; box-sizing: border-box; justify-content: center; }
+  .cds-link--primary { grid-column: 1 / -1; grid-row: 1; }
 }

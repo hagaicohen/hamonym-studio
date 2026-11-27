@@ -1,25 +1,31 @@
-:host { display: block; }
-
+:host {
+  display: block;
+  padding-top: var(--header-height, 60px);
+  background: #f3f5f8;
+  color: #283249;
+  font: 14px Arial, sans-serif;
+  min-width: 0;
+  --campaign-accent: var(--hm-admin-primary);
+  --campaign-ink: #283249;
+  --campaign-muted: #687589;
+  --campaign-border: #e0e5eb;
+  --campaign-soft: var(--hm-admin-primary-soft);
+  --campaign-green: #206b57;
+}
 .cws-shell {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: calc(100dvh - var(--header-height, 60px));
   direction: rtl;
 }
-
-/* Same pattern as AppLayoutComponent's .app-content -- router-outlet sits
-   inside a dedicated flex:1 wrapper instead of being a flex item itself,
-   so the routed page (a normal block child of this wrapper) reliably fills
-   the width next to the sidebar regardless of how Angular's view
-   encapsulation scopes the router-outlet's dynamically inserted sibling. */
 .cws-content {
-  flex: 1;
+  width: 100%;
+  margin-inline: auto;
+  padding: 22px 24px;
+  box-sizing: border-box;
   min-width: 0;
 }
-
-/* Below this, the sidebar collapses into a hamburger bar (see
-   campaign-management-sidebar's own CSS) -- stretch so both it and the
-   content fill the full width instead of sizing to their own content. */
-@media (max-width: 860px) {
-  .cws-shell { flex-direction: column; align-items: stretch; gap: 12px; }
+@media (max-width: 700px) {
+  .cws-shell { display: block; }
+  .cws-content { padding: 0 12px 12px; }
 }

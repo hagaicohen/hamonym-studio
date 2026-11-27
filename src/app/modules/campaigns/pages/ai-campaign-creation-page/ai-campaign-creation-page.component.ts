@@ -1,3 +1,4 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -104,7 +105,7 @@ function guessEntityTypeCode(text: string | null): string {
 @Component({
   selector: 'app-ai-campaign-creation-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule],
+  imports: [DropdownComponent, DropdownOptionComponent, HmIconComponent, CommonModule, FormsModule],
   templateUrl: './ai-campaign-creation-page.component.html',
   styleUrl: './ai-campaign-creation-page.component.css',
 })

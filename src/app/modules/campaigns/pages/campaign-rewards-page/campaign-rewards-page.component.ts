@@ -1,7 +1,9 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { MoneyInputDirective } from '../../../../shared/directives/money-input.directive';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignWorkspaceContextService } from '../../services/campaign-workspace-context.service';
 import { CampaignDraft, Offering } from '../../services/campaign-studio-state.service';
@@ -9,7 +11,9 @@ import { UploadService } from '../../../../core/services/upload.service';
 import { CampaignPartnersService, CampaignPartner } from '../../services/campaign-partners.service';
 import { PartnerLinkModalComponent } from '../../shared/components/partner-link-modal/partner-link-modal.component';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-
+
+
+import { DonationsPageComponent } from '../../../donations/pages/donations-page/donations-page.component';
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 // Dedicated page (2026-08-06 architecture reset) — CONTENT only: title,
 // price, description, stock, image, featured flag, partner link. No
@@ -23,7 +27,7 @@ import { HmIconComponent } from '../../../../shared/ui/design-system/icon.compon
 @Component({
   selector: 'app-campaign-rewards-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule, PartnerLinkModalComponent],
+  imports: [DropdownComponent, DropdownOptionComponent, MoneyInputDirective, DonationsPageComponent, RouterLink, HmIconComponent, CommonModule, FormsModule, PartnerLinkModalComponent],
   templateUrl: './campaign-rewards-page.component.html',
   styleUrl: './campaign-rewards-page.component.css',
 })
@@ -42,36 +46,58 @@ export class CampaignRewardsPageComponent implements OnInit {
   saving = false;
   saveError: string | null = null;
 
+  claims: ReadonlyMap<string, number> | null = null;
+  claimsError = false;
   campaignPartners: CampaignPartner[] = [];
   linkModalRewardId: string | null = null;
   linkModalRewardTitle = '';
 
   editingId: string | null = null;
-  minimumAmountInput = '250';
   stockInput = '';
   offering: Offering = this.empty();
   isUploadingImage = false;
 
   // Search (2026-08-07) — client-side title filter over the campaign's own
   // offerings array, same as everything else on this page: no new backend.
+  activeTab: 'catalog' | 'orders' = 'catalog';
+  viewMode: 'grid' | 'list' = 'grid';
+  formOpen = false;
+  stockFilter: 'all' | 'available' | 'unlimited' | 'out' = 'all';
   searchTerm = '';
+  page = 0;
+  readonly pageSize = 25;
+
+  get featuredCount(): number { return this.draft?.offerings.filter(item => item.featured).length ?? 0; }
+  get outOfStockCount(): number | null {
+    return this.claims ? this.draft?.offerings.filter(item => this.availableStock(item) === 0).length ?? 0 : null;
+  }
+
+  claimed(reward: Offering): number | null {
+    return this.claims ? this.claims.get(String(reward.id)) ?? 0 : null;
+  }
+
+  availableStock(reward: Offering): number | null {
+    const claimed = this.claimed(reward);
+    return reward.stock === null || claimed === null ? null : Math.max(0, reward.stock - claimed);
+  }
 
   get isEditing(): boolean { return this.editingId !== null; }
-  get isFormValid(): boolean { return !!this.offering.title.trim(); }
+  get isFormValid(): boolean { return !!this.offering.title.trim() && Number.isFinite(this.offering.minimumAmount) && this.offering.minimumAmount >= 0; }
 
   filteredOfferings(draft: CampaignDraft): Offering[] {
     const q = this.searchTerm.trim().toLowerCase();
-    if (!q) return draft.offerings;
-    return draft.offerings.filter(o => o.title.toLowerCase().includes(q));
+    return draft.offerings.filter(reward => {
+      const matchesSearch = !q || (reward.title + ' ' + reward.description).toLowerCase().includes(q);
+      const matchesStock = this.stockFilter === 'all'
+        || (this.stockFilter === 'available' && (this.availableStock(reward) ?? 0) > 0)
+        || (this.stockFilter === 'unlimited' && reward.stock === null)
+        || (this.stockFilter === 'out' && this.availableStock(reward) === 0);
+      return matchesSearch && matchesStock;
+    });
   }
 
-  // Carousel (2026-08-07) — same scroll-by-one-card pattern as the public
-  // page's own reward slider (campaign-preview.component#scrollSlider),
-  // so a campaign with many rewards doesn't turn this into one long list.
-  scrollCarousel(el: HTMLElement, dir: 'prev' | 'next'): void {
-    const firstCard = el.firstElementChild?.firstElementChild as HTMLElement;
-    const cardWidth = firstCard?.getBoundingClientRect().width || el.clientWidth;
-    el.scrollBy({ left: dir === 'prev' ? cardWidth : -cardWidth, behavior: 'smooth' });
+  pagedOfferings(draft: CampaignDraft): Offering[] {
+    return this.filteredOfferings(draft).slice(this.page * this.pageSize, (this.page + 1) * this.pageSize);
   }
 
   ngOnInit(): void {
@@ -82,6 +108,12 @@ export class CampaignRewardsPageComponent implements OnInit {
       next: draft => {
         this.draft = draft;
         this.loading = false;
+        if (draft.entityId) {
+          this.campaignApi.getRewardClaims(draft.entityId, this.campaignId).subscribe({
+            next: claims => { this.claims = claims; },
+            error: () => { this.claimsError = true; },
+          });
+        }
         this.partnersService.listForCampaign(this.campaignId).subscribe({
           next: res => { this.campaignPartners = res.partners; },
         });
@@ -98,9 +130,11 @@ export class CampaignRewardsPageComponent implements OnInit {
 
   openPartnerPicker(): void {
     if (!this.isFormValid) return;
-    this.commitOfferingToDraft();
-    this.linkModalRewardId = this.offering.id;
-    this.linkModalRewardTitle = this.offering.title;
+    const { id, title } = this.offering;
+    this.commitOfferingToDraft(() => {
+      this.linkModalRewardId = id;
+      this.linkModalRewardTitle = title;
+    });
   }
 
   onPartnerLinked(cp: CampaignPartner): void {
@@ -119,12 +153,11 @@ export class CampaignRewardsPageComponent implements OnInit {
 
   save(): void {
     if (!this.isFormValid) return;
-    this.commitOfferingToDraft();
-    this.reset();
+    this.commitOfferingToDraft(() => { this.reset(); this.formOpen = false; });
   }
 
-  private commitOfferingToDraft(): void {
-    if (!this.draft) return;
+  private commitOfferingToDraft(onSuccess: () => void): void {
+    if (!this.draft || this.saving) return;
     if (this.editingId) {
       const offerings = this.draft.offerings.map(o =>
         o.id === this.editingId ? { ...this.offering, id: this.editingId! } : o
@@ -134,29 +167,43 @@ export class CampaignRewardsPageComponent implements OnInit {
       this.editingId = this.offering.id;
       this.draft = { ...this.draft, offerings: [...this.draft.offerings, { ...this.offering }] };
     }
-    this.persist();
+    this.persist(onSuccess);
   }
 
   clearForm(): void { this.reset(); }
 
+  newOffering(): void {
+    this.reset();
+    this.formOpen = true;
+  }
+
+  closeForm(): void {
+    if (this.saving || this.isUploadingImage) return;
+    this.reset();
+    this.formOpen = false;
+  }
+
+  resetView(): void {
+    this.page = 0;
+  }
+
   editOffering(o: Offering): void {
     this.editingId = o.id;
     this.offering = { ...o };
-    this.minimumAmountInput = o.minimumAmount ? o.minimumAmount.toLocaleString('he-IL') : '';
     this.stockInput = o.stock !== null ? String(o.stock) : '';
-    setTimeout(() => document.querySelector('.rw-form-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    this.formOpen = true;
   }
 
   deleteOffering(id: string): void {
-    if (!this.draft) return;
+    if (!this.draft || this.saving || !confirm('למחוק את התשורה מהקטלוג?')) return;
     if (id === this.editingId) this.reset();
     this.draft = { ...this.draft, offerings: this.draft.offerings.filter(o => o.id !== id) };
     this.persist();
   }
 
   duplicateOffering(o: Offering): void {
-    if (!this.draft) return;
-    const copy = { ...o, id: Date.now().toString() };
+    if (!this.draft || this.saving) return;
+    const copy = { ...o, id: crypto.randomUUID() };
     const idx = this.draft.offerings.findIndex(x => x.id === o.id);
     const offerings = [...this.draft.offerings];
     offerings.splice(idx + 1, 0, copy);
@@ -173,13 +220,6 @@ export class CampaignRewardsPageComponent implements OnInit {
     const allowed = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End'];
     if (allowed.includes(event.key) || event.ctrlKey || event.metaKey) return;
     if (!/^[0-9]$/.test(event.key)) event.preventDefault();
-  }
-
-  onAmountInput(event: Event): void {
-    const raw = (event.target as HTMLInputElement).value.replace(/[^0-9]/g, '');
-    const n = Number(raw || 0);
-    this.offering.minimumAmount = n;
-    this.minimumAmountInput = n ? n.toLocaleString('he-IL') : '';
   }
 
   onStockInput(event: Event): void {
@@ -202,23 +242,33 @@ export class CampaignRewardsPageComponent implements OnInit {
   removeImage(): void { this.offering.imageUrl = null; }
 
   private empty(): Offering {
-    return { id: Date.now().toString(), title: '', description: '', minimumAmount: 250, stock: null, imageUrl: null, featured: false };
+    return { id: crypto.randomUUID(), title: '', description: '', minimumAmount: 250, stock: null, imageUrl: null, featured: false };
   }
 
   private reset(): void {
     this.editingId = null;
-    this.minimumAmountInput = '250';
     this.stockInput = '';
     this.offering = this.empty();
   }
 
-  private persist(): void {
+  private persist(onSuccess?: () => void): void {
     if (!this.draft) return;
     this.saving = true;
     this.saveError = null;
-    this.campaignApi.update(this.campaignId, this.draft).subscribe({
-      next: (updated) => { this.saving = false; this.ctx.setDraft(updated); },
-      error: (err) => { this.saving = false; this.saveError = err?.error?.error || 'שמירת התשורה נכשלה, נסו שוב'; },
+    this.campaignApi.updateWorkspaceFields(this.campaignId, { rewards: this.draft.offerings }).subscribe({
+      next: (updated) => {
+        this.saving = false;
+        this.draft = updated;
+        this.ctx.setDraft(updated);
+        this.page = Math.min(this.page, Math.max(0, Math.ceil(this.filteredOfferings(updated).length / this.pageSize) - 1));
+        onSuccess?.();
+      },
+      error: (err) => {
+        this.saving = false;
+        this.draft = this.ctx.draft();
+        if (!this.draft?.offerings.some(reward => reward.id === this.editingId)) this.editingId = null;
+        this.saveError = err?.error?.error || 'שמירת התשורה נכשלה, נסו שוב';
+      },
     });
   }
 }

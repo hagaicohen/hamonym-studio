@@ -1,17 +1,13 @@
-<div class="cdf-panel">
-  <div class="cdf-header">
-    <span class="cdf-title"><app-icon name="coins" /> הזנת תרומה ידנית</span>
-  </div>
-  <p class="cdf-hint">קיבלתם תרומה מחוץ למערכת (העברה בנקאית, צ'ק, מזומן)? רשמו אותה כאן כדי שתיכלל בסכום שגויס ובמספר התורמים.</p>
-  <button type="button" class="cdf-open-btn" (click)="openModal()"><app-icon name="plus" /> הזנת תרומה ידנית</button>
-</div>
+<button type="button" class="cdf-open-btn" (click)="openModal()"><app-icon name="plus" /> רישום תרומה ידנית</button>
 
 <div class="cdf-modal-backdrop" *ngIf="modalOpen" (click)="closeModal()">
-  <div class="cdf-modal-box" (click)="$event.stopPropagation()">
-    <button type="button" class="cdf-modal-close" (click)="closeModal()">✕</button>
-    <h3 class="cdf-modal-heading">הזנת תרומה ידנית</h3>
+  <div class="cdf-modal-box cm-drawer" role="dialog" aria-modal="true" aria-labelledby="manual-donation-title" (click)="$event.stopPropagation()" (keydown.escape)="closeModal()">
+    <header class="cm-drawer-head">
+    <button type="button" class="cdf-modal-close" aria-label="סגירה" (click)="closeModal()">✕</button>
+    <h3 class="cdf-modal-heading" id="manual-donation-title">הזנת תרומה ידנית</h3>
 
-    <div class="cdf-form">
+    </header>
+    <div class="cdf-form cm-drawer-body">
       <label class="cdf-field">
         <span>סכום *</span>
         <input type="text" inputmode="numeric" [value]="amountInput"
@@ -20,9 +16,9 @@
 
       <label class="cdf-field">
         <span>מקור התרומה *</span>
-        <select [(ngModel)]="form.source">
-          <option *ngFor="let o of sourceOptions" [value]="o.value">{{ o.label }}</option>
-        </select>
+        <app-dropdown [(ngModel)]="form.source">
+          <app-dropdown-option *ngFor="let o of sourceOptions" [value]="o.value">{{ o.label }}</app-dropdown-option>
+        </app-dropdown>
       </label>
 
       <label class="cdf-field">
@@ -55,14 +51,14 @@
         <span>אני מצהיר/ה שהכספים האלה אמיתיים וידוע לי שתיגבה עמלת פלטפורמה</span>
       </label>
 
-      <p class="cdf-error" *ngIf="error">{{ error }}</p>
+      <p class="cdf-error" *ngIf="error" role="alert">{{ error }}</p>
+    </div>
 
-      <div class="cdf-modal-actions">
+    <div class="cdf-modal-actions cm-drawer-foot">
         <button type="button" class="cdf-cancel-btn" (click)="closeModal()">ביטול</button>
         <button type="button" class="cdf-submit-btn" [disabled]="!canSubmit" (click)="submit()">
           {{ saving ? 'שומר...' : 'שמירת התרומה' }}
         </button>
-      </div>
     </div>
   </div>
 </div>

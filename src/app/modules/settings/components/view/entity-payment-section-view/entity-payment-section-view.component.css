@@ -54,7 +54,7 @@
 
   font-weight: 700;
 
-  color: #6D5DF6;
+  color: var(--hm-admin-primary);
 
   line-height: 1.2;
 

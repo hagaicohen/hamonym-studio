@@ -1,15 +1,23 @@
 <div class="reg-shell" [class.reg-shell--scoped]="campaignScoped">
-  <div class="reg-page">
+  <div class="reg-page" [class.org-v1]="!campaignScoped" [class.cm-v7]="!campaignScoped">
+    @if (campaignScoped) {
+      <nav class="campaign-linked-tabs" aria-label="מקצים ומשתתפים">
+        <a [routerLink]="['../registration']">קטלוג מקצים</a>
+        <span aria-current="page">משתתפים</span>
+      </nav>
+    }
 
   @if (error) {
     <div class="reg-error">{{ error }}</div>
   } @else {
 
-  <button type="button" class="reg-back" *ngIf="campaignScoped" (click)="back()">→ חזרה לסקירה כללית</button>
 
   <!-- ══ HEADER ══ -->
   <div class="reg-header">
-    <h1 class="reg-title">הרשמות{{ campaignScoped && campaignTitle ? ' — ' + campaignTitle : '' }}</h1>
+    <div>
+      <h1 class="reg-title">{{ campaignScoped ? 'הרשמות' : 'מירוצים' }}</h1>
+      @if (!campaignScoped) { <p class="cm-description">ניהול רוחבי של מקצים, משתתפים והרשמות בכל הקמפיינים</p> }
+    </div>
     <div class="reg-header-actions" *ngIf="campaignId">
       <button type="button" class="reg-header-btn" (click)="openImport()"><app-icon name="file-up" /> ייבוא מקובץ</button>
       <button type="button" class="reg-header-btn reg-header-btn--primary" (click)="openAdd()"><app-icon name="plus" /> הוספת משתתף</button>
@@ -23,8 +31,48 @@
     </div>
   }
 
+  @if (!campaignScoped) {
+    <div class="cm-summary org-race-metrics">
+      <div><small>קמפיינים עם מקצים</small><strong class="kpi-value">{{ raceCatalogLoading || raceCatalogError ? '—' : (racesWithCourses | number) }}</strong></div>
+      <div><small>מקצים מוגדרים</small><strong class="kpi-value">{{ raceCatalogLoading || raceCatalogError ? '—' : (configuredCourses | number) }}</strong></div>
+      <div><small>משתתפים רשומים</small><strong class="kpi-value">{{ organizationParticipantCount == null ? '—' : (organizationParticipantCount | number) }}</strong></div>
+      <div><small>הרשמות ששולמו</small><strong class="kpi-value" title="הנתון אינו זמין בסיכום הארגוני">—</strong></div>
+    </div>
+    <nav class="cm-tabs" aria-label="מירוצים">
+      <button type="button" [attr.aria-pressed]="raceTab === 'races'" (click)="raceTab = 'races'">מירוצים ומקצים</button>
+      <button type="button" [attr.aria-pressed]="raceTab === 'participants'" (click)="raceTab = 'participants'">כל המשתתפים</button>
+    </nav>
+  }
+  @if (!campaignScoped && raceTab === 'races') {
+    <section class="cm-ledger org-catalog">
+      <h2 class="cm-panel-title">מירוצים ומקצים</h2>
+      @if (raceCatalogLoading) { <p role="status">טוען מירוצים…</p> }
+      @else if (raceCatalogError) { <p role="alert">טעינת המירוצים נכשלה</p> }
+      @else {
+        @for (race of raceCatalog; track race.id) {
+          <article class="org-catalog-card">
+            <h3>{{ race.title }}</h3>
+            @for (course of race.registrationOptions; track course.id) {
+              <div>{{ course.title }} <bdi>{{ course.price | currency:'ILS':'symbol':'1.0-2' }}</bdi></div>
+            }
+            <a class="cm-button" [routerLink]="['/campaigns', race.id, 'registration']">ניהול מקצים בקמפיין</a>
+            <a class="cm-button" [routerLink]="['/campaigns', race.id, 'registrations']">משתתפים</a>
+          </article>
+        } @empty { <p class="cm-empty">אין מירוצים בארגון</p> }
+      }
+    </section>
+  } @else {
+
   <!-- ══ FILTERS ══ -->
-  <div class="reg-filters">
+  <section [class.cm-ledger]="!campaignScoped">
+  @if (!campaignScoped) { <h2 class="cm-panel-title">רשימת משתתפים</h2> }
+  <div class="reg-filters" [class.cm-filters]="!campaignScoped">
+    @if (!campaignScoped && !campaignId) {
+      <app-dropdown label="סינון משתתפים לפי קמפיין" [(ngModel)]="participantCampaignFilter" (ngModelChange)="page = 0; load()">
+        <app-dropdown-option value="">כל הקמפיינים</app-dropdown-option>
+        @for (race of raceCatalog; track race.id) { <app-dropdown-option [value]="race.id">{{ race.title }}</app-dropdown-option> }
+      </app-dropdown>
+    }
     <input
       class="reg-search"
       type="search"
@@ -53,16 +101,20 @@
               <th>מידת חולצה</th>
               <th class="col-secondary">קמפיין</th>
               <th>סטטוס תשלום</th>
+            @if (!campaignScoped) { <th scope="col">פרטים</th> }
             </tr>
           </thead>
           <tbody>
             @for (p of participants; track p.id) {
               <tr class="reg-row">
                 <td class="reg-name">{{ p.name }}</td>
-                <td>{{ p.option_title || '—' }}</td>
-                <td>{{ p.shirt_size || '—' }}</td>
-                <td class="reg-campaign col-secondary">{{ p.campaign_title }}</td>
-                <td><span class="status-badge status-{{ p.payment_status }}">{{ statusLabel(p.payment_status) }}</span></td>
+                <td data-label="מקצה">{{ p.option_title || '—' }}</td>
+                <td data-label="מידת חולצה">{{ p.shirt_size || '—' }}</td>
+                <td class="reg-campaign col-secondary" data-label="קמפיין">{{ p.campaign_title }}</td>
+                <td data-label="סטטוס תשלום"><span class="status-badge status-{{ p.payment_status }}">{{ statusLabel(p.payment_status) }}</span></td>
+                @if (!campaignScoped) {
+                  <td><button type="button" class="cm-button" (click)="selectedParticipant = p">פרטים</button></td>
+                }
               </tr>
             }
           </tbody>
@@ -70,22 +122,20 @@
       </div>
 
       <!-- Pagination -->
+      @if (campaignScoped) {
       <div class="reg-pagination">
-        <label class="pag-limit">
-          שורות בעמוד:
-          <select [(ngModel)]="limit" (change)="onLimitChange()">
-            <option [ngValue]="10">10</option>
-            <option [ngValue]="25">25</option>
-            <option [ngValue]="50">50</option>
-          </select>
-        </label>
         <button class="pag-btn" (click)="prevPage()" [disabled]="page === 0">הקודם</button>
         <span class="pag-info">עמוד {{ page + 1 }} מתוך {{ totalPages }}</span>
         <button class="pag-btn" (click)="nextPage()" [disabled]="page >= totalPages - 1">הבא</button>
       </div>
+      } @else {
+      <app-management-pagination [page]="page" [total]="total" [pageSize]="limit" (pageChange)="page = $event; load()" />
+      }
     }
   </div>
+  </section>
 
+  }
   }
   </div>
 </div>
@@ -104,24 +154,24 @@
 
       <label class="reg-field">
         <span>קטגוריה *</span>
-        <select [(ngModel)]="form.registrationOptionId">
-          <option *ngFor="let o of registrationOptions" [value]="o.id">{{ o.title }} — ₪{{ o.price.toLocaleString('he-IL') }}</option>
-        </select>
+        <app-dropdown [(ngModel)]="form.registrationOptionId">
+          <app-dropdown-option *ngFor="let o of registrationOptions" [value]="o.id">{{ o.title }} — ₪{{ o.price.toLocaleString('he-IL') }}</app-dropdown-option>
+        </app-dropdown>
       </label>
 
       <label class="reg-field">
         <span>מידת חולצה</span>
-        <select [(ngModel)]="form.shirtSize">
-          <option value="">ללא</option>
-          <option *ngFor="let s of shirtSizes" [value]="s">{{ s }}</option>
-        </select>
+        <app-dropdown [(ngModel)]="form.shirtSize">
+          <app-dropdown-option value="">ללא</app-dropdown-option>
+          <app-dropdown-option *ngFor="let s of shirtSizes" [value]="s">{{ s }}</app-dropdown-option>
+        </app-dropdown>
       </label>
 
       <label class="reg-field">
         <span>מקור התשלום *</span>
-        <select [(ngModel)]="form.source">
-          <option *ngFor="let o of sourceOptions" [value]="o.value">{{ o.label }}</option>
-        </select>
+        <app-dropdown [(ngModel)]="form.source">
+          <app-dropdown-option *ngFor="let o of sourceOptions" [value]="o.value">{{ o.label }}</app-dropdown-option>
+        </app-dropdown>
       </label>
 
       <p class="reg-field-hint">פרטי מי ששילם (לא חייב להיות המשתתף עצמו) — אופציונלי, ברירת מחדל: שם המשתתף</p>
@@ -184,9 +234,9 @@
 
       <label class="reg-field">
         <span>מקור התשלום עבור כל השורות *</span>
-        <select [(ngModel)]="importSource">
-          <option *ngFor="let o of sourceOptions" [value]="o.value">{{ o.label }}</option>
-        </select>
+        <app-dropdown [(ngModel)]="importSource">
+          <app-dropdown-option *ngFor="let o of sourceOptions" [value]="o.value">{{ o.label }}</app-dropdown-option>
+        </app-dropdown>
       </label>
 
       <label for="reg-import-input" class="reg-dropzone">
@@ -223,3 +273,22 @@
     </ng-container>
   </div>
 </div>
+
+@if (!campaignScoped && selectedParticipant; as participant) {
+  <div class="cm-drawer-backdrop" (click)="selectedParticipant = null"></div>
+  <section class="cm-drawer org-participant-drawer" role="dialog" aria-modal="true" aria-labelledby="org-runner-title" (keydown.escape)="selectedParticipant = null">
+    <header class="cm-drawer-head"><h2 id="org-runner-title">פרטי משתתף</h2>
+      <button class="cm-button" type="button" aria-label="סגירה" (click)="selectedParticipant = null">×</button>
+    </header>
+    <dl class="cm-drawer-body">
+      <dt>משתתף</dt><dd>{{ participant.name }}</dd>
+      <dt>קמפיין</dt><dd>{{ participant.campaign_title }}</dd>
+      <dt>מקצה</dt><dd>{{ participant.option_title || '—' }}</dd>
+      <dt>מידת חולצה</dt><dd>{{ participant.shirt_size || '—' }}</dd>
+      <dt>משלם</dt><dd>{{ participant.payer_name || '—' }}</dd>
+      <dt>אימייל</dt><dd><bdi>{{ participant.payer_email || '—' }}</bdi></dd>
+      <dt>טלפון</dt><dd><bdi>{{ participant.payer_phone || '—' }}</bdi></dd>
+    </dl>
+    <footer class="cm-drawer-foot"><button class="cm-button" type="button" (click)="selectedParticipant = null">סגור</button></footer>
+  </section>
+}

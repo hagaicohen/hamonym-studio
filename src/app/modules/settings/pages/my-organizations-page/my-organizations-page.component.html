@@ -1,200 +1,126 @@
-<div class="settings-page">
-  <!-- PAGE HEADER -->
-
-  <div class="page-header">
+﻿<section class="workspace cm-v7" dir="rtl" aria-labelledby="organizations-title">
+  <header class="heading">
     <div>
-      <h1>הארגונים שלי</h1>
-
+      <h1 id="organizations-title">הארגונים שלי</h1>
       <p>ניהול הארגונים המשויכים לחשבון שלך</p>
     </div>
-  </div>
+    <a class="cm-button cm-primary" routerLink="/organization-registration">+ הוספת ארגון</a>
+  </header>
 
-  <app-incomplete-registrations class="incomplete-registrations" [drafts]="drafts"></app-incomplete-registrations>
+  @if (drafts.length) {
+    <app-incomplete-registrations [drafts]="drafts"></app-incomplete-registrations>
+  }
+  @if (loading) {
+    <p class="org-summary" role="status">טוען ארגונים…</p>
+  } @else if (loadError) {
+    <p class="org-summary" role="alert">{{ loadError }}</p>
+  } @else {
+    <p class="org-summary">{{ entities.length === 1 ? 'ארגון אחד' : (entities.length | number) + ' ארגונים' }}</p>
+  }
 
-  <!-- ENTITIES SECTION -->
-
-  <section class="settings-section">
-    <div class="entities-grid">
-      @for (entity of entities; track entity.id) {
-        <div class="entity-card" [class.current]="entity.isCurrent" [class.card--hidden]="entity.is_hidden">
-          <!-- TOP -->
-
-          <div class="entity-top">
-            <div class="entity-header">
-              <div class="entity-title-row">
-                <div class="entity-identity">
-                  <div class="entity-identity-text">
-                    <div class="entity-name">{{ entityName(entity) }}</div>
-                    <div class="entity-type">{{ getEntityTypeLabel(entity.entity_type) }}</div>
-                  </div>
-                  <div class="entity-logo">
-                    @if (entity.logo_url && !failedLogos.has(entity.id)) {
-                      <img [src]="entity.logo_url" [alt]="entityName(entity)" (error)="failedLogos.add(entity.id)" />
-                    } @else {
-                      <lucide-icon [img]="OrganizationIcon" [size]="26" aria-hidden="true"></lucide-icon>
-                    }
-                  </div>
-                </div>
-
-                <div class="entity-status-group">
-                  @if (entity.is_hidden) {
-                    <span class="badge-hidden">מוסתר</span>
-                  }
-                  <div
-                    class="entity-status"
-                    [class.active]="entity.status === 'active'"
-                    [class.incomplete]="entity.status === 'draft'"
-                    [class.pending]="entity.status === 'pending_review'"
-                  >
-                    {{ getStatusLabel(entity.status) }}
-                  </div>
-                </div>
-              </div>
-
-            </div>
+  <div class="org-grid">
+    @for (entity of entities; track entity.id) {
+      <article class="org-card">
+        <header class="org-title">
+          <div class="org-logo">
+            @if (entity.logo_url && !failedLogos.has(entity.id)) {
+              <img [src]="entity.logo_url" alt="" (error)="failedLogos.add(entity.id)">
+            } @else {
+              <lucide-icon [img]="OrganizationIcon" [size]="24" aria-hidden="true"></lucide-icon>
+            }
           </div>
-
-          <!-- CURRENT ENTITY -->
-
-          @if (entity.isCurrent) {
-            <div class="current-badge">ארגון פעיל כעת</div>
-          }
-
-          <!-- BODY -->
-          <div class="entity-body">
-            <div class="entity-details-grid">
-              <div class="entity-detail">
-                <div class="detail-label">מספר רישום</div>
-
-                <div class="detail-value">
-                  {{ entity.registration_number }}
-                </div>
-              </div>
-
-              <div class="entity-detail">
-                <div class="detail-label">איש קשר</div>
-
-                <div class="detail-value">
-                  {{ entity.contact_full_name }}
-                </div>
-              </div>
-            </div>
-
-            <div class="entity-stats-row">
-              <div class="entity-stat">
-                <div class="stat-value-row">
-                  <lucide-icon [img]="FlagIcon" [size]="22" class="stat-icon"></lucide-icon>
-                  <div class="stat-value">
-                    {{ entity.campaignsCount || 0 }}
-                  </div>
-                </div>
-
-                <div class="stat-label">קמפיינים</div>
-              </div>
-
-              <div class="entity-stat">
-                <div class="stat-value-row">
-                  <lucide-icon [img]="UsersIcon" [size]="22" class="stat-icon"></lucide-icon>
-                  <div class="stat-value">
-                    {{ entity.usersCount || 1 }}
-                  </div>
-                </div>
-
-                <div class="stat-label">משתמשים</div>
-              </div>
-            </div>
+          <div class="org-name">
+            <h2>{{ entityName(entity) }}</h2>
+            <p>{{ getEntityTypeLabel(entity.entity_type) }}</p>
+            @if (entity.isCurrent) { <p>ארגון פעיל כעת</p> }
           </div>
+          <div class="statuses">
+            @if (getStatusLabel(entity.status); as status) {
+              <span class="status" [class.active]="entity.status === 'active'"
+                    [class.pending]="entity.status === 'pending_review' || entity.status === 'changes_requested' || entity.status === 'draft'"
+                    [class.danger]="entity.status === 'rejected' || entity.status === 'suspended'">{{ status }}</span>
+            }
+            @if (entity.is_hidden) { <span class="status">מוסתר</span> }
+          </div>
+        </header>
 
-          <!-- FOOTER -->
+        <dl class="org-details">
+          <div><dt>מספר רישום</dt><dd><bdi>{{ entity.registration_number || '—' }}</bdi></dd></div>
+          <div><dt>איש קשר</dt><dd><strong>{{ entity.contact_full_name || '—' }}</strong></dd></div>
+        </dl>
 
-          <div class="entity-footer">
-            <div class="entity-footer-row">
-              <a
-                class="manage-btn"
-                [routerLink]="['/settings/entities', entity.id]"
-                (click)="selectEntity(entity)"
-              >
-                <lucide-icon [img]="SettingsIcon" [size]="16"></lucide-icon>
-                ניהול
-                {{ getEntityTypeLabel(entity.entity_type) }}
-              </a>
-
-              @if (entity.is_hidden) {
-                <button
-                  type="button"
-                  class="btn-icon-action btn-unhide"
-                  [disabled]="hidingEntityId === entity.id"
-                  (click)="toggleEntityCardVisibility($event, entity)"
-                  title="הצג מחדש"
-                >
-                  <lucide-icon [img]="EyeIcon" [size]="15"></lucide-icon>
-                </button>
-              } @else {
-                <button
-                  type="button"
-                  class="btn-icon-action btn-hide-entity"
-                  [disabled]="hidingEntityId === entity.id"
-                  (click)="toggleEntityCardVisibility($event, entity)"
-                  title="הסתרת הארגון"
-                >
-                  <lucide-icon [img]="EyeOffIcon" [size]="15"></lucide-icon>
-                </button>
-              }
-
-              <button
-                type="button"
-                class="btn-icon-action btn-delete-entity"
-                (click)="openDeleteEntityCardModal($event, entity)"
-                title="מחיקת הארגון"
-              >
-                <lucide-icon [img]="TrashIcon" [size]="15"></lucide-icon>
-              </button>
-            </div>
+        <div class="counts">
+          <div>
+            <small><lucide-icon [img]="FlagIcon" [size]="16" aria-hidden="true"></lucide-icon> קמפיינים</small>
+            <strong>{{ entity.campaignsCount == null ? '—' : (entity.campaignsCount | number) }}</strong>
+          </div>
+          <div>
+            <small><lucide-icon [img]="UsersIcon" [size]="16" aria-hidden="true"></lucide-icon> משתמשים</small>
+            <strong>{{ entity.usersCount == null ? '—' : (entity.usersCount | number) }}</strong>
           </div>
         </div>
-      }
 
-      <!-- ADD ENTITY CARD -->
+        <div class="org-actions">
+          <a class="cm-button cm-primary" [routerLink]="['/settings/entities', entity.id]" (click)="selectEntity(entity)">
+            ניהול {{ getEntityTypeLabel(entity.entity_type) }}
+          </a>
+          <button type="button" class="cm-button icon-button"
+                  [disabled]="hidingEntityId === entity.id"
+                  (click)="openVisibilityConfirmation(entity)"
+                  [attr.aria-label]="entity.is_hidden ? 'הצג מחדש' : 'הסתרת הארגון'"
+                  [title]="entity.is_hidden ? 'הצג מחדש' : 'הסתרת הארגון'">
+            <lucide-icon [img]="entity.is_hidden ? EyeIcon : EyeOffIcon" [size]="18" aria-hidden="true"></lucide-icon>
+          </button>
+          <button type="button" class="cm-button icon-button danger" (click)="openDeleteEntityCardModal($event, entity)"
+                  aria-label="מחיקת הארגון" title="מחיקת הארגון">
+            <lucide-icon [img]="TrashIcon" [size]="18" aria-hidden="true"></lucide-icon>
+          </button>
+        </div>
+      </article>
+    }
 
-      <button type="button" class="add-entity-card" [routerLink]="['/organization-registration']">
-        <div class="add-icon">+</div>
-
-        <div class="add-title">הוספת ארגון</div>
-
-        <div class="add-subtitle">עמותה, חל״צ, חברה ועוד</div>
-      </button>
-    </div>
-  </section>
-</div>
-
-<!-- DELETE ENTITY CONFIRM MODAL -->
-@if (deleteEntityTarget) {
-  <div class="modal-backdrop" (click)="closeDeleteEntityCardModal()">
-    <div class="modal-box" (click)="$event.stopPropagation()">
-      <h2 class="modal-title">מחיקת "{{ entityName(deleteEntityTarget) }}"</h2>
-      <p class="modal-desc">
-        פעולה זו תסתיר את הארגון ואת כל הקמפיינים שלו מהציבור באופן מיידי.
-        כדי לאשר, הקלידו את שם הארגון במדויק:
-      </p>
-      <input
-        type="text"
-        class="danger-confirm-input"
-        [(ngModel)]="deleteEntityConfirmText"
-        [placeholder]="entityName(deleteEntityTarget)"
-      />
-      @if (deleteEntityCardError) {
-        <p class="modal-error">{{ deleteEntityCardError }}</p>
-      }
-      <div class="modal-actions">
-        <button class="modal-btn-cancel" [disabled]="isDeletingEntityCard" (click)="closeDeleteEntityCardModal()">ביטול</button>
-        <button
-          class="modal-btn-delete"
-          [disabled]="!deleteEntityCardConfirmValid || isDeletingEntityCard"
-          (click)="confirmDeleteEntityCard()"
-        >
-          {{ isDeletingEntityCard ? "מוחק..." : "מחיקת הארגון" }}
-        </button>
-      </div>
-    </div>
+    <a class="add-card" routerLink="/organization-registration">
+      <span class="plus" aria-hidden="true">+</span>
+      <strong>הוספת ארגון</strong>
+      <p>עמותה, חל״צ, חברה ועוד</p>
+    </a>
   </div>
+</section>
+
+@if (visibilityTarget || deleteEntityTarget) {
+  <div class="drawer-shade" aria-hidden="true" (click)="closeOrganizationDrawer()"></div>
+  <section class="organization-drawer cm-drawer" dir="rtl" role="dialog" aria-modal="true"
+           aria-labelledby="organization-drawer-title" (keydown.escape)="closeOrganizationDrawer()">
+    <header class="heading">
+      <h2 id="organization-drawer-title">
+        @if (deleteEntityTarget) { מחיקת ״{{ entityName(deleteEntityTarget) }}״ }
+        @else { {{ visibilityTarget.is_hidden ? 'הצגה מחדש' : 'הסתרת הארגון' }} }
+      </h2>
+      <button type="button" class="cm-button icon-button" aria-label="סגירה" (click)="closeOrganizationDrawer()">×</button>
+    </header>
+    <div class="drawer-body">
+      @if (deleteEntityTarget) {
+        <p>פעולה זו תסתיר את הארגון ואת כל הקמפיינים שלו מהציבור באופן מיידי.</p>
+        <label for="organization-delete-confirm">כדי לאשר, הקלידו את שם הארגון במדויק</label>
+        <input id="organization-delete-confirm" [(ngModel)]="deleteEntityConfirmText"
+               [placeholder]="entityName(deleteEntityTarget)">
+        @if (deleteEntityCardError) { <p class="danger" role="alert">{{ deleteEntityCardError }}</p> }
+      } @else {
+        <p>{{ entityName(visibilityTarget) }}</p>
+        @if (visibilityError) { <p class="danger" role="alert">{{ visibilityError }}</p> }
+      }
+    </div>
+    <footer class="drawer-footer">
+      <button type="button" class="cm-button" [disabled]="isDeletingEntityCard || !!hidingEntityId" (click)="closeOrganizationDrawer()">ביטול</button>
+      @if (deleteEntityTarget) {
+        <button type="button" class="cm-button cm-primary"
+                [disabled]="!deleteEntityCardConfirmValid || isDeletingEntityCard" (click)="confirmDeleteEntityCard()">
+          {{ isDeletingEntityCard ? 'מוחק…' : 'מחיקת הארגון' }}
+        </button>
+      } @else {
+        <button type="button" class="cm-button cm-primary" [disabled]="!!hidingEntityId"
+                (click)="toggleEntityCardVisibility($event, visibilityTarget)">אישור</button>
+      }
+    </footer>
+  </section>
 }

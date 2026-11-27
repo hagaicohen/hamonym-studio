@@ -1,0 +1,45 @@
+<button #trigger type="button" class="account-trigger" dir="rtl" [class.is-open]="open" [attr.aria-expanded]="open" aria-haspopup="dialog" aria-label="פתיחת תפריט החשבון" (click)="toggle($event)">
+ <span class="account-avatar">@if (photo) { <img [src]="photo" [alt]="name" (error)="photoError()"> } @else if (auth.currentUser()) { <span>{{ initials }}</span> } @else { <app-icon name="user" /> }</span>
+ <span class="trigger-name">{{ name }}</span><svg class="account-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m6 8 4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
+</button>
+<dialog #panel class="account-panel" dir="rtl" aria-label="החשבון שלי" [style.top.px]="top" [style.left.px]="left" (cancel)="cancel($event)" (close)="close()" (click)="backdrop($event)">
+ <div class="mobile-handle" aria-hidden="true"></div>
+ <header class="account-heading"><span class="account-avatar large">@if (photo) { <img [src]="photo" [alt]="name" (error)="photoError()"> } @else if (auth.currentUser()) { <span>{{ initials }}</span> } @else { <app-icon name="user" /> }</span><div><strong>{{ name }}</strong><small>החשבון שלי</small></div><button type="button" class="account-close" aria-label="סגירה" (click)="close()"><app-icon name="x" /></button></header>
+ @if (auth.currentUser()) {
+  <p class="section-label">מעבר לסביבת עבודה</p>
+  <nav class="workspace-list" aria-label="סביבות עבודה">
+   <button type="button" class="account-workspace-option" [class.selected]="selectedWorkspace === 'donor'" [disabled]="navigating" (click)="donor()"><app-icon name="heart" /><span><strong>תורם</strong><small>התרומות והקבלות שלי</small></span>@if (selectedWorkspace === 'donor') { <app-icon name="check" /> }</button>
+   @if (campaigns.length) {
+    <button type="button" class="account-workspace-option" [class.selected]="selectedWorkspace === 'ambassador'" [attr.aria-expanded]="mode === 'ambassadors'" [disabled]="navigating || loading" (click)="choose('ambassadors')"><app-icon name="megaphone" /><span><strong>שגריר</strong><small>הקמפיינים שלי</small></span><span class="submenu-chevron" [class.expanded]="mode === 'ambassadors'" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" focusable="false"><path d="m6 8 4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg></span></button>
+    @if (mode === 'ambassadors') {
+     <div class="workspace-submenu" role="group" aria-label="הקמפיינים שלי כשגריר">
+      @if (campaigns.length > 5) { <label class="account-search"><app-icon name="search" /><input type="search" [ngModel]="search" (ngModelChange)="searchChanged($event)" placeholder="חיפוש קמפיין…" aria-label="חיפוש קמפיין שגריר"></label> }
+      <div class="context-list">
+       @for (campaign of filteredCampaigns; track campaign.id) {
+        <button type="button" class="context-row" [class.selected]="ctx.isActiveContext('ambassador', campaign.id)" [disabled]="navigating" (click)="selectCampaign(campaign)"><app-icon name="megaphone" /><span>{{ campaign.name }}</span>@if (ctx.isActiveContext('ambassador', campaign.id)) { <app-icon name="check" /> }</button>
+       } @empty { <p class="account-empty">לא נמצאו קמפיינים</p> }
+      </div>
+     </div>
+    }
+   }
+   @if (organizations.length) {
+    <button type="button" class="account-workspace-option" [class.selected]="selectedWorkspace === 'entity-manager'" [attr.aria-expanded]="mode === 'organizations'" [disabled]="navigating || loading" (click)="choose('organizations')"><app-icon name="building" /><span><strong>{{ organizationLabel }}</strong><small>הארגונים שלי</small></span><span class="submenu-chevron" [class.expanded]="mode === 'organizations'" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" focusable="false"><path d="m6 8 4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg></span></button>
+    @if (mode === 'organizations') {
+     <div class="workspace-submenu" role="group" aria-label="הארגונים שלי">
+      @if (organizations.length > 5) { <label class="account-search"><app-icon name="search" /><input type="search" [ngModel]="search" (ngModelChange)="searchChanged($event)" placeholder="חיפוש ארגון…" aria-label="חיפוש ארגון"></label> }
+      <div class="context-list">
+       @for (entity of filteredOrganizations; track entity.id) {
+        <button type="button" class="context-row" [class.selected]="ctx.isActiveContext('entity-manager', entity.id)" [disabled]="navigating" (click)="selectOrganization(entity)"><app-icon name="building" /><span>{{ entity.display_name || entity.legal_name }}</span>@if (ctx.isActiveContext('entity-manager', entity.id)) { <app-icon name="check" /> }</button>
+       } @empty { <p class="account-empty">לא נמצאו ארגונים</p> }
+      </div>
+     </div>
+    }
+   }
+  </nav>
+  @if (loading || navigating) { <p class="account-loading" role="status"><span class="account-spinner" aria-hidden="true"></span>{{ navigating ? 'פותח סביבת עבודה…' : 'טוען סביבות עבודה…' }}</p> }
+  @if (error) { <div class="account-error" role="alert">{{ error }}<button type="button" [disabled]="loading || navigating" (click)="loadMemberships()">ניסיון חוזר</button></div> }
+  <footer class="account-footer"><button type="button" [disabled]="navigating" (click)="details()"><app-icon name="settings" /><span>פרטי החשבון</span></button><button type="button" class="logout" [disabled]="navigating" (click)="logout()"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5H5v14h4m6-12 5 5-5 5m-4-5h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg><span>התנתקות</span></button></footer>
+ } @else {
+  <div class="guest-actions"><button type="button" (click)="login()">התחברות</button><button type="button" (click)="login(true)">יצירת חשבון</button></div>
+ }
+</dialog>

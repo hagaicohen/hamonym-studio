@@ -1,21 +1,26 @@
-import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
+import { AnalyticsRangeService, CAMPAIGN_RANGE_DEFAULT } from '../../../../core/services/analytics-range.service';
+import { DateRangePickerComponent, shiftCivilDate } from '../../../../shared/components/date-range-picker/date-range-picker.component';
+import { Component, ElementRef, HostListener, OnDestroy, ViewChild, effect, inject, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CurrentContextService } from '../../../../core/services/current-context.service';
 import { DashboardOverview, DashboardRange, PlatformDashboardService } from '../../services/platform-dashboard.service';
-
+
+
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
+type DashboardPeriod = 'month' | DashboardRange | 'custom';
 interface ChartPoint { date: string; value: number; }
 
 @Component({
+  providers: [AnalyticsRangeService, { provide: CAMPAIGN_RANGE_DEFAULT, useValue: 'month' }],
   selector: 'app-platform-dashboard-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, RouterLink],
+  imports: [DateRangePickerComponent, HmIconComponent, CommonModule, RouterLink],
   templateUrl: './platform-dashboard-page.component.html',
   styleUrl: './platform-dashboard-page.component.css',
 })
-export class PlatformDashboardPageComponent implements OnInit, OnDestroy {
+export class PlatformDashboardPageComponent implements OnDestroy {
   private service = inject(PlatformDashboardService);
   readonly context = inject(CurrentContextService);
   @ViewChild('donorDrawer') donorDrawer?: ElementRef<HTMLElement>;
@@ -29,9 +34,8 @@ export class PlatformDashboardPageComponent implements OnInit, OnDestroy {
   loading = true;
   error: string | null = null;
   range: DashboardRange = '30d';
-  readonly ranges: { key: DashboardRange; label: string }[] = [
-    { key: '7d', label: '7 ימים' }, { key: '30d', label: '30 ימים' }, { key: '12m', label: '12 חודשים' },
-  ];
+  period: DashboardPeriod = 'month';
+  private readonly analyticsRange = inject(AnalyticsRangeService);
   attentionPage = 0;
   donorsOpen = false;
   donorPage = 0;
@@ -41,14 +45,24 @@ export class PlatformDashboardPageComponent implements OnInit, OnDestroy {
   private readonly padding = { top: 10, bottom: 20, left: 8, right: 8 };
   lineHover: { index: number; x: number; y: number } | null = null;
 
-  ngOnInit(): void { this.load(); }
+  constructor() {
+    effect(() => {
+      const { preset } = this.analyticsRange.activeRange();
+      const period = preset === 'calendar_12m' ? '12m' : preset === 'month' || preset === '7d' || preset === '30d' ? preset : 'custom';
+      untracked(() => this.load(period));
+    });
+  }
   ngOnDestroy(): void {
     this.requestId++;
     this.request?.unsubscribe();
     clearTimeout(this.focusTimer);
   }
 
-  load(range: DashboardRange = this.range): void {
+  load(period: DashboardPeriod = this.period): void {
+    const range = period === 'month' || period === 'custom' ? '30d' : period;
+    const periodChanged = this.period !== period;
+    this.period = period;
+    if (periodChanged && this.donorsOpen) this.closeDonors();
     this.request?.unsubscribe();
     const requestId = ++this.requestId;
     this.loading = true;
@@ -77,7 +91,57 @@ export class PlatformDashboardPageComponent implements OnInit, OnDestroy {
     });
   }
 
-  get donationsDaily(): ChartPoint[] { return this.data?.trend?.points ?? []; }
+  private get monthStartDay(): string {
+    const start = this.data?.period?.start;
+    return start ? this.fmtDate(start).split('/').reverse().join('-') : '';
+  }
+
+  get monthSeriesAvailable(): boolean {
+    const points = this.data?.trend?.points;
+    return !!this.monthStartDay && !!points?.length && points[0].date <= this.monthStartDay;
+  }
+
+  get seriesAvailable(): boolean {
+    if (this.period === 'month') return this.monthSeriesAvailable;
+    if (this.period !== 'custom') return !!this.data?.trend;
+    const { from, to } = this.analyticsRange.activeRange();
+    const points = this.data?.trend?.points ?? [];
+    return !!from && !!to && !!points.length && points[0].date <= from &&
+      points[points.length - 1].date >= shiftCivilDate(to, -1);
+  }
+
+  get donationTotal(): number | null {
+    if (this.loading || this.error) return null;
+    if (this.period === 'month') return this.data?.kpis.donationsMonth ?? null;
+    if (this.period === 'custom') return this.seriesAvailable ? this.donationsDaily.reduce((total, point) => total + point.value, 0) : null;
+    return this.data?.trend?.total ?? null;
+  }
+
+  get periodDonors() {
+    if (this.loading || this.error || this.data?.kpis.newDonorsThisMonth == null) return null;
+    if (this.period === 'month') return this.data.newDonors;
+    const { from, to } = this.analyticsRange.activeRange();
+    if (!from || from < this.monthStartDay || !to || to > this.localDay(this.data.period?.end ?? '')) return null;
+    return this.data.newDonors.filter(donor => {
+      const day = this.localDay(donor.firstDonationAt);
+      return day >= from && day < to;
+    });
+  }
+
+  private localDay(iso: string): string {
+    return iso ? this.fmtDate(iso).split('/').reverse().join('-') : '';
+  }
+
+  get donationsDaily(): ChartPoint[] {
+    const points = this.data?.trend?.points ?? [];
+    if (this.period === 'custom') {
+      const { from, to } = this.analyticsRange.activeRange();
+      return this.seriesAvailable ? points.filter(point => point.date >= from && point.date < to) : [];
+    }
+    if (this.period !== 'month') return points;
+    return this.monthSeriesAvailable ? points.filter(point => point.date.startsWith(this.monthStartDay.slice(0, 7))) : [];
+  }
+
   get recentActivity() {
     const seen = new Set<string>();
     return this.data?.activity.filter(event => {
@@ -91,13 +155,29 @@ export class PlatformDashboardPageComponent implements OnInit, OnDestroy {
   }
   get hasDonations(): boolean { return this.donationsDaily.some(p => p.value > 0); }
   get comparisonPercent(): number | null {
-    const trend = this.data?.trend;
-    return trend && trend.previousTotal > 0 ? (trend.total - trend.previousTotal) / trend.previousTotal * 100 : null;
+    const previous = this.previousTotal;
+    const total = this.donationTotal;
+    return previous !== null && previous > 0 && total !== null ? (total - previous) / previous * 100 : null;
+  }
+
+  get previousTotal(): number | null {
+    if (this.period !== 'month' && this.period !== 'custom') return this.data?.trend?.previousTotal ?? null;
+    if (!this.seriesAvailable) return null;
+    const { from, to } = this.analyticsRange.activeRange();
+    const days = (Date.parse(to) - Date.parse(from)) / 86400000;
+    const previousFrom = this.period === 'month'
+      ? shiftCivilDate(from, -1).slice(0, 7) + '-01'
+      : shiftCivilDate(from, -days);
+    const matchedEnd = shiftCivilDate(previousFrom, days);
+    const previousEnd = matchedEnd < from ? matchedEnd : from;
+    const points = this.data?.trend?.points ?? [];
+    if (!points.length || points[0].date > previousFrom) return null;
+    return points.filter(point => point.date >= previousFrom && point.date < previousEnd).reduce((total, point) => total + point.value, 0);
   }
   get visibleAttention() { return this.data?.attention.slice(this.attentionPage * 5, this.attentionPage * 5 + 5) ?? []; }
   get attentionPages(): number { return Math.max(1, Math.ceil((this.data?.attention.length ?? 0) / 5)); }
-  get visibleDonors() { return this.data?.newDonors.slice(this.donorPage * this.donorPageSize, (this.donorPage + 1) * this.donorPageSize) ?? []; }
-  get donorPages(): number { return Math.max(1, Math.ceil((this.data?.newDonors.length ?? 0) / this.donorPageSize)); }
+  get visibleDonors() { return this.periodDonors?.slice(this.donorPage * this.donorPageSize, (this.donorPage + 1) * this.donorPageSize) ?? []; }
+  get donorPages(): number { return Math.max(1, Math.ceil((this.periodDonors?.length ?? 0) / this.donorPageSize)); }
 
   focusAttention(section: HTMLElement): void {
     this.attentionPage = 0;
@@ -106,7 +186,7 @@ export class PlatformDashboardPageComponent implements OnInit, OnDestroy {
   }
 
   openDonors(trigger: HTMLElement): void {
-    if (!this.context.isSuperAdmin() || !this.data) return;
+    if (!this.context.isSuperAdmin() || !this.periodDonors) return;
     this.drawerTrigger = trigger;
     this.donorPage = 0;
     this.donorsOpen = true;

@@ -1,7 +1,13 @@
+import { DateRangePickerComponent } from '../../../../shared/components/date-range-picker/date-range-picker.component';
+import { DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
+import { AdminDetailsDrawerComponent } from '../../components/admin-details-drawer/admin-details-drawer.component';
+import { EntityComboboxComponent } from '../../components/entity-combobox/entity-combobox.component';
+import { ActivatedRoute } from '@angular/router';
+import { ManagementPaginationComponent } from '../../../../shared/components/management-pagination/management-pagination.component';
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import {
   CardcomOpsService,
   HealthResponse,
@@ -17,7 +23,8 @@ import {
 } from '../../utils/ops-labels';
 import { environment } from '../../../../../environments/environment';
 import { ColumnPickerComponent, ColumnDef } from '../../components/column-picker/column-picker.component';
-
+
+
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 // תאריך is the anchor column (always shown, not in this list) -- same
 // convention as platform-organizations-page's own COLUMNS (שם העמותה is
@@ -185,7 +192,7 @@ const DONATION_STATUS_LABELS: Record<string, string> = {
 @Component({
   selector: 'app-platform-cardcom-ops-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule, ColumnPickerComponent],
+  imports: [DateRangePickerComponent, DropdownOptionComponent, ManagementPaginationComponent, EntityComboboxComponent, AdminDetailsDrawerComponent, HmIconComponent, CommonModule, FormsModule, ColumnPickerComponent],
   templateUrl: './platform-cardcom-ops-page.component.html',
   styleUrl: './platform-cardcom-ops-page.component.css',
 })
@@ -209,6 +216,30 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
 
   // ---- Donations browser (2026-09-15s) -----------------------------------
   donations: PlatformDonation[] = [];
+  selectedDonation: PlatformDonation | null = null;
+  receiptDownloadError = '';
+  receiptDownloadBusy = false;
+  private readonly receiptHttp = inject(HttpClient);
+
+  downloadOfficialReceipt(receiptId: string): void {
+    if (this.receiptDownloadBusy) return;
+    this.receiptDownloadBusy = true;
+    this.receiptDownloadError = '';
+    const headers = new HttpHeaders({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+    this.receiptHttp.get(`${environment.apiUrl}/api/donations/receipt/${encodeURIComponent(receiptId)}/pdf`, { headers, responseType: 'blob' }).subscribe({
+      next: receipt => {
+        this.receiptDownloadBusy = false;
+        const url = URL.createObjectURL(receipt);
+        const href = document.createElement('a');
+        href.href = url;
+        href.download = 'receipt.pdf';
+        href.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      },
+      error: () => { this.receiptDownloadBusy = false; this.receiptDownloadError = 'הקבלה הרשמית אינה זמינה להורדה'; },
+    });
+  }
+
   donationsLoading = true;
   // Set instead of `loading` once rows are already on screen (2026-09-16
   // loading-state audit/fix) -- search/filter/sort/pagination must never
@@ -220,7 +251,20 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   donationsPage = 0;
   donationsLimit = 25;
   donationsSearch = '';
-  donationsStatus = '';
+  private readonly route = inject(ActivatedRoute, { optional: true });
+  donationsStatus = this.route?.snapshot.queryParamMap.get('status') || '';
+  donationsPeriod = this.route?.snapshot.queryParamMap.get('period') || 'all';
+  donationsEntityId = this.route?.snapshot.queryParamMap.get('entityId') || '';
+  donationsCampaignId = this.route?.snapshot.queryParamMap.get('campaignId') || '';
+  organizationOptions: { id: string; name: string }[] = [];
+  campaignOptions: { id: string; name: string }[] = [];
+  filterOptionsError = '';
+  readonly donationPeriods = [
+    { key: 'all', label: 'כל הזמנים' },
+    { key: 'this_month_israel', label: 'החודש בישראל' },
+    { key: 'last_month', label: 'חודש קודם' },
+    { key: 'quarter', label: 'שלושה חודשים אחרונים' },
+  ];
   private donationsSearchTimer: ReturnType<typeof setTimeout> | undefined;
 
   readonly donationsColumns = DONATIONS_COLUMNS;
@@ -239,6 +283,14 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
   ngOnInit(): void {
     this.loadAll();
     this.loadDonations();
+    this.platformService.getOrganizationFilterOptions().subscribe({
+      next: options => { this.organizationOptions = options; },
+      error: () => { this.filterOptionsError = 'טעינת אפשרויות הסינון נכשלה'; },
+    });
+    this.platformService.getCampaignFilterOptions().subscribe({
+      next: options => { this.campaignOptions = options; },
+      error: () => { this.filterOptionsError = 'טעינת אפשרויות הסינון נכשלה'; },
+    });
   }
 
   private loadAll(): void {
@@ -274,6 +326,9 @@ export class PlatformCardcomOpsPageComponent implements OnInit {
       .listDonations({
         search: this.donationsSearch || undefined,
         status: this.donationsStatus || undefined,
+        entityId: this.donationsEntityId || undefined,
+        campaignId: this.donationsCampaignId || undefined,
+        period: this.donationsPeriod === 'all' ? undefined : this.donationsPeriod,
         sortBy: this.donationsSortField,
         sortDir: this.donationsSortDir,
         page: this.donationsPage,

@@ -1,3 +1,4 @@
+import { environment } from '../../../../../environments/environment';
 import { Component, Input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApprovalStatusCardComponent } from '../../../settings/components/approval-status-card/approval-status-card.component';
@@ -11,6 +12,11 @@ import { campaignCreatePath } from '../../../campaigns/campaign-editor-route';
   template: `
     <section class="organization-card" dir="rtl" [attr.aria-labelledby]="'organization-name-' + entity.id">
       <div class="organization-card-heading">
+        @if (logoUrl) {
+          <img class="organization-logo" [src]="logoUrl" alt="">
+        } @else {
+          <span class="organization-logo organization-initial" aria-hidden="true">{{ (entity.display_name || entity.legal_name || '').slice(0, 1) }}</span>
+        }
         <div>
           <h2 class="organization-name" [id]="'organization-name-' + entity.id">{{ entity.display_name || entity.legal_name }}</h2>
           @if (entity.unavailable) {
@@ -19,6 +25,9 @@ import { campaignCreatePath } from '../../../campaigns/campaign-editor-route';
             <p class="organization-status">{{ guidance.title }}</p>
           }
         </div>
+        @if (statusLabel) {
+          <span class="organization-badge" [class.is-active]="entity.status === 'active'">{{ statusLabel }}</span>
+        }
         <a class="organization-primary-action" [routerLink]="action.route" [queryParams]="action.edit ? {edit: 'true'} : {}" [attr.aria-label]="action.label + ' — ' + (entity.display_name || entity.legal_name)">{{ action.label }}</a>
       </div>
       @if (!entity.unavailable) {
@@ -46,6 +55,22 @@ export class OrganizationStatusCardComponent {
   @Input({required:true}) entity: any;
   @Input() selected = false;
   @Input() campaignCount = -1;
+  get logoUrl(): string {
+    const logo = this.entity.logo_url || '';
+    return logo && !/^(https?:|data:)/i.test(logo) ? environment.apiUrl + logo : logo;
+  }
+
+  get statusLabel(): string {
+    const labels: Record<string, string> = {
+      active: 'פעילה',
+      pending_review: 'ממתינה לאישור',
+      changes_requested: 'נדרשת השלמה',
+      suspended: 'מושעית',
+      rejected: 'נדחתה',
+    };
+    return this.entity.unavailable ? '' : labels[this.entity.status] || '';
+  }
+
   get guidance() { return organizationNextAction(this.entity, this.campaignCount); }
   get action(): {label:string;route:string[];edit:boolean} {
     const settings = ['/settings/entities', this.entity.id];

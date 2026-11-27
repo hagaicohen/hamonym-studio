@@ -3,6 +3,7 @@
 import { Routes, UrlSegment, UrlMatchResult, CanDeactivateFn } from '@angular/router';
 import { AppLayoutComponent } from './core/layout/app-layout/app-layout.component';
 import { AuthLayoutComponent } from './modules/auth/layouts/auth-layout/auth-layout.component';
+import { AnalyticsRangeService, CAMPAIGN_RANGE_DEFAULT } from './core/services/analytics-range.service';
 import { CampaignWorkspaceShellComponent } from './modules/campaigns/shared/components/campaign-workspace-shell/campaign-workspace-shell.component';
 import { contextGuard } from './core/guards/context.guard';
 import { campaignEditorGuard } from './core/guards/campaign-editor.guard';
@@ -65,6 +66,7 @@ const CAMPAIGN_WORKSPACE_ROUTE = {
   matcher: campaignIdMatcher,
   canActivate: [contextGuard],
   component: CampaignWorkspaceShellComponent,
+  data: { sharedHeader: true },
   children: [
     {
       path: 'ambassadors',
@@ -75,13 +77,22 @@ const CAMPAIGN_WORKSPACE_ROUTE = {
     },
     {
       path: 'dashboard',
+      providers: [AnalyticsRangeService, { provide: CAMPAIGN_RANGE_DEFAULT, useValue: 'all' }],
       loadComponent: () =>
         import('./modules/campaigns/pages/campaign-dashboard-page/campaign-dashboard-page.component').then(
           (m) => m.CampaignDashboardPageComponent,
         ),
     },
     {
+      path: 'updates',
+      loadComponent: () =>
+        import('./modules/campaigns/pages/campaign-workspace-content/campaign-workspace-content.component').then(
+          (m) => m.CampaignWorkspaceContentComponent,
+        ),
+    },
+    {
       path: 'rewards',
+      providers: [AnalyticsRangeService, { provide: CAMPAIGN_RANGE_DEFAULT, useValue: 'all' }],
       loadComponent: () =>
         import('./modules/campaigns/pages/campaign-rewards-page/campaign-rewards-page.component').then(
           (m) => m.CampaignRewardsPageComponent,
@@ -138,6 +149,7 @@ const CAMPAIGN_WORKSPACE_ROUTE = {
     // entity-wide ?campaignId= routes below (under AppLayoutComponent).
     {
       path: 'donations',
+      providers: [AnalyticsRangeService, { provide: CAMPAIGN_RANGE_DEFAULT, useValue: 'all' }],
       loadComponent: () =>
         import('./modules/donations/pages/donations-page/donations-page.component').then(
           (m) => m.DonationsPageComponent,
@@ -152,6 +164,7 @@ const CAMPAIGN_WORKSPACE_ROUTE = {
     },
     {
       path: 'reports',
+      providers: [AnalyticsRangeService, { provide: CAMPAIGN_RANGE_DEFAULT, useValue: '30d' }],
       loadComponent: () =>
         import('./modules/reports/pages/reports-page/reports-page.component').then(
           (m) => m.ReportsPageComponent,
@@ -556,6 +569,7 @@ export const routes: Routes = [
       },
       {
         path: 'donations',
+        providers: [AnalyticsRangeService, { provide: CAMPAIGN_RANGE_DEFAULT, useValue: 'all' }],
         loadComponent: () =>
           import('./modules/donations/pages/donations-page/donations-page.component').then(
             (m) => m.DonationsPageComponent,
@@ -728,6 +742,42 @@ export const routes: Routes = [
           import('./modules/platform/pages/platform-billing-setup-page/platform-billing-setup-page.component').then(
             (m) => m.PlatformBillingSetupPageComponent,
           ),
+      },
+      {
+        path: 'platform/tasks',
+        canActivate: [superAdminGuard],
+        data: { screen: 'tasks' },
+        loadComponent: () => import('./modules/platform/pages/platform-v1-tools/platform-v1-tools.component').then(m => m.PlatformV1ToolsComponent),
+      },
+      {
+        path: 'platform/business-reports',
+        canActivate: [superAdminGuard],
+        data: { screen: 'business' },
+        loadComponent: () => import('./modules/platform/pages/platform-v1-tools/platform-v1-tools.component').then(m => m.PlatformV1ToolsComponent),
+      },
+      {
+        path: 'platform/settings/categories',
+        canActivate: [superAdminGuard],
+        data: { screen: 'catalog' },
+        loadComponent: () => import('./modules/platform/pages/platform-v1-tools/platform-v1-tools.component').then(m => m.PlatformV1ToolsComponent),
+      },
+      {
+        path: 'platform/audit',
+        canActivate: [superAdminGuard],
+        data: { screen: 'audit' },
+        loadComponent: () => import('./modules/platform/pages/platform-v1-tools/platform-v1-tools.component').then(m => m.PlatformV1ToolsComponent),
+      },
+      {
+        path: 'platform/portal',
+        canActivate: [superAdminGuard],
+        data: { screen: 'portal' },
+        loadComponent: () => import('./modules/platform/pages/platform-v1-tools/platform-v1-tools.component').then(m => m.PlatformV1ToolsComponent),
+      },
+      {
+        path: 'platform/developer-tools',
+        canActivate: [superAdminGuard],
+        data: { developerTools: true },
+        loadComponent: () => import('./modules/platform/pages/platform-general-settings-page/platform-general-settings-page.component').then(m => m.PlatformGeneralSettingsPageComponent),
       },
       {
         // Platform-wide settings that aren't about any one association or

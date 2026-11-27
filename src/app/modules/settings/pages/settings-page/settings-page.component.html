@@ -1,115 +1,67 @@
-<div class="settings-page">
-  <!-- PAGE HEADER -->
+﻿<section class="account-workspace cm-v7 org-v1" dir="rtl" aria-labelledby="account-title">
+  <header class="account-heading">
+    <h1 id="account-title">הגדרות</h1>
+    <p>ניהול פרטי החשבון האישי והאבטחה</p>
+  </header>
 
-  <div class="page-header">
-    <div>
-      <h1>הגדרות</h1>
-
-      <p>ניהול החשבון וההעדפות שלך</p>
-    </div>
-  </div>
-
-  <!-- ACCOUNT SECTION -->
-
-  <section class="settings-section">
-    <div class="section-header">
-      <div>
-        <h2>החשבון שלי</h2>
-
-        <p>פרטי המשתמש והאבטחה</p>
+  <section class="cm-ledger account-panel" aria-labelledby="account-profile-title">
+    <header class="account-panel-head">
+      <div><h2 id="account-profile-title">החשבון שלי</h2><p>פרטי המשתמש וההרשאות הנוכחיות</p></div>
+      <button type="button" class="cm-button cm-primary" (click)="startEditAccount()">
+        <lucide-icon [img]="PencilIcon" [size]="16" aria-hidden="true"></lucide-icon> עריכת פרטים
+      </button>
+    </header>
+    <dl class="account-rows">
+      <div class="account-row">
+        <dt><lucide-icon [img]="UserIcon" [size]="16" aria-hidden="true"></lucide-icon> שם משתמש</dt>
+        <dd><strong>{{ currentUser()?.full_name || '—' }}</strong></dd>
       </div>
+      <div class="account-row">
+        <dt><lucide-icon [img]="MailIcon" [size]="16" aria-hidden="true"></lucide-icon> אימייל</dt>
+        <dd><bdi>{{ currentUser()?.email || '—' }}</bdi></dd>
+      </div>
+      <div class="account-row">
+        <dt><lucide-icon [img]="ShieldIcon" [size]="16" aria-hidden="true"></lucide-icon> תפקיד נוכחי</dt>
+        <dd><span class="account-role">{{ roleLabel || '—' }}</span></dd>
+      </div>
+    </dl>
+  </section>
 
-      @if (!editingAccount) {
-        <button class="account-edit-trigger" (click)="startEditAccount()">
-          <lucide-icon [img]="PencilIcon" [size]="13" [strokeWidth]="1.75"></lucide-icon>
-          עריכה
-        </button>
-      }
-    </div>
-
-    <div class="account-card">
-      @if (!editingAccount) {
-        <div class="account-row">
-          <div class="account-label-row">
-            <lucide-icon [img]="UserIcon" [size]="16" class="account-row-icon"></lucide-icon>
-            <div class="account-label">שם משתמש</div>
-          </div>
-          <div class="account-value">{{ currentUser()?.full_name || "—" }}</div>
-        </div>
-
-        <div class="account-row">
-          <div class="account-label-row">
-            <lucide-icon [img]="MailIcon" [size]="16" class="account-row-icon"></lucide-icon>
-            <div class="account-label">אימייל</div>
-          </div>
-          <div class="account-value">{{ currentUser()?.email || "—" }}</div>
-        </div>
-
-        <div class="account-row">
-          <div class="account-label-row">
-            <lucide-icon [img]="ShieldIcon" [size]="16" class="account-row-icon"></lucide-icon>
-            <div class="account-label">תפקיד נוכחי</div>
-          </div>
-          <div class="account-value">{{ roleLabel || "—" }}</div>
-        </div>
-
-        <div class="account-row">
-          <div class="account-label-row">
-            <lucide-icon [img]="KeyIcon" [size]="16" class="account-row-icon"></lucide-icon>
-            <div class="account-label">סיסמה</div>
-          </div>
-          <div class="account-value">••••••••</div>
-        </div>
-      } @else {
-        <div class="account-edit-panel">
-          <div class="account-field">
-            <label>שם משתמש</label>
-            <input class="account-input" type="text" [(ngModel)]="nameDraft" />
-          </div>
-
-          <div class="account-field">
-            <label>אימייל</label>
-            <div class="account-value account-value--readonly">{{ currentUser()?.email || "—" }}</div>
-          </div>
-
-          <div class="account-field">
-            <label>סיסמה חדשה</label>
-            <input
-              class="account-input"
-              type="password"
-              placeholder="השאירו ריק אם לא רוצים לשנות"
-              [(ngModel)]="newPassword"
-            />
-          </div>
-
-          <div class="account-field">
-            <label>אימות סיסמה חדשה</label>
-            <input
-              class="account-input"
-              type="password"
-              placeholder="חובה רק אם משנים סיסמה"
-              [(ngModel)]="confirmPassword"
-            />
-          </div>
-
-          @if (accountError) {
-            <div class="password-error">{{ accountError }}</div>
-          }
-
-          <div class="account-edit-actions">
-            <button class="account-btn account-btn--save" [disabled]="accountSaving" (click)="saveAccount()">
-              {{ accountSaving ? "שומר..." : "שמירה" }}
-            </button>
-            <button class="account-btn account-btn--cancel" [disabled]="accountSaving" (click)="cancelEditAccount()">
-              ביטול
-            </button>
-          </div>
-        </div>
-      }
-
-      @if (accountSuccess) {
-        <div class="password-success">הפרטים עודכנו בהצלחה</div>
-      }
+  <section class="cm-ledger account-panel" aria-labelledby="account-security-title">
+    <header class="account-panel-head">
+      <div><h2 id="account-security-title">אבטחת החשבון</h2><p>ניהול סיסמת הכניסה למערכת</p></div>
+    </header>
+    <div class="account-row security-row">
+      <span><lucide-icon [img]="KeyIcon" [size]="16" aria-hidden="true"></lucide-icon><span>סיסמה<br><small aria-hidden="true">••••••••</small></span></span>
+      <button class="cm-button" type="button" (click)="startEditAccount('password')">שינוי סיסמה</button>
     </div>
   </section>
-</div>
+  @if (accountSuccess) { <p role="status" class="account-success">הפרטים עודכנו בהצלחה</p> }
+
+  @if (editingAccount) {
+    <div class="cm-drawer-backdrop" aria-hidden="true" (click)="!accountSaving && cancelEditAccount()"></div>
+    <section class="cm-drawer org-account-drawer" role="dialog" aria-modal="true" aria-labelledby="account-drawer-title"
+             (keydown.escape)="!accountSaving && cancelEditAccount()">
+      <header class="cm-drawer-head">
+        <h2 id="account-drawer-title">{{ accountDrawer === 'profile' ? 'עריכת פרטי החשבון' : 'שינוי סיסמה' }}</h2>
+        <button type="button" class="cm-button account-drawer-close" aria-label="סגירה"
+                [disabled]="accountSaving" (click)="cancelEditAccount()">×</button>
+      </header>
+      <div class="cm-drawer-body account-drawer-fields">
+        @if (accountDrawer === 'profile') {
+          <label>שם משתמש<input class="cm-input" type="text" autocomplete="name" [(ngModel)]="nameDraft"></label>
+          <label>אימייל<input class="cm-input account-readonly" type="email" dir="ltr" [value]="currentUser()?.email || ''" readonly></label>
+          <label>תפקיד נוכחי<input class="cm-input account-readonly" type="text" [value]="roleLabel || '—'" readonly></label>
+        } @else {
+          <label>סיסמה חדשה<input class="cm-input" type="password" autocomplete="new-password" [(ngModel)]="newPassword"></label>
+          <label>אימות סיסמה חדשה<input class="cm-input" type="password" autocomplete="new-password" [(ngModel)]="confirmPassword"></label>
+        }
+        @if (accountError) { <p class="account-error" role="alert">{{ accountError }}</p> }
+      </div>
+      <footer class="cm-drawer-foot">
+        <button type="button" class="cm-button" [disabled]="accountSaving" (click)="cancelEditAccount()">ביטול</button>
+        <button type="button" class="cm-button cm-primary" [disabled]="accountSaving" (click)="saveAccount()">{{ accountSaving ? 'שומר…' : 'שמירה' }}</button>
+      </footer>
+    </section>
+  }
+</section>

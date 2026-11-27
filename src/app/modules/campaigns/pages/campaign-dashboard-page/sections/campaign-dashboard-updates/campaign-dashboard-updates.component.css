@@ -12,7 +12,7 @@
 .cdu-title { font-size: 15px; font-weight: 800; color: #0f172a; }
 .cdu-add-btn {
   font-family: inherit; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer;
-  background: linear-gradient(135deg, #7c3aed, #583cd6); border: none;
+  background: linear-gradient(135deg, var(--hm-admin-primary), var(--hm-admin-primary)); border: none;
   padding: 7px 14px; border-radius: 999px;
 }
 .cdu-add-btn:hover { filter: brightness(1.05); }
@@ -82,13 +82,13 @@
 .cdu-cancel-btn { background: #fff; color: #64748b; border-color: #e2e8f0; }
 .cdu-draft-btn { background: #fff; color: #475569; border-color: #cbd5e1; }
 .cdu-draft-btn:disabled, .cdu-publish-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.cdu-publish-btn { background: linear-gradient(135deg, #7c3aed, #583cd6); color: #fff; }
+.cdu-publish-btn { background: linear-gradient(135deg, var(--hm-admin-primary), var(--hm-admin-primary)); color: #fff; }
 .cdu-publish-btn:hover:not(:disabled) { filter: brightness(1.05); }
 
 /* ── Live preview — same card markup as the feed, updates as you type. ── */
 .cdu-preview-section { display: flex; flex-direction: column; gap: 8px; }
-.cdu-preview-label { font-size: 12px; font-weight: 700; color: #7c3aed; }
-.cdu-card--preview { border: 1.5px dashed #ddd6fe; box-shadow: none; }
+.cdu-preview-label { font-size: 12px; font-weight: 700; color: var(--hm-admin-primary); }
+.cdu-card--preview { border: 1.5px dashed var(--hm-admin-selected-border); box-shadow: none; }
 
 /* ── Feed — compact horizontal cards: small image on the trailing side
    (right in RTL), text on the leading side. Dashboard is a management
@@ -103,7 +103,7 @@
 }
 .cdu-card--draft { background: #fafbfc; border-style: dashed; border-color: #cbd5e1; }
 .cdu-card--clickable { cursor: pointer; }
-.cdu-card--clickable:hover { box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08); border-color: #ddd6fe; }
+.cdu-card--clickable:hover { box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08); border-color: var(--hm-admin-selected-border); }
 .cdu-card-media { position: relative; width: 110px; height: 78px; border-radius: 10px; overflow: hidden; flex-shrink: 0; }
 .cdu-card-image { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cdu-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -123,7 +123,7 @@
 }
 .cdu-card-date { font-size: 11px; color: #b0b8c4; }
 
-.cdu-card-title { font-size: 15px; font-weight: 800; color: #583cd6; line-height: 1.3; margin: 0; }
+.cdu-card-title { font-size: 15px; font-weight: 800; color: var(--hm-admin-primary); line-height: 1.3; margin: 0; }
 .cdu-card-title--clamp {
   display: -webkit-box; -webkit-line-clamp: 1; line-clamp: 1;
   -webkit-box-orient: vertical; overflow: hidden;
@@ -147,11 +147,11 @@
 }
 
 .cdu-showmore-btn {
-  align-self: center; font-family: inherit; font-size: 13px; font-weight: 700; color: #7c3aed;
-  background: #faf5ff; border: 1.5px solid #ddd6fe; border-radius: 8px;
+  align-self: center; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--hm-admin-primary);
+  background: var(--hm-admin-primary-subtle); border: 1.5px solid var(--hm-admin-selected-border); border-radius: 8px;
   padding: 8px 18px; cursor: pointer; margin-top: 4px;
 }
-.cdu-showmore-btn:hover { background: #f3e8ff; }
+.cdu-showmore-btn:hover { background: var(--hm-admin-primary-soft); }
 
 .cdu-empty { font-size: 13px; color: #94a3b8; text-align: center; padding: 20px 0; }
 
@@ -161,4 +161,24 @@
   .cdu-photo-btn { text-align: center; }
   .cdu-composer-buttons { width: 100%; }
   .cdu-composer-buttons button { flex: 1; }
+}
+
+@media (max-width: 760px) {
+  .cdu-modal-backdrop { padding: 0; }
+  .cdu-modal-box { width: 100%; max-width: none; max-height: 100dvh; border-radius: 0; padding: 16px; box-sizing: border-box; }
+  .cdu-composer, .cdu-composer-actions { min-width: 0; overflow-wrap: anywhere; }
+}
+.cdu-workspace .cdu-filter { width: auto; }
+.cdu-workspace .cdu-card { border: 1px solid var(--campaign-border); border-radius: 9px; background: #fff; box-shadow: none; }
+.cdu-workspace .cdu-card-media { width: 84px; min-width: 84px; }
+.cm-drawer .cdu-modal-close { position: static; order: 2; }
+.cm-drawer .cdu-composer { display: block; }
+.cm-drawer .cdu-preview-section { margin: 16px 0 0; padding: 12px 0 0; border-color: var(--campaign-border); }
+.cm-drawer .cdu-composer-buttons { flex-wrap: wrap; }
+.cdu-file { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.cdu-photo-btn:focus-within { outline: 2px solid var(--hm-admin-focus-ring); outline-offset: 2px; }
+.cdu-workspace .cdu-card-actions { background: transparent; }
+@media (max-width: 700px) {
+  .cdu-workspace .cdu-filter { width: 100%; }
+  .cdu-workspace .cdu-card-media { width: 54px; min-width: 54px; }
 }

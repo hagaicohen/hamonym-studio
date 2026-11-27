@@ -1,6 +1,8 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, InjectionToken, inject, signal } from '@angular/core';
 
-export type AnalyticsPreset = 'today' | '7d' | '30d' | '90d' | 'year' | 'custom';
+export type AnalyticsPreset = 'today' | '7d' | '30d' | '90d' | 'year' | 'calendar_12m' | 'all' | 'month' | 'last_month' | 'custom';
+
+export const CAMPAIGN_RANGE_DEFAULT = new InjectionToken<AnalyticsPreset>('campaign date range default');
 
 export interface AnalyticsRange {
   preset: AnalyticsPreset;
@@ -26,9 +28,38 @@ function toIsoDate(d: Date): string {
 // Resolves a preset to concrete from/to boundaries, in local time.
 // `to` is always "start of tomorrow" (exclusive) so the current day is
 // always fully included regardless of what time it is right now.
-function resolvePreset(preset: AnalyticsPreset): { from: string; to: string } {
+function currentDate(timeZone?: string): Date {
+  if (!timeZone) return new Date();
+  const parts = new Intl.DateTimeFormat('en', {
+    timeZone, year: 'numeric', month: 'numeric', day: 'numeric',
+  }).formatToParts(new Date());
+  const year = Number(parts.find(part => part.type === 'year')?.value);
+  const month = Number(parts.find(part => part.type === 'month')?.value);
+  const day = Number(parts.find(part => part.type === 'day')?.value);
+  return new Date(year, month - 1, day);
+}
+
+function resolvePreset(preset: AnalyticsPreset, timeZone?: string): { from: string; to: string } {
+  if (preset === 'all') return { from: '', to: '' };
+  if (preset === 'calendar_12m') {
+    const now = currentDate(timeZone);
+    return {
+      from: toIsoDate(new Date(now.getFullYear(), now.getMonth() - 11, 1)),
+      to: toIsoDate(new Date(now.getFullYear(), now.getMonth() + 1, 1)),
+    };
+  }
+  if (preset === 'month' || preset === 'last_month') {
+    const now = currentDate(timeZone);
+    const month = now.getMonth();
+    return {
+      from: toIsoDate(new Date(now.getFullYear(), month - (preset === 'last_month' ? 1 : 0), 1)),
+      to: toIsoDate(preset === 'last_month'
+        ? new Date(now.getFullYear(), month, 1)
+        : new Date(now.getFullYear(), month, now.getDate() + 1)),
+    };
+  }
   const days = PRESET_DAYS[preset] ?? PRESET_DAYS['30d']!;
-  const to = new Date();
+  const to = currentDate(timeZone);
   to.setHours(0, 0, 0, 0);
   to.setDate(to.getDate() + 1);
   const from = new Date(to);
@@ -44,10 +75,14 @@ function resolvePreset(preset: AnalyticsPreset): { from: string; to: string } {
 // string — see GLOBAL_DATE_RANGE_SPEC.md.
 @Injectable({ providedIn: 'root' })
 export class AnalyticsRangeService {
-  readonly activeRange = signal<AnalyticsRange>(this._loadSaved());
+  private readonly campaignDefault = inject(CAMPAIGN_RANGE_DEFAULT, { optional: true });
+  private readonly timeZone = this.campaignDefault ? 'Asia/Jerusalem' : undefined;
+  readonly activeRange = signal<AnalyticsRange>(this.campaignDefault
+    ? { preset: this.campaignDefault, ...resolvePreset(this.campaignDefault, this.timeZone) }
+    : this._loadSaved());
 
   setPreset(preset: Exclude<AnalyticsPreset, 'custom'>): void {
-    const { from, to } = resolvePreset(preset);
+    const { from, to } = resolvePreset(preset, this.timeZone);
     this._set({ preset, from, to });
   }
 
@@ -55,9 +90,25 @@ export class AnalyticsRangeService {
     this._set({ preset: 'custom', from, to });
   }
 
+  setRolling(count: number, unit: 'days' | 'months'): void {
+    if (!Number.isSafeInteger(count) || count < 1 || count > (unit === 'days' ? 3660 : 120)) return;
+    const to = currentDate(this.timeZone);
+    to.setDate(to.getDate() + 1);
+    const from = new Date(to);
+    if (unit === 'days') from.setDate(from.getDate() - count);
+    else {
+      const day = from.getDate();
+      from.setDate(1);
+      from.setMonth(from.getMonth() - count);
+      const daysInMonth = new Date(from.getFullYear(), from.getMonth() + 1, 0).getDate();
+      from.setDate(Math.min(day, daysInMonth));
+    }
+    this.setCustom(toIsoDate(from), toIsoDate(to));
+  }
+
   private _set(range: AnalyticsRange): void {
     this.activeRange.set(range);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(range));
+    if (!this.campaignDefault) localStorage.setItem(STORAGE_KEY, JSON.stringify(range));
   }
 
   // Re-resolves saved non-custom presets against "now" rather than trusting

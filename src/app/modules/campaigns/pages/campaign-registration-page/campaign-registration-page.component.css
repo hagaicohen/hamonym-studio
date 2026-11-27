@@ -8,7 +8,7 @@
 .rg-main { flex: 1; min-width: 0; }
 .rg-loading { text-align: center; padding: 60px 0; color: #94a3b8; width: 100%; }
 
-.rg-back { background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 700; color: #7c3aed; padding: 0; margin-bottom: 14px; }
+.rg-back { background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 700; color: var(--hm-admin-primary); padding: 0; margin-bottom: 14px; }
 .rg-title { font-size: 24px; font-weight: 800; color: #0f172a; margin: 0 0 4px; }
 .rg-subtitle { font-size: 14px; color: #64748b; margin: 0 0 20px; }
 
@@ -35,12 +35,12 @@
   padding: 9px 16px; border-radius: 8px; border: 1.5px solid transparent;
 }
 .rgf-btn-clear { background: #fff; color: #64748b; border-color: #e2e8f0; }
-.rgf-btn-save { background: linear-gradient(135deg, #7c3aed, #583cd6); color: #fff; flex: 1; }
+.rgf-btn-save { background: linear-gradient(135deg, var(--hm-admin-primary), var(--hm-admin-primary)); color: #fff; flex: 1; }
 .rgf-btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .rg-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
 .rg-card { background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06); border-radius: 14px; padding: 14px; }
-.rg-card-price { font-size: 15px; font-weight: 800; color: #583cd6; }
+.rg-card-price { font-size: 15px; font-weight: 800; color: var(--hm-admin-primary); }
 .rg-card-title { font-size: 14px; font-weight: 700; color: #0f172a; margin-top: 2px; }
 .rg-card-desc { font-size: 12px; color: #64748b; margin: 4px 0 0; }
 .rg-card-actions { display: flex; gap: 6px; margin-top: 10px; }

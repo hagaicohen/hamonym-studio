@@ -1,17 +1,19 @@
 <div class="asf-wrap">
-  <label class="asf-label">{{ 'publicPage.ambassadorSlugField.yourPersonalLink' | hmPublic }}</label>
-  <p class="asf-hint">{{ 'publicPage.ambassadorSlugField.chooseTheEndingOfYour' | hmPublic }}</p>
-
-  <div class="asf-input-row" dir="ltr" [class.asf-input-row--available]="status === 'available'" [class.asf-input-row--taken]="status === 'taken'">
-    <span class="asf-prefix">{{ campaignSlug }}/</span>
-    <input class="asf-input" type="text" dir="ltr" [ngModel]="value" (ngModelChange)="onInput($event)" maxlength="60" [placeholder]="'publicPage.ambassadorSlugField.janeDoe' | hmPublic">
+ <label class="asf-label">{{ 'publicPage.ambassadorSlugField.yourPersonalLink' | hmPublic }}
+  <div class="asf-input-row" dir="ltr" [class.asf-input-row--available]="status === 'available'" [class.asf-input-row--taken]="status === 'taken' || status === 'invalid'">
+   <span class="asf-prefix" [title]="prefix">{{ prefix }}</span>
+   <input class="asf-input" type="text" [disabled]="disabled" dir="ltr" [ngModel]="value" (ngModelChange)="onInput($event)" maxlength="60" autocomplete="off" spellcheck="false" placeholder="israel-cohen" [attr.aria-invalid]="status === 'taken' || status === 'invalid'" aria-label="הסיומת של הכתובת האישית">
+   <span *ngIf="status === 'checking'" class="asf-spinner" aria-hidden="true">{{ 'publicPage.ambassadorSlugField.checkingAvailability' | hmPublic }}</span>
+   <span *ngIf="status === 'available'" class="asf-check" aria-hidden="true">{{ 'publicPage.ambassadorSlugField.theLinkIsAvailable' | hmPublic }}</span>
+   <span *ngIf="status === 'taken' || status === 'invalid'" class="asf-cross" aria-hidden="true">×</span>
   </div>
-
-  <p class="asf-status asf-status--checking" *ngIf="status === 'checking'">{{ 'publicPage.ambassadorSlugField.checkingAvailability' | hmPublic }}</p>
-  <p class="asf-status asf-status--available" *ngIf="status === 'available'">{{ 'publicPage.ambassadorSlugField.theLinkIsAvailable' | hmPublic }}</p>
-  <p class="asf-status asf-status--taken" *ngIf="status === 'taken'">{{ 'publicPage.ambassadorSlugField.thisLinkIsAlreadyTaken' | hmPublic }}</p>
-  <p class="asf-status asf-status--short" *ngIf="status === 'too-short'">{{ 'publicPage.ambassadorSlugField.enterAtLeast2Characters' | hmPublic }}</p>
-  <p class="asf-status asf-status--error" *ngIf="status === 'error'">{{ 'publicPage.ambassadorSlugField.weCouldntCheckTheLinks' | hmPublic }}</p>
-
-  <p class="asf-preview">{{ 'publicPage.ambassadorSlugField.thisIsHowYourLink' | hmPublic }} <span dir="ltr">{{ publicUrl }}</span></p>
+ </label>
+ <div class="asf-status" role="status" aria-live="polite">
+  <span *ngIf="status === 'checking'">{{ 'publicPage.ambassadorSlugField.checkingAvailability' | hmPublic }}</span>
+  <span *ngIf="status === 'available'" class="asf-status--available">{{ 'publicPage.ambassadorSlugField.theLinkIsAvailable' | hmPublic }}</span>
+  <span *ngIf="status === 'taken'" class="asf-status--taken">{{ 'publicPage.ambassadorSlugField.thisLinkIsAlreadyTaken' | hmPublic }}</span>
+  <span *ngIf="status === 'invalid'" class="asf-status--taken">יש להזין 2–60 אותיות קטנות באנגלית, אותיות בעברית, מספרים או מקפים בין מילים.</span>
+  <span *ngIf="status === 'error'" class="asf-status--error">{{ 'publicPage.ambassadorSlugField.weCouldntCheckTheLinks' | hmPublic }}</span>
+ </div>
+ <p class="asf-preview" dir="ltr">{{ publicUrl }}</p>
 </div>

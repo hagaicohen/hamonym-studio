@@ -27,11 +27,11 @@ const SELF_HIDING_PREFIXES = ['/campaigns', '/dashboard'];
 const WORKSPACE_SHELL_SEGMENTS = [
   'dashboard', 'rewards', 'ambassadors', 'sponsors', 'registration',
   'registrations', 'donation', 'settings', 'visibility', 'donations',
-  'donors', 'reports',
+  'donors', 'reports', 'updates',
 ];
 
 function workspaceKey(url: string): string | null {
-  const match = url.split('?')[0].match(/^\/campaigns\/([^/]+)\/([^/]+)/);
+  const match = url.split(/[?#]/, 1)[0].match(/^\/campaigns\/([^/]+)\/([^/]+)/);
   if (!match) return null;
   const [, id, segment] = match;
   return WORKSPACE_SHELL_SEGMENTS.includes(segment) ? id : null;
@@ -50,6 +50,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private sub?: Subscription;
   readonly sharedHeader = signal(false);
   readonly studioWorkspace = signal(false);
+  readonly campaignWorkspace = signal(false);
   @ViewChild(RouterOutlet) private outlet?: RouterOutlet;
   private headerElement?: HTMLElement;
   private headerObserver?: ResizeObserver;
@@ -82,6 +83,7 @@ export class AppComponent implements OnInit, OnDestroy {
       pending.push(...route.children);
     }
     this.sharedHeader.set(shared);
+    this.campaignWorkspace.set(workspaceKey(this.router.url) !== null);
     this.studioWorkspace.set(studio);
     this.measureHeader();
   }

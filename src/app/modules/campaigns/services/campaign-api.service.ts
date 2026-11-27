@@ -309,6 +309,46 @@ export class CampaignApiService {
     );
   }
 
+  getRewardClaims(entityId: string, campaignId: string): Observable<ReadonlyMap<string, number>> {
+    const url = `${environment.apiUrl}/api/donations/entity/${encodeURIComponent(entityId)}`;
+    return this.http.get<{ rewards: { id: string; claimed: number }[] }>(url, {
+      headers: this.headers(), params: { campaignId, inventory: '1' },
+    }).pipe(map(result => new Map(result.rewards.map(reward => [reward.id, reward.claimed]))));
+  }
+
+  updateWorkspaceFields(
+    campaignId: string,
+    fields: Partial<{
+      title: string;
+      short_description: string;
+      campaign_lifecycle: CampaignDraft['campaignLifecycle'];
+      category: string;
+      manager_name: string;
+      target_amount: number;
+      start_date: string | null;
+      end_date: string | null;
+      campaign_location: NonNullable<CampaignDraft['layout']['campaignLocation']> | null;
+      enable_suggested_amounts: boolean;
+      allow_custom_amount: boolean;
+      allow_monthly_donation: boolean;
+      suggested_amounts: number[];
+      monthly_amounts: number[];
+      recurring_billing_mode: CampaignDraft['recurringBillingMode'];
+      recurring_installments_count: number;
+      rewards_enabled: boolean;
+      workspace_visibility: { blockId: string; visible: boolean; statKey?: string };
+      blocks: CampaignDraft['blocks'];
+      updates: CampaignDraft['updates'];
+      rewards: CampaignDraft['offerings'];
+      sponsors: CampaignDraft['sponsors'];
+      registration_options: CampaignDraft['registrationOptions'];
+    }>,
+  ): Observable<CampaignDraft> {
+    return this.http.patch<any>(`${this.apiUrl}/${campaignId}`, fields, {
+      headers: this.headers(),
+    }).pipe(map(row => this.fromSnake(row)));
+  }
+
   getById(campaignId: string): Observable<CampaignDraft> {
     return this.http.get<any>(`${this.apiUrl}/${campaignId}`, {
       headers: this.headers(),

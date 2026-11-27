@@ -1,51 +1,33 @@
 @if (error) {
-  <div class="db-error">{{ error }}</div>
+  <div class="db-error" role="alert">{{ error }}</div>
 }
-
 @if (!error && data) {
-<div class="db">
-
-  <!-- ══ PAGE HEADER — title + entity context + period control together,
-       the actual dashboard content (KPIs) starts right after. User identity
-       (name/role/avatar) already lives in the global topbar's context
-       switcher — not repeated here. ══ -->
-  <div class="db-page-header">
-    <div class="db-title-block">
-      <h1 class="db-title">דשבורד</h1>
-      <div class="db-subtitle">
-        @if (entityLogoUrl) {
-          <img class="db-subtitle-logo" [src]="entityLogoUrl" [alt]="entityName" />
-        }
-        <span>{{ entityName }}</span>
+<div class="workspace" dir="rtl">
+  <header class="heading">
+    <div>
+      <h1>דשבורד</h1>
+      <p>תמונת מצב של פעילות הגיוס · {{ entityName }}</p>
+    </div>
+    <div class="heading-controls">
+      @if (allAlerts.length) {
+        <button class="view-all-link" type="button" (click)="scrollToAlerts()">התראות ({{ allAlerts.length }})</button>
+      }
+      <div class="period">
+        <app-date-range-picker [campaign]="true" [allowAll]="false" [showRange]="true"></app-date-range-picker>
       </div>
     </div>
+  </header>
+  <section class="org-metrics">
 
-    <div class="db-header-actions">
-      <button type="button" class="dh-bell" (click)="scrollToAlerts()" title="להתראות" aria-label="מעבר להתראות">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75V9a6 6 0 10-12 0v.75a8.967 8.967 0 00-2.312 6.022c1.733.64 3.56 1.081 5.454 1.31m5.715 0a24.255 24.255 0 01-5.715 0m5.715 0a3 3 0 11-5.715 0" />
-        </svg>
-          @if (allAlerts.length > 0) {
-          <span class="dh-badge">{{ allAlerts.length }}</span>
-        }
-      </button>
-      <app-date-range-picker class="dashboard-date-picker"></app-date-range-picker>
-    </div>
-  </div>
-
-  <!-- ══ KPI GRID ══ -->
-  <section class="kpi-grid">
-
-    <div class="kpi-card success">
-      <div class="kpi-header kpi-h-centered">
+    <div class="stat success">
+      <div class="stat-label">
         <svg class="kpi-icon kpi-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 7a2 2 0 012-2h14a2 2 0 012 2v1H3V7zm0 3h18v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8zm13 4a1 1 0 100 2 1 1 0 000-2z"/>
         </svg>
         <span class="kpi-title">גויס בתקופה</span>
       </div>
-      <div class="kpi-value kpi-centered">{{ fmt(data.kpi.fundraisingThisMonth.total) }}</div>
-      <div class="kpi-trend kpi-centered"
+      <div class="kpi-value">{{ fmt(data.kpi.fundraisingThisMonth.total) }}</div>
+      <div class="kpi-trend"
            [class.trend-neutral]="pctAbs(data.kpi.fundraisingThisMonth.pctChange) === '0'"
            [class.trend-negative]="!pctIsUp(data.kpi.fundraisingThisMonth.pctChange)">
         @if (data.kpi.fundraisingThisMonth.pctChange === null) {
@@ -60,15 +42,15 @@
       </div>
     </div>
 
-    <div class="kpi-card info">
-      <div class="kpi-header kpi-h-centered">
+    <div class="stat info">
+      <div class="stat-label">
         <svg class="kpi-icon kpi-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M20 12v10H4V12M22 7H2v5h20V7zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/>
         </svg>
         <span class="kpi-title">תרומות בתקופה</span>
       </div>
-      <div class="kpi-value kpi-centered">{{ data.kpi.donationsThisMonth.count }}</div>
-      <div class="kpi-trend kpi-centered"
+      <div class="kpi-value">{{ data.kpi.donationsThisMonth.count }}</div>
+      <div class="kpi-trend"
            [class.trend-neutral]="pctAbs(data.kpi.donationsThisMonth.pctChange) === '0'"
            [class.trend-negative]="!pctIsUp(data.kpi.donationsThisMonth.pctChange)">
         @if (data.kpi.donationsThisMonth.pctChange === null) {
@@ -83,19 +65,19 @@
       </div>
     </div>
 
-    <div class="kpi-card primary">
-      <div class="kpi-header kpi-h-centered">
+    <div class="stat primary">
+      <div class="stat-label">
         <svg class="kpi-icon kpi-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/>
         </svg>
         <span class="kpi-title">קמפיינים פעילים</span>
       </div>
-      <div class="kpi-value kpi-centered">{{ data.kpi.activeCampaigns.active }}</div>
-      <div class="kpi-trend kpi-centered kpi-sub">מתוך {{ data.kpi.activeCampaigns.total }} קמפיינים</div>
+      <div class="kpi-value">{{ data.kpi.activeCampaigns.active }}</div>
+      <div class="kpi-trend kpi-sub">מתוך {{ data.kpi.activeCampaigns.total }} קמפיינים</div>
     </div>
 
-    <div class="kpi-card" [class.danger]="data.kpi.failedPayments.count > 0" [class.neutral]="data.kpi.failedPayments.count === 0">
-      <div class="kpi-header kpi-h-centered">
+    <div class="stat" [class.danger]="data.kpi.failedPayments.count > 0" [class.neutral]="data.kpi.failedPayments.count === 0">
+      <div class="stat-label">
         <svg class="kpi-icon kpi-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
           <line x1="9.5" y1="11" x2="14.5" y2="16" stroke-linecap="round"/>
@@ -103,10 +85,10 @@
         </svg>
         <span class="kpi-title">תשלומים שנכשלו</span>
       </div>
-      <div class="kpi-value kpi-centered" [class.text-danger]="data.kpi.failedPayments.count > 0">
+      <div class="kpi-value" [class.text-danger]="data.kpi.failedPayments.count > 0">
         {{ data.kpi.failedPayments.count }}
       </div>
-      <div class="kpi-trend kpi-centered kpi-sub">
+      <div class="kpi-trend kpi-sub">
         @if (data.kpi.failedPayments.totalLost > 0) {
           {{ fmt(data.kpi.failedPayments.totalLost) }} לא נגבו
         } @else {
@@ -117,28 +99,148 @@
 
   </section>
 
-  <!-- ══ ALERTS ══ -->
-  <section class="organization-status-area" aria-labelledby="organization-status-title">
-    <div class="organization-status-area-heading">
-      <h2 id="organization-status-title">סטטוס העמותות</h2>
-      <p>מצב האישור, הערות המנהל והשלמות נדרשות לכל עמותה.</p>
+  <section class="panel" aria-labelledby="organization-status-title">
+    <div class="panel-head">
+      <div>
+        <h2 id="organization-status-title">סטטוס הארגונים</h2>
+        <p>מצב אישור והשלמות נדרשות</p>
+      </div>
+      <a class="view-all-link" routerLink="/entities">לכל הארגונים ←</a>
     </div>
-  <app-organization-status-card [entity]="currentEntity.currentEntity()!" [selected]="true" [campaignCount]="data.kpi.activeCampaigns.total"></app-organization-status-card>
+    <app-organization-status-card [entity]="currentEntity.currentEntity()!" [selected]="true" [campaignCount]="data.kpi.activeCampaigns.total"></app-organization-status-card>
 
-  <app-other-organizations [selectedId]="currentEntity.currentEntity()!.id"></app-other-organizations>
+    <app-other-organizations [selectedId]="currentEntity.currentEntity()!.id"></app-other-organizations>
 
-  @if (noCampaigns) {
-    <section class="organization-first-campaign">
-      <h2>הקמפיין הראשון שלכם מתחיל כאן</h2>
-      <p>כאן תופיע הפעילות לאחר יצירת קמפיין. אפשר להכין טיוטה כבר עכשיו; הפרסום וקבלת התרומות כפופים לאישורים ולהגדרות הקיימים.</p>
-      @if (!nextAction.ready && !['rejected', 'suspended'].includes(currentEntity.currentEntity()?.status)) {
-        <a class="btn-new-campaign first-campaign-action" [routerLink]="createCampaignPath">+ קמפיין חדש</a>
-      }
-    </section>
-  }
-
+    @if (noCampaigns) {
+      <section class="organization-first-campaign">
+        <h2>הקמפיין הראשון שלכם מתחיל כאן</h2>
+        <p>כאן תופיע הפעילות לאחר יצירת קמפיין. אפשר להכין טיוטה כבר עכשיו; הפרסום וקבלת התרומות כפופים לאישורים ולהגדרות הקיימים.</p>
+        @if (!nextAction.ready && !['rejected', 'suspended'].includes(currentEntity.currentEntity()?.status)) {
+          <a class="btn-new-campaign first-campaign-action" [routerLink]="createCampaignPath">+ קמפיין חדש</a>
+        }
+      </section>
+    }
   </section>
 
+  <div class="dashcols">
+    <div class="panel recent">
+      <div class="panel-head">
+        <h2>תרומות אחרונות</h2>
+        <a class="view-all-link" routerLink="/donations">לכל התרומות ←</a>
+      </div>
+      <div class="mobile-sort">
+        <label>מיון לפי
+          <app-dropdown [value]="donationSort" (selectionChange)="setDonationSort($event)">
+            <app-dropdown-option value="date">זמן</app-dropdown-option><app-dropdown-option value="amount">סכום</app-dropdown-option>
+            <app-dropdown-option value="donor">תורם</app-dropdown-option><app-dropdown-option value="campaign">קמפיין</app-dropdown-option>
+          </app-dropdown>
+        </label>
+        <button type="button" (click)="setDonationSort(donationSort)" aria-label="שינוי כיוון המיון">↕</button>
+      </div>
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th scope="col" [attr.aria-sort]="donationSort === 'donor' ? (donationDescending ? 'descending' : 'ascending') : null"><button type="button" (click)="setDonationSort('donor')">תורם ↕</button></th>
+            <th scope="col" [attr.aria-sort]="donationSort === 'campaign' ? (donationDescending ? 'descending' : 'ascending') : null"><button type="button" (click)="setDonationSort('campaign')">קמפיין ↕</button></th>
+            <th scope="col" [attr.aria-sort]="donationSort === 'amount' ? (donationDescending ? 'descending' : 'ascending') : null"><button type="button" (click)="setDonationSort('amount')">סכום ↕</button></th>
+            <th scope="col" [attr.aria-sort]="donationSort === 'date' ? (donationDescending ? 'descending' : 'ascending') : null"><button type="button" (click)="setDonationSort('date')">זמן ↕</button></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (d of displayDonations; track d.id) {
+            <tr>
+              <td>{{ d.donor_name }}</td>
+              <td class="td-campaign">{{ d.campaign_title }}</td>
+              <td class="td-amount"><bdi>{{ fmt(d.amount) }}</bdi></td>
+              <td class="td-muted">{{ timeAgo(d.completed_at) }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="4" class="empty-state-row">אין עדיין תרומות</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="stack">
+      <div id="failed-payments-section" class="panel">
+        <div class="panel-head">
+          <h2>תשלומים שנכשלו</h2>
+          @if (displayFailedPayments.length > 0) {
+            <a class="view-all-link" routerLink="/campaigns">לכל התשלומים שנכשלו</a>
+          }
+        </div>
+        @if (displayFailedPayments.length > 0) {
+        <div class="sub-alert-box">
+          <div class="sub-alert-text">
+            <span class="sub-alert-count">{{ displayFailedPayments.length }} תשלומים נכשלו בתצוגה</span>
+            <span class="sub-alert-sub">סה"כ {{ fmt(displayFailedTotal) }} שלא נגבו</span>
+          </div>
+          <svg class="sub-alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13" stroke-linecap="round"/>
+            <circle cx="12" cy="17" r="0.8" fill="currentColor" stroke="none"/>
+          </svg>
+        </div>
+        <table class="compact-table">
+          <thead>
+            <tr><th>סיבה</th><th>סכום</th><th>קמפיין</th><th>תאריך</th></tr>
+          </thead>
+          <tbody>
+            @for (f of displayFailedPayments; track f.id) {
+              <tr>
+                <td class="text-danger">{{ failureReason(f) }}</td>
+                <td class="td-amount">{{ fmt(f.amount) }}</td>
+                <td>{{ f.campaign_title }}</td>
+                <td class="td-muted">{{ fmtDate(f.updated_at) }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="4" class="empty-state-row">אין תשלומים שנכשלו</td></tr>
+            }
+          </tbody>
+        </table>
+        } @else {
+          <div class="failed-payments-empty">אין תשלומים שנכשלו בתקופה המוצגת</div>
+        }
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>שגרירים מובילים</h2>
+          <a class="view-all-link" routerLink="/ambassadors">לכל השגרירים ←</a>
+        </div>
+        <ul class="data-list">
+          @for (amb of displayAmbassadors; track amb.id; let i = $index) {
+            <li class="amb-list-item">
+              <div class="amb-list-row">
+                <div class="list-right">
+                  <span class="rank">{{ i + 1 }}</span>
+                  <div class="amb-avatar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
+                      <circle cx="12" cy="8" r="4"/>
+                      <path stroke-linecap="round" d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                    </svg>
+                  </div>
+                  <span class="ambassador-name">{{ amb.full_name }}</span>
+                </div>
+                <strong class="amb-amount">{{ fmt(amb.raised_total) }}</strong>
+              </div>
+              @if (amb.goal_amount) {
+                <div class="amb-progress-row">
+                  <div class="amb-progress-bar">
+                    <div class="amb-progress-fill" [style.width.%]="ambProgressPct(amb) > 100 ? 100 : ambProgressPct(amb)"></div>
+                  </div>
+                  <span class="amb-progress-pct">{{ ambProgressPct(amb) }}%</span>
+                </div>
+              }
+            </li>
+          } @empty {
+            <li class="empty-state-row">אין עדיין שגרירים</li>
+          }
+        </ul>
+      </div>
+
+    </div>
+  </div>
   @if (allAlerts.length > 0) {
   <section class="alerts-section" id="alerts-section">
     <div class="alerts-card">
@@ -212,129 +314,9 @@
   </section>
   }
 
-  <!-- Campaigns-list preview removed 2026-08-05 — redundant with /campaigns
-       (sidebar tab one click away); the alerts section above already
-       surfaces anything that actually needs attention (goal 90%, ending
-       soon, no donations, unpublished drafts) in a more targeted way than a
-       raw grid of every campaign. See docs/ — Campaign Management Dashboard
-       work this same week established the "don't duplicate a screen that
-       already exists" principle; this applies it in reverse (retiring a
-       duplicate instead of avoiding building one). -->
-
-
-  <!-- ══ BOTTOM 3-COL GRID ══ -->
-  <section class="bottom-tables-grid">
-
-    <!-- שגרירים מובילים -->
-    <div class="table-card">
-      <div class="card-header-flex">
-        <h3>שגרירים מובילים</h3>
-        <a class="view-all-link" routerLink="/campaigns">לכל השגרירים</a>
-      </div>
-      <ul class="data-list">
-        @for (amb of displayAmbassadors; track amb.id; let i = $index) {
-          <li class="amb-list-item">
-            <div class="amb-list-row">
-              <div class="list-right">
-                <span class="rank">{{ i + 1 }}</span>
-                <div class="amb-avatar">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
-                    <circle cx="12" cy="8" r="4"/>
-                    <path stroke-linecap="round" d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-                  </svg>
-                </div>
-                <span class="ambassador-name">{{ amb.full_name }}</span>
-              </div>
-              <strong class="amb-amount">{{ fmt(amb.raised_total) }}</strong>
-            </div>
-            @if (amb.goal_amount) {
-              <div class="amb-progress-row">
-                <div class="amb-progress-bar">
-                  <div class="amb-progress-fill" [style.width.%]="ambProgressPct(amb) > 100 ? 100 : ambProgressPct(amb)"></div>
-                </div>
-                <span class="amb-progress-pct">{{ ambProgressPct(amb) }}%</span>
-              </div>
-            }
-          </li>
-        } @empty {
-          <li class="empty-state-row">אין עדיין שגרירים</li>
-        }
-      </ul>
-    </div>
-
-    <!-- תשלומים שנכשלו -->
-    <div id="failed-payments-section" class="table-card">
-      <div class="card-header-flex">
-        <h3>תשלומים שנכשלו</h3>
-        @if (displayFailedPayments.length > 0) {
-          <a class="view-all-link" routerLink="/campaigns">לכל התשלומים שנכשלו</a>
-        }
-      </div>
-      @if (displayFailedPayments.length > 0) {
-      <div class="sub-alert-box">
-        <div class="sub-alert-text">
-          <span class="sub-alert-count">{{ displayFailedPayments.length }} תשלומים נכשלו השבוע</span>
-          <span class="sub-alert-sub">סה"כ {{ fmt(displayFailedTotal) }} שלא נגבו</span>
-        </div>
-        <svg class="sub-alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-          <line x1="12" y1="9" x2="12" y2="13" stroke-linecap="round"/>
-          <circle cx="12" cy="17" r="0.8" fill="currentColor" stroke="none"/>
-        </svg>
-      </div>
-      <table class="compact-table">
-        <thead>
-          <tr><th>סיבה</th><th>סכום</th><th>קמפיין</th><th>תאריך</th></tr>
-        </thead>
-        <tbody>
-          @for (f of displayFailedPayments; track f.id) {
-            <tr>
-              <td class="text-danger">{{ failureReason(f) }}</td>
-              <td class="td-amount">{{ fmt(f.amount) }}</td>
-              <td>{{ f.campaign_title }}</td>
-              <td class="td-muted">{{ fmtDate(f.updated_at) }}</td>
-            </tr>
-          } @empty {
-            <tr><td colspan="4" class="empty-state-row">אין תשלומים שנכשלו</td></tr>
-          }
-        </tbody>
-      </table>
-      } @else {
-        <div class="failed-payments-empty">אין תשלומים שנכשלו בתקופה המוצגת</div>
-      }
-    </div>
-
-    <!-- תרומות אחרונות -->
-    <div class="table-card">
-      <div class="card-header-flex">
-        <h3>תרומות אחרונות</h3>
-        <a class="view-all-link" routerLink="/campaigns">לכל התרומות</a>
-      </div>
-      <table class="compact-table">
-        <thead>
-          <tr><th>סכום</th><th>קמפיין</th><th>תורם</th><th>זמן</th></tr>
-        </thead>
-        <tbody>
-          @for (d of displayDonations; track d.id) {
-            <tr>
-              <td class="td-amount">{{ fmt(d.amount) }}</td>
-              <td class="td-campaign">{{ d.campaign_title }}</td>
-              <td>{{ d.donor_name }}</td>
-              <td class="td-muted">{{ timeAgo(d.completed_at) }}</td>
-            </tr>
-          } @empty {
-            <tr><td colspan="4" class="empty-state-row">אין עדיין תרומות</td></tr>
-          }
-        </tbody>
-      </table>
-    </div>
-
-  </section>
-
-  <!-- ══ CHART ══ -->
   <section class="chart-section">
     <div class="section-header">
-      <h2>גיוסים ב-30 הימים האחרונים</h2>
+      <h2>גיוסים בתקופה</h2>
       <a class="view-all-link" routerLink="/reports">לכל הדוחות</a>
     </div>
     <div class="chart-wrapper">

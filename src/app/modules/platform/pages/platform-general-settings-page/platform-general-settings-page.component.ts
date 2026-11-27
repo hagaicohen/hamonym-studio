@@ -1,3 +1,5 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -6,7 +8,7 @@ import { SimulationClockService, SimulationClockStatus } from '../../services/si
 import { PlatformService } from '../../services/platform.service';
 import { CampaignResetService, CampaignResetStatus } from '../../services/campaign-reset.service';
 
-type SettingsTab = 'billing' | 'simulation';
+type SettingsTab = 'billing' | 'simulation' | 'design';
 
 // Platform Admin "הגדרות כלליות" (2026-09-14j) -- VAT moved here from
 // "חיובי עמותות" because it is a Hamonym system setting, not an
@@ -21,7 +23,7 @@ type SettingsTab = 'billing' | 'simulation';
 @Component({
   selector: 'app-platform-general-settings-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [DropdownComponent, DropdownOptionComponent, CommonModule, FormsModule, RouterLink],
   templateUrl: './platform-general-settings-page.component.html',
   styleUrl: './platform-general-settings-page.component.css',
 })
@@ -31,7 +33,15 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
   private platformService = inject(PlatformService);
   private campaignResetService = inject(CampaignResetService);
 
-  tab: SettingsTab = 'billing';
+  readonly developerTools = inject(ActivatedRoute, { optional: true })?.snapshot.data['developerTools'] === true;
+  tab: SettingsTab = this.developerTools ? 'simulation' : 'billing';
+  readonly defaultColor = '#4e3b99';
+  readonly colorPalette = [this.defaultColor, '#2563a0', '#206b57', '#374151', '#9b4b35'];
+  colorDraft = this.defaultColor;
+
+  get previewColor(): string {
+    return /^#[0-9a-fA-F]{6}$/.test(this.colorDraft) ? this.colorDraft : this.defaultColor;
+  }
 
   systemVatRatePercent: number | null = null;
   vatSettingLoading = true;
@@ -42,9 +52,8 @@ export class PlatformGeneralSettingsPageComponent implements OnInit {
   vatSaveError: string | null = null;
 
   ngOnInit(): void {
-    this.loadVatSetting();
-    this.loadClockStatus();
-    this.loadCampaigns();
+    if (this.developerTools) { this.loadClockStatus(); this.loadCampaigns(); }
+    else this.loadVatSetting();
   }
 
   // The settings clock is independent of FIN-11 authorization and production time.

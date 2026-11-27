@@ -13,7 +13,7 @@ import { LucideAngularModule, ImageIcon, Pencil, TriangleAlert } from 'lucide-an
 
   templateUrl: './entity-profile-section-view.component.html',
 
-  styleUrls: ['./entity-profile-section-view.component.css'],
+  styleUrls: ['./entity-profile-section-view.component.css', '../../entity-settings/entity-settings-section.css'],
 })
 export class EntityProfileSectionViewComponent {
   @Input()

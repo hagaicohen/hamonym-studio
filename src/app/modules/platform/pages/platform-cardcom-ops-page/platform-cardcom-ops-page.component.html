@@ -1,8 +1,8 @@
-<div class="plat-page">
+<div class="plat-page sa-v1 cm-v7">
 
   <div class="plat-header">
     <div>
-      <h1 class="plat-title">תרומות</h1>
+      <h1 class="plat-title">תרומות ועסקאות</h1>
       <p class="plat-subtitle">כל התרומות שבוצעו בפלטפורמה. ניתן לחפש תרומה ולבדוק את מצבה.</p>
     </div>
   </div>
@@ -54,7 +54,7 @@
 
   <!-- Primary content: cross-entity donations browser -->
   <div class="plat-card">
-    <h3 class="plat-section-title">כל התרומות</h3>
+    <h2 class="plat-section-title">כל העסקאות</h2>
 
     <div class="ops-donations-toolbar">
       <input
@@ -65,12 +65,22 @@
         (input)="onDonationsSearchInput()"
         (keyup.enter)="onDonationsSearch()"
       />
-      <select class="ops-status-select" data-form-style="custom" [(ngModel)]="donationsStatus" (ngModelChange)="onDonationsStatusChange()">
-        <option value="">כל הסטטוסים</option>
-        <option value="paid">שולם</option>
-        <option value="pending">ממתין</option>
-        <option value="failed">נכשל</option>
-      </select>
+      <app-date-range-picker [fixedOptions]="donationPeriods" [fixedValue]="donationsPeriod"
+        (fixedValueChange)="donationsPeriod = $event; onDonationsStatusChange()" />
+      <app-entity-combobox [entities]="organizationOptions" [selectedId]="donationsEntityId || undefined" placeholder="כל הארגונים"
+        (selectedIdChange)="donationsEntityId = $event || ''; donationsCampaignId = ''; onDonationsStatusChange()" />
+      <app-entity-combobox [entities]="campaignOptions" [selectedId]="donationsCampaignId || undefined" placeholder="כל הקמפיינים"
+        (selectedIdChange)="donationsCampaignId = $event || ''; onDonationsStatusChange()" />
+      <app-dropdown class="ops-status-select" [(ngModel)]="donationsStatus" (ngModelChange)="onDonationsStatusChange()">
+        <app-dropdown-option value="">כל הסטטוסים</app-dropdown-option>
+        <app-dropdown-option value="paid">שולם</app-dropdown-option>
+        <app-dropdown-option value="pending">ממתין</app-dropdown-option>
+        <app-dropdown-option value="failed">נכשל</app-dropdown-option>
+      </app-dropdown>
+      <app-dropdown label="סינון שגרירים" placeholder="כל השגרירים" disabled title="סינון שגרירים רוחבי דורש תמיכת API">
+        <app-dropdown-option value="">כל השגרירים</app-dropdown-option>
+        <app-dropdown-option value="unassigned">ללא שיוך לשגריר</app-dropdown-option>
+      </app-dropdown>
       <app-column-picker
         [columns]="donationsColumns"
         storageKey="platformColumns_donations"
@@ -78,6 +88,7 @@
       ></app-column-picker>
     </div>
 
+    @if (filterOptionsError) { <p class="sa-empty" role="status">{{ filterOptionsError }}</p> }
     @if (donationsError) {
       <div class="ops-action-error">{{ donationsError }}</div>
     } @else if (donationsLoading) {
@@ -96,6 +107,7 @@
               @if (visibleDonationsColumns.has('amount')) { <th class="sortable" (click)="sortDonationsBy('amount')">סכום{{ donationsSortIndicator('amount') }}</th> }
               @if (visibleDonationsColumns.has('type')) { <th class="sortable" (click)="sortDonationsBy('type')">סוג{{ donationsSortIndicator('type') }}</th> }
               @if (visibleDonationsColumns.has('status')) { <th class="sortable" (click)="sortDonationsBy('status')">סטטוס{{ donationsSortIndicator('status') }}</th> }
+              <th scope="col">שגריר</th><th scope="col">פרטים</th>
             </tr>
           </thead>
           <tbody>
@@ -124,19 +136,38 @@
                     </span>
                   </td>
                 }
+                <td>{{ donation.ambassador_name || '—' }}</td><td><button type="button" class="cm-button" (click)="selectedDonation = donation; receiptDownloadError = ''">פרטים</button></td>
               </tr>
             }
           </tbody>
         </table>
       </div>
 
-      <div class="ops-pager">
-        <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="donationsPage === 0" (click)="prevDonationsPage()">הקודם</button>
-        <span class="ops-pager-info">עמוד {{ donationsPage + 1 }} מתוך {{ donationsTotalPages }} · סה"כ {{ donationsTotal }}</span>
-        <button type="button" class="ops-btn ops-btn-secondary ops-btn-sm" [disabled]="donationsPage >= donationsTotalPages - 1" (click)="nextDonationsPage()">הבא</button>
-      </div>
+      <app-management-pagination [page]="donationsPage" [total]="donationsTotal" [pageSize]="donationsLimit" (pageChange)="donationsPage = $event; loadDonations()" />
     }
   </div>
+
+  @if (selectedDonation; as donation) {
+    <app-admin-details-drawer heading="פרטי עסקה" (closed)="selectedDonation = null">
+      <dl class="sa-detail-list">
+        <dt>סכום</dt><dd><bdi>{{ donation.amount | currency:(donation.currency || 'ILS') }}</bdi></dd>
+        <dt>תורם</dt><dd>{{ donation.is_anonymous ? 'אנונימי' : (donation.donor_name || '—') }}</dd>
+        <dt>עמותה</dt><dd>{{ donation.entity_name }}</dd>
+        <dt>קמפיין</dt><dd>{{ donation.campaign_title }}</dd>
+        <dt>שגריר</dt><dd>{{ donation.ambassador_name || '—' }}</dd>
+        <dt>סוג תרומה</dt><dd>{{ donation.is_recurring ? 'הוראת קבע' : 'חד פעמית' }}</dd>
+        <dt>סטטוס</dt><dd>{{ donationStatusLabel(donation.status) }}</dd>
+        <dt>קבלה רשמית</dt><dd>{{ donation.receipt_id ? 'זמינה להורדה' : '—' }}</dd>
+        <dt>תאריך יצירה</dt><dd><bdi>{{ fmtDateTime(donation.created_at) }}</bdi></dd>
+        @if (donation.failure_reason) { <dt>סיבת כשל</dt><dd>{{ donation.failure_reason }}</dd> }
+      </dl>
+      @if (receiptDownloadError) { <p role="alert">{{ receiptDownloadError }}</p> }
+      <div drawerActions class="sa-drawer-actions">
+        <button type="button" class="cm-button" (click)="selectedDonation = null">סגור</button>
+        @if (donation.receipt_id) { <button type="button" class="cm-button cm-primary" [disabled]="receiptDownloadBusy" (click)="downloadOfficialReceipt(donation.receipt_id)">הורדת קבלה</button> }
+      </div>
+    </app-admin-details-drawer>
+  }
 
   <!-- Focused per-group anomaly drawer -- opened from the anomaly panel
        above. No "סמן כנבדק" here (2026-09-15s): the earlier audit found no

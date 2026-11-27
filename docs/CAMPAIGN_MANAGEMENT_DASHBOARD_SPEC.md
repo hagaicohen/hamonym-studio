@@ -176,6 +176,8 @@ Workspace טוב הוא מרכז עבודה, לא לוח מחוונים סטטי
 
 ## Migration Plan
 
+> Historical plan. The [current project instructions](../AGENTS.md) freeze the Builder. Campaign management implementation awaits an approved redesign specification. The [master plan](HAMONYM_MASTER_PLAN.md) is for task tracking.
+
 זו **Migration**, לא פיתוח פיצ'ר חדש: מעבירים יכולת אחת בכל פעם מה-Builder ל-Workspace, מוודאים שהיא עובדת ב-Production, ורק אז מסירים אותה מה-Builder.
 
 **כלל הברזל:** 🔴/🟡 נשארים גלויים ופעילים ב-Builder כרגיל. רק כאשר תא "Workspace" הופך 🟢 **ומאומת ב-Production**, מסירים את המקבילה מה-Builder.

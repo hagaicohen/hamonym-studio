@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignWorkspaceContextService } from '../../services/campaign-workspace-context.service';
 import { CampaignDraft, RegistrationOption } from '../../services/campaign-studio-state.service';
@@ -15,7 +15,7 @@ import { HmIconComponent } from '../../../../shared/ui/design-system/icon.compon
 @Component({
   selector: 'app-campaign-registration-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule],
+  imports: [RouterLink, HmIconComponent, CommonModule, FormsModule],
   templateUrl: './campaign-registration-page.component.html',
   styleUrl: './campaign-registration-page.component.css',
 })
@@ -58,7 +58,7 @@ export class CampaignRegistrationPageComponent implements OnInit {
       );
       this.draft = { ...this.draft, registrationOptions };
     } else {
-      const item = { ...this.option, id: Date.now().toString() };
+      const item = { ...this.option, id: crypto.randomUUID() };
       this.draft = { ...this.draft, registrationOptions: [...this.draft.registrationOptions, item] };
     }
     this.persist();
@@ -100,8 +100,8 @@ export class CampaignRegistrationPageComponent implements OnInit {
   private persist(): void {
     if (!this.draft) return;
     this.saving = true;
-    this.campaignApi.update(this.campaignId, this.draft).subscribe({
-      next: (updated) => { this.saving = false; this.ctx.setDraft(updated); },
+    this.campaignApi.updateWorkspaceFields(this.campaignId, { registration_options: this.draft.registrationOptions }).subscribe({
+      next: (updated) => { this.saving = false; this.draft = updated; this.ctx.setDraft(updated); },
       error: () => { this.saving = false; },
     });
   }

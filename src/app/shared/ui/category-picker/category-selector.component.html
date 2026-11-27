@@ -25,7 +25,8 @@
       <ul class="hm-chip-list" [attr.aria-labelledby]="inputId + '-selected'">
         @for (id of selectedIds; track id) {
           <li class="hm-chip hm-chip--picked">
-            <span class="hm-cat-emoji" aria-hidden="true">{{ emojiForId(id) }}</span><span>{{ labelOf(id) }}</span>
+            <ng-container [ngTemplateOutlet]="categoryIcon" [ngTemplateOutletContext]="{ $implicit: id }"></ng-container>
+            <span>{{ labelOf(id) }}</span>
             <button type="button" class="hm-chip-remove" [attr.aria-label]="'הסר ' + labelOf(id)" (click)="remove(id)">
               <lucide-icon [img]="X" [size]="14" [strokeWidth]="2" aria-hidden="true"></lucide-icon>
             </button>
@@ -52,7 +53,7 @@
               [attr.aria-pressed]="isSelected(category.id)"
               (click)="toggle(category.id)"
             >
-              <span class="hm-cat-emoji" aria-hidden="true">{{ emoji(category) }}</span>
+              <ng-container [ngTemplateOutlet]="categoryIcon" [ngTemplateOutletContext]="{ $implicit: category.id }"></ng-container>
               <span class="hm-cat-option-label">{{ categoryLabel(category) }}</span>
               @if (isSelected(category.id)) { <lucide-icon [img]="Check" [size]="14" [strokeWidth]="2" aria-hidden="true"></lucide-icon> }
             </button>
@@ -68,3 +69,13 @@
   </div>
   @if (!multiple) { <p class="hm-cat-empty" role="status" aria-live="polite">{{ selectedIds.length ? 'נבחר: ' + labelOf(selectedIds[0]) : 'לא נבחר תחום ראשי' }}</p> }
 </div>
+
+<ng-template #categoryIcon let-id>
+  @if (iconForId(id); as icon) {
+    <svg class="hm-cat-icon" [attr.viewBox]="icon.viewBox" fill="currentColor" aria-hidden="true" focusable="false">
+      @for (path of icon.paths; track $index) {
+        <path [attr.d]="path"></path>
+      }
+    </svg>
+  }
+</ng-template>

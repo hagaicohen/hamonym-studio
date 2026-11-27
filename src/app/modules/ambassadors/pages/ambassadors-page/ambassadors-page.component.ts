@@ -1,3 +1,5 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
+import { ManagementPaginationComponent } from '../../../../shared/components/management-pagination/management-pagination.component';
 import { Component, OnInit, inject, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -5,7 +7,8 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
 import { CurrentEntityService } from '../../../../core/services/current-entity.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-
+
+
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
 interface Kpi {
   totalAmbassadors:  number;
@@ -54,7 +57,7 @@ const COLUMNS_STORAGE_KEY = 'ambassadors-hidden-columns';
 @Component({
   selector: 'app-ambassadors-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule],
+  imports: [DropdownComponent, DropdownOptionComponent, ManagementPaginationComponent, HmIconComponent, CommonModule, FormsModule],
   templateUrl: './ambassadors-page.component.html',
   styleUrl: './ambassadors-page.component.css',
 })
@@ -86,7 +89,7 @@ export class AmbassadorsPageComponent implements OnInit {
   get totalPages(): number { return Math.max(1, Math.ceil(this.kpi.totalAmbassadors / this.limit)); }
 
   readonly columnDefs = COLUMN_DEFS;
-  hiddenColumns = new Set<ColumnKey>();
+  hiddenColumns = new Set<ColumnKey>(['email', 'phone']);
   columnsMenuOpen = false;
 
   linkCopied = false;
@@ -145,10 +148,6 @@ export class AmbassadorsPageComponent implements OnInit {
   prevPage(): void { if (this.page > 0) { this.page--; this.load(); } }
   nextPage(): void { if (this.page < this.totalPages - 1) { this.page++; this.load(); } }
 
-  onLimitChange(): void {
-    this.page = 0;
-    this.load();
-  }
 
   openDrawer(a: AmbassadorRow): void { this.selected = a; this.linkCopied = false; }
   closeDrawer(): void               { this.selected = null; }

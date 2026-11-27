@@ -1,26 +1,22 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { MoneyInputDirective } from '../../../../shared/directives/money-input.directive';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignWorkspaceContextService } from '../../services/campaign-workspace-context.service';
 import { CampaignDraft, CampaignLocation, CampaignLocationType } from '../../services/campaign-studio-state.service';
+import { campaignEditPath } from '../../campaign-editor-route';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { ENTITY_CATEGORIES } from '../../../../shared/config/entity-categories';
-
+import { CategorySelectorComponent } from '../../../../shared/ui/category-picker/category-selector.component';
+
+
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
-// Dedicated page (2026-08-06 architecture reset) — CONTENT/setup fields
-// only, no Design (no colors/layout/placement — those stay in the Builder).
-// Saves per field on (change), same full-draft round trip
-// (campaignApi.update) the Builder's own topbar uses — no partial-update
-// mechanism, no shared CampaignStudioStateService (this page is
-// self-sufficient: fetch → mutate → save, same pattern as Updates).
-// Slug/status are deliberately not editable here — see the "why" notes
-// inline below.
 @Component({
   selector: 'app-campaign-settings-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule],
+  imports: [MoneyInputDirective, CategorySelectorComponent, RouterLink, HmIconComponent, CommonModule, FormsModule],
   templateUrl: './campaign-settings-page.component.html',
   styleUrl: './campaign-settings-page.component.css',
 })
@@ -36,7 +32,7 @@ export class CampaignSettingsPageComponent implements OnInit {
   // here to match this page's own "simple, rarely-changed metadata"
   // pattern rather than replicating the Builder's custom autocomplete
   // widget (2026-09-23).
-  readonly categories = ENTITY_CATEGORIES;
+
 
   // Campaign Location (2026-09-29) — Step 1 in the Builder (where this field
   // was first added) is one of PUBLISHED_GATED_STEPS (campaign-editor
@@ -68,6 +64,41 @@ export class CampaignSettingsPageComponent implements OnInit {
   saving = false;
   saveError: string | null = null;
   saved = false;
+  categoryOpen = false;
+  candidateCategory: string[] = [];
+  private pending: Parameters<CampaignApiService['updateWorkspaceFields']>[1] = {};
+
+  get selectedCategoryLabel(): string {
+    return ENTITY_CATEGORIES.find(category => category.id === this.draft?.category)?.label || 'בחירת קטגוריה';
+  }
+
+  get dirty(): boolean { return Object.keys(this.pending).length > 0; }
+
+  openCategory(): void {
+    this.candidateCategory = this.draft?.category ? [this.draft.category] : [];
+    this.categoryOpen = true;
+  }
+
+  applyCategory(): void {
+    this.patchText('category', this.candidateCategory[0] || '');
+    this.categoryOpen = false;
+  }
+
+  cancel(): void {
+    this.pending = {};
+    this.draft = this.ctx.draft();
+    this.saveError = null;
+    this.saved = false;
+  }
+
+  setLifecycle(ongoing: boolean): void {
+    if (!this.draft) return;
+    const campaignLifecycle = ongoing ? 'ongoing' : 'one-time';
+    this.draft = { ...this.draft, campaignLifecycle };
+    this.stage({ campaign_lifecycle: campaignLifecycle });
+  }
+
+  get builderLink(): string[] { return campaignEditPath(this.campaignId); }
 
   get isOngoing(): boolean { return this.draft?.campaignLifecycle === 'ongoing'; }
 
@@ -88,35 +119,24 @@ export class CampaignSettingsPageComponent implements OnInit {
 
   back(): void { this.router.navigate(['/campaigns', this.campaignId, 'dashboard']); }
 
-  patchText(field: 'title' | 'category' | 'managerName', value: string): void {
+  patchText(field: 'title' | 'category' | 'managerName' | 'shortDescription', value: string): void {
     if (!this.draft) return;
     this.draft = { ...this.draft, [field]: value };
-    this.persist();
+    const key = field === 'managerName' ? 'manager_name' : field === 'shortDescription' ? 'short_description' : field;
+    this.stage({ [key]: value });
   }
 
-  formatTargetInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const digits = input.value.replace(/[^0-9]/g, '');
-    input.value = digits ? Number(digits).toLocaleString('he-IL') : '';
-  }
-
-  patchTarget(value: string): void {
-    if (!this.draft) return;
-    const n = Number(value.replace(/[^0-9]/g, '')) || 0;
-    this.draft = { ...this.draft, targetAmount: n };
-    this.persist();
-  }
-
-  // Display only — patchTarget above already strips non-digit characters
-  // when parsing the input back, so commas round-trip safely.
-  formatMoney(n: number): string {
-    return (n || 0).toLocaleString('he-IL');
+  patchTarget(value: number | null): void {
+    if (!this.draft || value === null || value < 0) return;
+    this.draft = { ...this.draft, targetAmount: value };
+    this.stage({ target_amount: value });
   }
 
   patchDate(field: 'startDate' | 'endDate', value: string): void {
     if (!this.draft) return;
     this.draft = { ...this.draft, [field]: value };
-    this.persist();
+    const key = field === 'startDate' ? 'start_date' : 'end_date';
+    this.stage({ [key]: value || null });
   }
 
   setLocationType(type: CampaignLocationType): void {
@@ -127,7 +147,7 @@ export class CampaignSettingsPageComponent implements OnInit {
       ? { type, label: canned }
       : { type, label: existing?.label ?? '', city: existing?.city };
     this.draft = { ...this.draft, layout: { ...this.draft.layout, campaignLocation: location } };
-    this.persist();
+    this.stage({ campaign_location: location });
   }
 
   setLocationLabel(value: string): void {
@@ -139,32 +159,39 @@ export class CampaignSettingsPageComponent implements OnInit {
       ...(current.type === 'region' ? { city: value } : {}),
     };
     this.draft = { ...this.draft, layout: { ...this.draft.layout, campaignLocation: location } };
-    this.persist();
+    this.stage({ campaign_location: location });
   }
 
   clearLocation(): void {
     if (!this.draft) return;
     this.draft = { ...this.draft, layout: { ...this.draft.layout, campaignLocation: undefined } };
-    this.persist();
+    this.stage({ campaign_location: null });
   }
 
-  // Explicit save action (2026-09-29) — every field on this page already
-  // auto-saves on (change), but a visible, clickable "שמור" the manager can
-  // press and watch confirm gives a much stronger sense that an update
-  // actually happened than passively noticing small status text. Same
-  // persist() round trip, not a second save mechanism.
-  saveNow(): void {
-    this.persist();
-  }
-
-  private persist(): void {
-    if (!this.draft) return;
-    this.saving = true;
+  private stage(fields: Parameters<CampaignApiService['updateWorkspaceFields']>[1]): void {
+    this.pending = { ...this.pending, ...fields };
     this.saved = false;
     this.saveError = null;
-    this.campaignApi.update(this.campaignId, this.draft).subscribe({
-      next: (updated) => { this.saving = false; this.saved = true; this.ctx.setDraft(updated); },
-      error: (err) => { this.saving = false; this.saveError = err?.error?.error || 'שמירת ההגדרות נכשלה, נסו שוב'; },
+  }
+
+  save(): void {
+    if (!this.draft || this.saving || !this.dirty) return;
+    if (!this.draft.title.trim()) { this.saveError = 'יש להזין שם קמפיין'; return; }
+    if (!this.isOngoing && this.draft.startDate && this.draft.endDate && this.draft.startDate > this.draft.endDate) {
+      this.saveError = 'תאריך הסיום חייב להיות אחרי תאריך ההתחלה';
+      return;
+    }
+    this.saving = true;
+    this.saveError = null;
+    this.campaignApi.updateWorkspaceFields(this.campaignId, this.pending).subscribe({
+      next: updated => {
+        this.saving = false;
+        this.saved = true;
+        this.pending = {};
+        this.draft = updated;
+        this.ctx.setDraft(updated);
+      },
+      error: err => { this.saving = false; this.saveError = err?.error?.error || 'שמירת ההגדרות נכשלה, נסו שוב'; },
     });
   }
 }

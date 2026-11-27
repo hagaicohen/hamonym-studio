@@ -1,4 +1,4 @@
-<div class="plat-page" [class.refreshing]="refreshing">
+<div class="plat-page sa-v1 cm-v7" [class.refreshing]="refreshing">
 
   <div class="plat-back">
     <a routerLink="/platform/organizations" [queryParams]="organizationListQuery">← כל העמותות</a>
@@ -18,7 +18,7 @@
           <div class="plat-logo-placeholder">{{ orgName.charAt(0) }}</div>
         }
         <div>
-          <h1 class="plat-title">{{ orgName }}</h1>
+          <h1 class="plat-title">פרטי ארגון ואישור פעילות</h1><p class="plat-subtitle">{{ orgName }}</p>
           <span class="plat-status" [ngClass]="'status-' + entity.status">{{ statusLabel(entity.status) }}</span>
         </div>
       </div>

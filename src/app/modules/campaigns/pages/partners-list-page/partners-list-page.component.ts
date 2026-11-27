@@ -1,9 +1,12 @@
+import { DropdownComponent, DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
+import { ManagementPaginationComponent } from '../../../../shared/components/management-pagination/management-pagination.component';
+import { CurrentEntityService } from '../../../../core/services/current-entity.service';
+import { CampaignDraft } from '../../services/campaign-studio-state.service';
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { LucideAngularModule, Eye, Pencil, Copy, Trash2, CircleUserRound, Handshake } from 'lucide-angular';
-import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
 import { EntitiesService } from '../../../../core/services/entities.service';
 import { defaultPartnerLayoutBlocks } from '../../services/campaign-studio-state.service';
 import { PartnerImportService } from '../../services/partner-import.service';
@@ -27,7 +30,7 @@ interface PartnerRow {
 @Component({
   selector: 'app-partners-list-page',
   standalone: true,
-  imports: [HmIconComponent, CommonModule, FormsModule, RouterLink, LucideAngularModule, EmptyStateComponent],
+  imports: [DropdownComponent, DropdownOptionComponent, HmIconComponent, CommonModule, FormsModule, RouterLink, LucideAngularModule, ManagementPaginationComponent],
   templateUrl: './partners-list-page.component.html',
   styleUrl: './partners-list-page.component.css',
 })
@@ -41,6 +44,63 @@ export class PartnersListPageComponent implements OnInit {
   readonly Copy = Copy;
   readonly Trash2 = Trash2;
   readonly CircleUserRound = CircleUserRound;
+  activeTab: 'partners' | 'sponsors' = 'partners';
+  sponsorCampaigns: CampaignDraft[] = [];
+  sponsorsLoading = false;
+  sponsorsError = false;
+  sponsorQuery = '';
+  sponsorCampaignFilter = '';
+  partnerQuery = '';
+  partnerPage = 0;
+  sponsorPage = 0;
+  readonly listPageSize = 25;
+  partnersError = false;
+
+  get sponsorCount(): number { return this.sponsorCampaigns.reduce((total, campaign) => total + campaign.sponsors.length, 0); }
+
+  get filteredPartners(): PartnerRow[] {
+    const query = this.partnerQuery.trim().toLocaleLowerCase();
+    return this.partners.filter(partner => !query || partner.display_name.toLocaleLowerCase().includes(query));
+  }
+
+  private readonly currentEntity = inject(CurrentEntityService);
+
+  openSponsors(): void {
+    this.activeTab = 'sponsors';
+    this.sponsorPage = 0;
+    this.loadSponsors();
+  }
+
+  private loadSponsors(): void {
+    const entityId = this.currentEntity.currentEntity()?.id;
+    this.sponsorCampaigns = [];
+    this.sponsorsError = !entityId;
+    this.sponsorsLoading = false;
+    if (!entityId) return;
+    this.sponsorsLoading = true;
+    this.campaignApiService.list(entityId).subscribe({
+      next: campaigns => {
+        if (this.currentEntity.currentEntity()?.id !== entityId) return;
+        this.sponsorCampaigns = campaigns.filter(campaign => campaign.id && campaign.sponsors.length);
+        this.sponsorsLoading = false;
+      },
+      error: () => {
+        if (this.currentEntity.currentEntity()?.id !== entityId) return;
+        this.sponsorsLoading = false;
+        this.sponsorsError = true;
+      },
+    });
+  }
+
+  get matchingSponsors() {
+    const query = this.sponsorQuery.trim().toLowerCase();
+    return this.sponsorCampaigns
+      .filter(campaign => !this.sponsorCampaignFilter || campaign.id === this.sponsorCampaignFilter)
+      .flatMap(campaign => campaign.sponsors
+      .filter(sponsor => !query || [sponsor.name, campaign.title].some(value => value.toLowerCase().includes(query)))
+      .map(sponsor => ({ campaignId: campaign.id, campaign: campaign.title, sponsor })));
+  }
+
   private entitiesService = inject(EntitiesService);
   private partnerImportService = inject(PartnerImportService);
   private campaignApiService = inject(CampaignApiService);
@@ -138,13 +198,15 @@ export class PartnersListPageComponent implements OnInit {
     this.returnStep = qp.get('returnStep');
     if (this.returnCampaignId) this.createMode = 'choose';
     this.load();
+    this.loadSponsors();
   }
 
   private load(): void {
     this.loading = true;
+    this.partnersError = false;
     this.entitiesService.getMyPartners().subscribe({
       next: res => { this.partners = res.partners; this.loading = false; },
-      error: () => { this.loading = false; },
+      error: () => { this.loading = false; this.partnersError = true; },
     });
   }
 
@@ -270,6 +332,7 @@ export class PartnersListPageComponent implements OnInit {
       next: () => {
         this.isDeleting = false;
         this.partners = this.partners.filter(p => p.id !== id);
+        this.partnerPage = Math.min(this.partnerPage, Math.max(0, Math.ceil(this.filteredPartners.length / this.listPageSize) - 1));
         this.deleteTarget = null;
       },
       error: err => {

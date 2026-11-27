@@ -87,6 +87,14 @@
     "platformOrganizations": "Organizations",
     "platformUsers": "Users",
     "platformCollectionOps": "Collections",
+    "platformManagementGroup": "Management",
+    "platformFinanceGroup": "Finance",
+    "platformSystemGroup": "System",
+    "platformTasks": "Tasks and exceptions",
+    "platformBusinessReports": "Business reports",
+    "platformPortal": "Portal management",
+    "platformAudit": "Activity log",
+    "platformDeveloperTools": "Developer tools",
     "platformSettings": "General settings",
     "platformCategorySuggestions": "Category suggestions"
   }
