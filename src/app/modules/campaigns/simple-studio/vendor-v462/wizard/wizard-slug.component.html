@@ -1,8 +1,15 @@
+@if (!integration?.locked()) {
+  <div class="hw-slug-modes" role="group" aria-label="סוג כתובת">
+    <button type="button" [attr.aria-pressed]="mode === 'he'" (click)="select('he')">הצעה בעברית</button>
+    <button type="button" [attr.aria-pressed]="mode === 'en'" (click)="select('en')">הצעה באנגלית</button>
+    <button type="button" [attr.aria-pressed]="mode === 'custom'" (click)="select('custom')">מותאם אישית</button>
+  </div>
+}
 <label class="hw-field hw-slug-field">
  <span class="hw-label">{{simple?'כתובת הדף':'כתובת הקמפיין'}} <span class="hw-required">*</span></span>
  <div class="hw-slug-control">
-  <span class="hw-slug-prefix" dir="ltr">hamonym.com/campaign/</span>
-  <input #slugInput id="hwCampaignSlug" [attr.aria-invalid]="!slug.trim() || result()?.available === false" aria-describedby="hwCampaignSlug-status" (input)="edit(slugInput.value)" (change)="onChange(slugInput)" [readOnly]="integration?.locked()" type="text" dir="ltr" autocomplete="off" spellcheck="false" required maxlength="70" [value]="slug" [placeholder]="simple?'donate-now':'campaign-name'" aria-label="מזהה כתובת הקמפיין" />
+  <span class="hw-slug-prefix" dir="ltr">{{ baseUrl }}</span>
+  <input #slugInput id="hwCampaignSlug" [attr.aria-invalid]="!slug.trim() || result()?.available === false" aria-describedby="hwCampaignSlug-status" (input)="edit(slugInput.value)" (change)="onChange(slugInput)" [readOnly]="!!integration?.locked() || mode !== 'custom'" type="text" dir="ltr" autocomplete="off" spellcheck="false" required maxlength="70" [value]="slug" [placeholder]="simple?'donate-now':'campaign-name'" aria-label="מזהה כתובת הקמפיין" />
  </div>
  <small>{{simple?'אותיות, מספרים ומקפים. לפחות 3 תווים.':'שדה חובה · לפחות 3 תווים, אותיות בעברית או באנגלית, מספרים ומקפים. בלי רווחים.'}}</small>
  @if (checking()) { <small role="status">בודק זמינות…</small> }

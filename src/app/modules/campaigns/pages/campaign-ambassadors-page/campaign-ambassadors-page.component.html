@@ -60,22 +60,39 @@
         </app-dropdown>
       </label>
       @if (selectedIds.size && !bulkSaving) {
-        <button type="button" (click)="actionReason = ''; bulkAction = 'pause'">השהיית {{ selectedIds.size }} שגרירים</button>
-        <button type="button" class="action-btn--delete" (click)="actionReason = ''; bulkAction = 'remove'">הסרת {{ selectedIds.size }} שגרירים</button>
+        <button type="button" class="cm-button amb-bulk-pause" (click)="openStatusAction('pause')">השהיית {{ selectedIds.size }} שגרירים</button>
+        <button type="button" class="cm-button amb-bulk-remove" (click)="openStatusAction('remove')">הסרת {{ selectedIds.size }} שגרירים</button>
       }
-      <span role="status">{{ actionMessage }}</span>
+    </div>
+    <div class="amb-bulk-status" role="status" aria-live="polite" [class.amb-bulk-status-error]="bulkResultError">
+      @if (bulkSaving) {
+        <span class="spinner" aria-hidden="true"></span>
+        {{ bulkProgressMessage }}
+      } @else {
+        {{ actionMessage }}
+      }
     </div>
     @if (bulkAction) {
-      <div class="amb-filters" role="alert">
-        @if (bulkAction === 'pause') {
-          השהיית {{ selectedIds.size }} שגרירים תשמור את הכתובות ואת ההיסטוריה שלהם.
-        } @else {
-          שגרירים ללא תרומות או התאמות יועברו לארכיון. שגרירים עם היסטוריה יושהו.
-        }
-        <label>סיבת הפעולה <input [(ngModel)]="actionReason"></label>
-        <button type="button" [disabled]="!actionReason.trim()" (click)="applyBulkAction()">אישור</button>
-        <button type="button" (click)="bulkAction = null">ביטול</button>
-      </div>
+      <form class="amb-bulk-confirm" aria-labelledby="amb-bulk-title" (ngSubmit)="applyBulkAction()">
+        <div class="amb-bulk-copy">
+          <h3 id="amb-bulk-title">{{ bulkAction === 'pause' ? 'השהיית שגרירים' : 'הסרת שגרירים' }}</h3>
+          <p id="amb-bulk-description">
+            @if (bulkAction === 'pause') {
+              השהיית {{ selectedIds.size }} שגרירים תשמור את הכתובות ואת ההיסטוריה שלהם.
+            } @else {
+              שגרירים ללא תרומות או התאמות יועברו לארכיון. שגרירים עם היסטוריה יושהו.
+            }
+          </p>
+        </div>
+        <label class="amb-bulk-reason" for="amb-bulk-reason">סיבת הפעולה
+          <input id="amb-bulk-reason" name="reason" class="cm-input" type="text" required
+            placeholder="הזינו סיבה לפעולה" aria-describedby="amb-bulk-description" [(ngModel)]="actionReason">
+        </label>
+        <div class="amb-bulk-actions">
+          <button type="submit" class="cm-button cm-primary" [disabled]="!actionReason.trim() || (!actionTarget && !selectedIds.size) || bulkSaving">אישור</button>
+          <button type="button" class="cm-button" (click)="cancelStatusAction()">ביטול</button>
+        </div>
+      </form>
     }
 
     <!-- Loading -->
@@ -102,6 +119,13 @@
 
     <!-- Table -->
     <div class="amb-table" *ngIf="!isLoading && ambassadors.length > 0">
+      @let eligible = selectableAmbassadors;
+      <label class="amb-select-all">
+        <input #selectAll type="checkbox" [checked]="eligible.length > 0 && selectedIds.size === eligible.length"
+          [indeterminate]="selectedIds.size > 0 && selectedIds.size < eligible.length"
+          [disabled]="bulkSaving || !eligible.length" (change)="toggleSelectAll(eligible, selectAll.checked)">
+        בחירת כל השגרירים הפעילים
+      </label>
       <div class="amb-table-head">
         <button type="button" class="cm-row-link" (click)="sortBy('name')">שגריר ↕</button>
         <button type="button" class="cm-row-link" (click)="sortBy('goal')">יעד ↕</button>
@@ -116,7 +140,6 @@
         class="amb-row"
         *ngFor="let a of pageRows"
         [class.amb-row--hidden]="a.status === 'inactive'"
-        [class.amb-row--deleting]="deletingId === a.id"
       >
         <!-- Identity -->
         <div class="amb-identity">
@@ -167,20 +190,22 @@
           </button>
           <button
             class="action-btn"
+            [class.action-btn--reactivate]="a.status === 'inactive'"
             (click)="toggleStatus(a)"
-            [disabled]="togglingId === a.id"
-            [title]="a.status === 'active' ? 'הסתר שגריר' : 'הצג שגריר'"
+            [disabled]="!!togglingId || bulkSaving"
+            [attr.aria-label]="a.status === 'active' ? 'השהיית שגריר' : a.status === 'inactive' ? 'הפעלה מחדש' : 'הפעלת שגריר'"
           >
             <lucide-angular
               [img]="a.status === 'active' ? EyeOffIcon : EyeIcon"
               [size]="15"
               color="#6b7280"
             ></lucide-angular>
+            @if (a.status === 'inactive') { <span>הפעלה מחדש</span> }
           </button>
           <button
             class="action-btn action-btn--delete"
-            [disabled]="deletingId === a.id"
-            (click)="openDeleteConfirm(a)"
+            [disabled]="bulkSaving || !!togglingId"
+            (click)="openStatusAction('remove', a)"
             title="מחק שגריר"
           >
             <lucide-angular [img]="TrashIcon" [size]="15" color="#ef4444"></lucide-angular>
@@ -201,102 +226,21 @@
 
 </section>
 
-@if (confirmDelete || pauseTarget) {
-  <div class="cm-drawer-backdrop" (click)="cancelDelete(); pauseTarget = null"></div>
-  <section class="cm-drawer" role="dialog" aria-modal="true" aria-labelledby="amb-status-title" (keydown.escape)="cancelDelete(); pauseTarget = null">
-    <header class="cm-drawer-head">
-      <h2 id="amb-status-title">{{ confirmDelete && !confirmDelete.hasDonations ? 'העברה לארכיון' : 'השהיית שגריר' }}</h2>
-      <button class="cm-button" type="button" aria-label="סגירה" (click)="cancelDelete(); pauseTarget = null">×</button>
-    </header>
-    <div class="cm-drawer-body">
-      <p>{{ confirmDelete?.name || pauseTarget?.fullName }}</p>
-      <p>{{ confirmDelete && !confirmDelete.hasDonations ? 'העברה לארכיון שומרת את ההיסטוריה.' : 'השהיה משביתה את הקישור ושומרת את ההיסטוריה.' }}</p>
-      <label class="form-field">סיבת הפעולה<textarea [(ngModel)]="actionReason" rows="3"></textarea></label>
-    </div>
-    <footer class="cm-drawer-foot">
-      <button class="cm-button" type="button" (click)="cancelDelete(); pauseTarget = null">ביטול</button>
-      <button class="cm-button cm-primary" type="button" [disabled]="!actionReason.trim()" (click)="confirmDelete ? confirmDeleteAction() : confirmPause()">אישור</button>
-    </footer>
-  </section>
+@if (showDrawer) {
+  <app-ambassador-form-drawer [title]="editingId ? 'עריכת שגריר' : 'הוספת שגריר'"
+      [busy]="saving || photoUploading" (dismissed)="closeDrawer()">
+    <app-ambassador-form-fields [model]="form" [campaignSlug]="campaignSlug"
+      [editingId]="editingId ?? undefined" [savedSlug]="editedAmbassador?.slug"
+      [target]="campaignTargetAmount" [photoUrl]="editedAmbassador?.photoUrl"
+      [disabled]="saving" (availabilityChange)="slugAvailable = $event" (photoBusy)="photoUploading = $event" />
+    @if (saveError) { <p class="form-error" role="alert">{{ saveError }}</p> }
+    <button drawer-action type="button" [disabled]="saving || photoUploading" (click)="closeDrawer()">ביטול</button>
+    <button drawer-action="primary" type="button" [disabled]="!canSaveAmbassador" (click)="saveAmbassador()">
+      @if (saving && !editingId) { <span class="amb-create-spinner" aria-hidden="true"></span> }
+      {{ saving ? (editingId ? 'שומר…' : 'יוצר שגריר…') : editingId ? 'שמירת שינויים' : 'הוספת שגריר' }}
+    </button>
+  </app-ambassador-form-drawer>
 }
-
-<!-- ADD AMBASSADOR DRAWER -->
-<div class="modal-backdrop" *ngIf="showDrawer" (click)="closeDrawer()">
-  <div class="form-modal-box cm-drawer" role="dialog" aria-modal="true" aria-labelledby="amb-drawer-title" (keydown.escape)="closeDrawer()" (click)="$event.stopPropagation()">
-    <div class="form-modal-header cm-drawer-head">
-      <h2 class="modal-title" id="amb-drawer-title">{{ editingId ? 'עריכת שגריר' : 'הוספת שגריר' }}</h2>
-      <button type="button" class="icon-close-btn" aria-label="סגירה" (click)="closeDrawer()">
-        <lucide-angular [img]="XIcon" [size]="16" color="#64748b"></lucide-angular>
-      </button>
-    </div>
-
-    <div class="cm-drawer-body">
-      @if (editedAmbassador; as row) {
-        <section class="amb-history">
-          <p>גיוס מקוון {{ fmtMoney(row.raisedOnline) }} · התאמות {{ fmtMoney(row.raisedManual) }}</p>
-          <p>הצטרפות {{ row.createdAt | date:'dd/MM/yyyy' }}</p>
-          @if (row.deactivatedAt) { <p>הושעה ב־{{ row.deactivatedAt | date:'dd/MM/yyyy' }}</p> }
-          @if (campaignSlug && row.slug && row.status === 'active') {
-            <a [href]="publicPath(row)" target="_blank" rel="noopener">דף שגריר</a>
-            <button type="button" (click)="copyPublicLink(row)">העתקת קישור</button>
-            @if (actionMessage) { <span role="status">{{ actionMessage }}</span> }
-          }
-        </section>
-      }
-    <div class="form-grid">
-      <label class="form-field">
-        <span>שם מלא *</span>
-        <input type="text" [(ngModel)]="form.fullName" placeholder="ישראל ישראלי">
-      </label>
-      <label class="form-field">
-        <span>טלפון</span>
-        <input type="tel" [(ngModel)]="form.phone" dir="ltr">
-      </label>
-      <label class="form-field">
-        <span>אימייל</span>
-        <input type="email" [(ngModel)]="form.email" dir="ltr">
-      </label>
-      <label class="form-field">
-        <span>יעד אישי (₪)</span>
-        <input type="text" inputmode="numeric" [value]="goalDisplay" (input)="onGoalInput($event)" placeholder="5,000">
-      </label>
-      <p class="form-goal-warning" *ngIf="goalAboveCampaignGoal()">
-        שימו לב: היעד שבחרתם גבוה מיעד הקמפיין, שעומד על {{ campaignTargetAmount | number }} ₪. ניתן להמשיך עם היעד שבחרתם.
-      </p>
-      <div class="form-field" *ngIf="campaignSlug">
-        <app-ambassador-slug-field
-          [campaignSlug]="campaignSlug"
-          [nameForDefault]="form.fullName"
-          [excludeAmbassadorId]="editingId ?? undefined"
-          [value]="form.slug ?? ''"
-          (valueChange)="form.slug = $event"
-          (availabilityChange)="slugAvailable = $event">
-        </app-ambassador-slug-field>
-      </div>
-      @if (photoSupported) {
-        <div class="form-field">
-          <label class="amb-photo-upload"><app-icon name="cloud-upload" /> {{ photoUploading ? 'מעלה…' : photoFileName || 'בחירת תמונת שגריר' }}
-            <input class="cm-file-input" type="file" accept="image/*" [disabled]="photoUploading" (change)="selectPhoto($event)">
-          </label>
-        </div>
-      }
-      <label class="form-field">
-        <span>הודעה אישית (אופציונלי)</span>
-        <textarea rows="2" [(ngModel)]="form.personalMessage" placeholder="הצטרפו אליי במסע הזה..."></textarea>
-      </label>
-    </div>
-
-    <p class="form-error" *ngIf="saveError">{{ saveError }}</p>
-
-    </div>
-    <div class="modal-actions cm-drawer-foot">
-      <button class="modal-btn-cancel" (click)="closeDrawer()">ביטול</button>
-      <button class="modal-btn-save" [disabled]="!canSaveAmbassador" (click)="saveAmbassador()">
-        {{ saving ? 'שומר...' : (editingId ? 'עדכון שגריר' : 'הוספת שגריר') }}
-      </button>
-    </div>
-  </div>
-</div>
 
 <!-- IMPORT FROM FILE MODAL -->
 <div class="modal-backdrop" *ngIf="showImportModal" (click)="closeImport()">

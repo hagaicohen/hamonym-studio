@@ -1,3 +1,5 @@
+export interface DonationAmbassador { id: string; name: string; campaignTitle: string; photo?: string; }
+
 export type CartKind = 'donation' | 'reward' | 'race';
 
 export interface CartParticipant { fullName?: string; [key: string]: unknown; }
@@ -15,6 +17,8 @@ export interface CartEntry {
   months?: number;
   /** The single donation line driven by the donation box selection. */
   selectionBased?: boolean;
+  ambassadorId?: string;
+  ambassadorName?: string;
   participants?: CartParticipant[];
   contact?: { name?: string; [key: string]: unknown } | null;
 }

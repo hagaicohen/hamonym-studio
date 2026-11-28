@@ -1,0 +1,100 @@
+#preview.preview .hc-public-collection .hc-items > .hc-card.ham-donor-card-v3 {
+  --donor-accent: var(--ham-campaign-accent, var(--hc-card-accent,#246f65));
+  --donor-line: var(--hc-card-border,#d5e3de);
+  --donor-muted: var(--hc-donor-text,#526e66);
+  --donor-soft: color-mix(in srgb,var(--donor-accent) 10%,white);
+  box-sizing:border-box;
+  min-width:0!important;
+  height:190px!important;
+  min-height:190px!important;
+  max-height:190px!important;
+  padding:12px 14px!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:32px 30px 18px 36px 1fr!important;
+  align-items:stretch!important;
+  gap:4px!important;
+  background:var(--hc-card-bg,#f5f8f6)!important;
+  color:var(--hc-donor-title,#203c36);
+  border:1px solid var(--donor-line)!important;
+  border-radius:12px!important;
+  overflow:hidden!important;
+}
+.donor-v3-header { display:contents; }
+.donor-v3-identity { grid-row:1; display:flex; align-items:center; gap:7px; min-width:0; }
+.donor-v3-avatar {
+  width:30px; height:30px; border-radius:50%; display:grid; place-items:center; flex:none;
+  color:var(--donor-accent); background:var(--donor-soft);
+}
+.donor-v3-name { font-size:14px; font-weight:600; }
+.donor-v3-name,.donor-v3-via span,.donor-v3-time { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.donor-v3-time { font-size:11px; color:var(--donor-muted); margin-inline-start:auto; flex-shrink:0; max-width:45%; }
+.donor-v3-amount { grid-row:2; font-size:25px; line-height:30px; font-weight:700; color:var(--donor-accent); font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.donor-v3-via { grid-row:3; display:flex; align-items:center; gap:5px; min-width:0; overflow:hidden; font-size:12px; color:var(--donor-accent); }
+.donor-v3-blessing { grid-row:4; display:flex; flex-direction:column; align-items:flex-start; overflow:hidden; min-width:0; height:36px; font-size:12px; line-height:17px; color:var(--donor-muted); }
+.donor-v3-quote { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; max-height:34px; width:100%; overflow:hidden; overflow-wrap:anywhere; white-space:pre-wrap; }
+.donor-v3-blessing.long .donor-v3-quote { -webkit-line-clamp:1; max-height:17px; }
+.donor-v3-more { flex:none; line-height:14px; background:transparent; color:var(--donor-accent); border:0; padding:0; font-size:11px; line-height:14px; text-decoration:underline; cursor:pointer; }
+.donor-v3-foot { grid-row:5; border-top:1px solid var(--donor-line); min-height:22px; display:flex; align-items:center; justify-content:flex-end; color:var(--donor-accent); padding-inline:5px; }
+.ham-donor-card-v3 svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+.donor-v3-sr { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+.donor-v3-dialog {
+  box-sizing:border-box; border:1px solid var(--donor-line); border-radius:12px; padding:20px;
+  width:min(440px,92vw); max-height:80dvh; overflow:auto; color:inherit; background:white; font:inherit;
+}
+.donor-v3-dialog::backdrop { background:#203c3666; }
+.donor-v3-dialog p { white-space:pre-wrap; overflow-wrap:anywhere; }
+.donor-v3-dialog button { background:white; border:1px solid var(--donor-line); border-radius:8px; color:var(--donor-accent); padding:7px 12px; cursor:pointer; }
+.ham-donor-card-v3 button:focus-visible { outline:2px solid var(--donor-accent); outline-offset:2px; box-shadow:none; }
+
+
+#preview.preview .hc-public-collection[data-hc-mode="list"] .hc-items > .hc-card.ham-donor-card-v3 {
+  height:80px!important; min-height:80px!important; max-height:80px!important;
+  grid-template-columns:minmax(140px,1.3fr) minmax(0,1.5fr) 105px 32px!important;
+  grid-template-rows:1fr!important; gap:12px!important; align-items:center!important; padding:10px 14px!important;
+  border-radius:11px!important;
+}
+[data-hc-mode="list"] .ham-donor-card-v3 .donor-v3-header {
+  display:grid; grid-column:1; grid-row:1; grid-template-columns:34px minmax(0,1fr); align-items:center; column-gap:9px; min-width:0;
+}
+[data-hc-mode="list"] .ham-donor-card-v3 .donor-v3-identity { display:contents; }
+[data-hc-mode="list"] .ham-donor-card-v3 .donor-v3-avatar { grid-column:1; grid-row:1/4; width:34px; height:34px; }
+[data-hc-mode="list"] .ham-donor-card-v3 .donor-v3-name { grid-column:2; grid-row:1; }
+[data-hc-mode="list"] .ham-donor-card-v3 .donor-v3-time { grid-column:2; grid-row:2; margin:0; max-width:none; }
+[data-hc-mode="list"] .ham-donor-card-v3 .donor-v3-via { grid-column:2; grid-row:3; height:16px; }
+[data-hc-mode="list"] .ham-donor-card-v3 .donor-v3-blessing { grid-column:2; grid-row:1; }
+[data-hc-mode="list"] .ham-donor-card-v3 .donor-v3-amount { grid-column:3; grid-row:1; font-size:22px; text-align:left; }
+[data-hc-mode="list"] .ham-donor-card-v3 .donor-v3-foot { grid-column:4; grid-row:1; border:0; }
+#preview.preview .hc-donor-collection[data-hc-mode="carousel"] .hc-items {
+  gap:10px!important; overscroll-behavior-inline:contain; scroll-snap-type:x mandatory; padding-bottom:8px;
+}
+#preview.preview .hc-donor-collection[data-hc-mode="carousel"] .hc-items > .hc-card.ham-donor-card-v3 {
+  flex:0 0 calc((100% - 20px)/3)!important; width:calc((100% - 20px)/3)!important;
+  max-width:calc((100% - 20px)/3)!important; scroll-snap-align:start;
+}
+@media(max-width:700px) {
+  #preview.preview .hc-public-collection[data-hc-mode="list"] .hc-items > .hc-card.ham-donor-card-v3 {
+    height:96px!important; min-height:96px!important; max-height:96px!important;
+    grid-template-columns:minmax(0,1fr) 75px 28px!important;
+    grid-template-rows:minmax(0,1fr) 32px!important; gap:6px!important; padding:8px 10px!important;
+  }
+  [data-hc-mode="grid"] .ham-donor-card-v3 .donor-v3-identity { flex-wrap:wrap; gap:3px; }
+  [data-hc-mode="grid"] .ham-donor-card-v3 .donor-v3-time { font-size:10px; }
+  [data-hc-mode="list"] .ham-donor-card-v3 .donor-v3-blessing { grid-column:1; grid-row:2; height:32px; }
+  [data-hc-mode="list"] .ham-donor-card-v3 .donor-v3-amount { grid-column:2; grid-row:1/3; font-size:20px; }
+  [data-hc-mode="list"] .ham-donor-card-v3 .donor-v3-foot { grid-column:3; grid-row:1/3; }
+  #preview.preview .hc-donor-collection[data-hc-mode="carousel"] .hc-items > .hc-card.ham-donor-card-v3 {
+    flex:0 0 85%!important; width:85%!important; max-width:85%!important;
+  }
+}
+#preview .hc-donor-collection .donor-v3-carousel-count {
+  position:absolute!important; width:1px!important; height:1px!important; overflow:hidden!important; clip-path:inset(50%);
+}
+#preview .hc-donor-collection .donor-v3-carousel-dots { display:flex; flex-wrap:wrap; justify-content:center; gap:5px; direction:rtl; }
+#preview .hc-donor-collection .donor-v3-carousel-dots > button {
+  padding:0!important; width:8px!important; height:8px!important; min-width:8px; border-radius:50%;
+  background:#c7d7d1!important; border:0!important;
+}
+#preview .hc-donor-collection .donor-v3-carousel-dots > button.active {
+  background:var(--ham-campaign-accent,var(--hc-card-accent,#246f65))!important;
+}

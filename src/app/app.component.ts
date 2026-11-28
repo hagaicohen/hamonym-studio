@@ -91,6 +91,10 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.sub = this.router.events.subscribe(event => {
       if (event instanceof NavigationStart) {
+        const active = this.outlet?.isActivated
+          ? this.outlet.component as { keepsPublicCampaignMounted?: (url: string) => boolean }
+          : undefined;
+        if (active?.keepsPublicCampaignMounted?.(event.url)) return;
         const fromKey = workspaceKey(this.router.url);
         const toKey = workspaceKey(event.url);
         if (fromKey && toKey && fromKey === toKey) {

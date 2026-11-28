@@ -1,6 +1,11 @@
+import { CurrentContextService } from '../../../../core/services/current-context.service';
+import { CampaignJoinDialogComponent } from '../../shared/components/campaign-join-dialog/campaign-join-dialog.component';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { Subscription, filter, map, distinctUntilChanged } from 'rxjs';
+import { AuthService } from '../../../../core/services/auth.service';
 import { Component, inject, OnInit, OnDestroy, HostListener, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { CampaignStudioStateService } from '../../services/campaign-studio-state.service';
@@ -11,8 +16,7 @@ import { StudioUiService } from '../../studio/services/studio-ui.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
 import { PaymentFailedPopupComponent } from '../../shared/components/payment-failed-popup/payment-failed-popup.component';
 import { DonationToastComponent } from '../../shared/components/donation-toast/donation-toast.component';
-import { AmbassadorService, Ambassador, AmbassadorPublicInfo } from '../../services/ambassador.service';
-import { CurrentContextService } from '../../../../core/services/current-context.service';
+import { AmbassadorService, Ambassador, AmbassadorMembership, AmbassadorPublicInfo } from '../../services/ambassador.service';
 import { DonationService } from '../../services/donation.service';
 import { SimpleStudioCheckoutService } from '../../simple-studio/simple-studio-checkout.service';
 import { AnalyticsService } from '../../../../core/services/analytics.service';
@@ -26,7 +30,7 @@ import { HmMoneyArgPipe } from '../../../../core/i18n/money';
 @Component({
   selector: 'app-campaign-public-page',
   standalone: true,
-  imports: [SimpleStudioPublicPageComponent, HmMoneyArgPipe, HmCampaignContentDirective, HmPublicTextPipe, HmIconComponent, CommonModule, CampaignPreviewComponent, MinimalDonationPageComponent, PaymentFailedPopupComponent, DonationToastComponent],
+  imports: [CampaignJoinDialogComponent, SimpleStudioPublicPageComponent, HmMoneyArgPipe, HmCampaignContentDirective, HmPublicTextPipe, HmIconComponent, CommonModule, CampaignPreviewComponent, MinimalDonationPageComponent, PaymentFailedPopupComponent, DonationToastComponent],
   templateUrl: './campaign-public-page.component.html',
   styleUrls: ['./campaign-public-page.component.css'],
 })
@@ -43,8 +47,33 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
   state                    = inject(CampaignStudioStateService);
   private ui              = inject(StudioUiService);
   private loader          = inject(AppLoaderService);
+  private readonly auth = inject(AuthService);
+  private readonly context = inject(CurrentContextService);
+
+  get publicCampaignAccent(): string {
+    const layout = this.state.draft.layout;
+    return (layout.simpleStudio as { theme?: { primary?: string } } | undefined)?.theme?.primary
+      || layout.theme.primaryColor || '#246f65';
+  }
+
+  private enterDonorWorkspace(): void {
+    if (!this.auth.currentUser() || this.context.active()?.role === 'donor') return;
+    this.context.ensureDonorRole();
+    this.context.switchContext('donor', null);
+  }
+  myAmbassador: AmbassadorMembership | null = null;
+  ambassadorLookupError = false;
+  ambassadorPageError = false;
+  private readonly userId$ = toObservable(this.auth.currentUser).pipe(map(user => user?.id), distinctUntilChanged());
+  private readonly lifetime = new Subscription();
+  private routeRequests = new Subscription();
+  private membershipRequest?: Subscription;
+  private routeKey?: string;
+  private ambassadorRouteRequest?: Subscription;
+  ambassadorRoutePending = false;
+  ambassadorRouteIssue: 'not-found' | 'failed' | null = null;
+  ambassadorLookupReady = true;
   private ambassadorSvc   = inject(AmbassadorService);
-  private ctx             = inject(CurrentContextService);
   private donationSvc     = inject(DonationService);
   private analytics       = inject(AnalyticsService);
   private readonly t       = publicText();
@@ -89,16 +118,41 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
   }
 
   get isAmbassadorMode(): boolean {
-    return this.ctx.active()?.role === 'ambassador';
+    return !!this.myAmbassador && this.myAmbassador.id === this.currentAmbassador?.id;
   }
 
   get isMinimalFormat(): boolean {
     return this.state.draft?.layout?.pageFormat === 'minimal';
   }
 
+  editingAmbassador: Ambassador | null = null;
+  ambassadorEditorLoading = false;
+  ambassadorEditorError = '';
+
   editMyAmbassadorPage(): void {
-    if (this.currentAmbassador?.campaignId) {
-      this.router.navigate(['/campaigns', this.currentAmbassador.campaignId, 'ambassador-studio'], { queryParams: { ambassadorId: this.currentAmbassador.id } });
+    if (!this.isAmbassadorMode || !this.currentAmbassador || this.ambassadorEditorLoading) return;
+    const id = this.currentAmbassador.id;
+    this.ambassadorEditorError = '';
+    this.ambassadorEditorLoading = true;
+    this.ambassadorSvc.getEditable(id).subscribe({
+      next: row => {
+        this.ambassadorEditorLoading = false;
+        if (this.isAmbassadorMode && this.currentAmbassador?.id === id) this.editingAmbassador = row;
+      },
+      error: () => {
+        this.ambassadorEditorLoading = false;
+        this.ambassadorEditorError = 'לא ניתן לטעון את הטופס. נסו שוב.';
+      },
+    });
+  }
+
+  ambassadorEditSaved(row: Ambassador): void {
+    this.editingAmbassador = null;
+    const previousSlug = this.currentAmbassador?.slug;
+    this.currentAmbassador = row;
+    this.retryAmbassadorLookup();
+    if (previousSlug !== row.slug) {
+      void this.router.navigate(['/campaigns', this.slug, row.slug], { queryParamsHandling: 'preserve', replaceUrl: true });
     }
   }
 
@@ -126,6 +180,23 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
   currentAmbassador: Ambassador | null = null;
   ambassadorsList: AmbassadorPublicInfo[] | null = null;
   autoOpenJoin    = false;
+  minimalJoinOpen = false;
+
+  get minimalAmbassadorActionLabel(): string | null {
+    if (this.ownerPreview || this.state.draft.status !== 'published' || !this.ambassadorLookupReady) return null;
+    if (!this.myAmbassador) return 'הצטרפו כשגרירים';
+    return this.myAmbassador.status === 'active' && this.myAmbassador.id !== this.currentAmbassador?.id
+      ? 'לדף השגריר שלי' : null;
+  }
+
+  runMinimalAmbassadorAction(): void {
+    if (!this.minimalAmbassadorActionLabel) return;
+    if (this.myAmbassador) {
+      void this.router.navigate(['/campaigns', this.slug, this.myAmbassador.slug]);
+    } else {
+      this.minimalJoinOpen = true;
+    }
+  }
 
   private pollSlug    = '';
   private pollLookback = '';
@@ -185,12 +256,57 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.syncDevice();
+    this.enterDonorWorkspace();
+    this.loadRoute();
+    this.lifetime.add(this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => this.loadRoute()));
+    this.lifetime.add(this.userId$.subscribe(() => {
+      this.enterDonorWorkspace();
+      this.retryAmbassadorLookup();
+    }));
+  }
+
+  keepsPublicCampaignMounted(url: string): boolean {
+    if (!this.stored || this.isLoading || this.notFound || this.ambassadorPageError || !this.state.draft.layout.simpleStudio) return false;
+    const segments = this.router.parseUrl(url).root.children['primary']?.segments;
+    if (!segments || segments[0]?.path !== 'campaigns' || segments[1]?.path !== this.slug ||
+        (segments.length !== 2 && segments.length !== 3)) return false;
+    const tail = segments[2]?.path;
+    if (!tail || tail === 'view') return true;
+    if (['success', 'edit', 'classic', 'studio', 'simple-studio', 'ambassador-studio', 'create'].includes(tail)) return false;
+    // A UUID can also enter the separately guarded management workspace.
+    return !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(this.slug);
+  }
+
+  private loadRoute(force = false): void {
     const slug          = this.route.snapshot.paramMap.get('slug');
     const ambassadorSlug =
       this.route.snapshot.paramMap.get('ambassadorSlug') ??
       this.route.snapshot.queryParamMap.get('a');
 
     if (!slug) { this.router.navigate(['/campaigns']); return; }
+    const key = JSON.stringify([slug, ambassadorSlug]);
+    if (!force && key === this.routeKey) return;
+    this.routeKey = key;
+    this.enterDonorWorkspace();
+    this.ambassadorRouteRequest?.unsubscribe();
+    this.ambassadorRoutePending = false;
+    this.ambassadorRouteIssue = null;
+    if (this.stored && this.slug === slug && !this.isLoading && !this.notFound &&
+        !this.ambassadorPageError && this.state.draft.layout.simpleStudio) {
+      this.loadAmbassadorRoute(slug, ambassadorSlug, this.state.draft.id, true);
+      return;
+    }
+    this.routeRequests.unsubscribe();
+    this.routeRequests = new Subscription();
+    this.membershipRequest?.unsubscribe();
+    if (this.pollInterval) clearInterval(this.pollInterval);
+    this.stored = null;
+    this.currentAmbassador = this.myAmbassador = null;
+    this.ambassadorLookupReady = false;
+    this.ambassadorLookupError = this.ambassadorPageError = false;
+    this.isLoading = true;
+    this.minimalJoinOpen = false;
+    this.canEdit = this.ownerPreview = this.notFound = false;
 
     if (this.route.snapshot.queryParamMap.get('payment') === 'failed') {
       // Checkout V2 Step 3 (2026-09-26) — same iframe/postMessage bridge as
@@ -210,7 +326,7 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
     const sinceParm = this.route.snapshot.queryParamMap.get('since');
     this.autoOpenJoin = this.route.snapshot.queryParamMap.get('join') === 'ambassador';
 
-    this.api.getBySlugPublic(slug).subscribe({
+    this.routeRequests.add(this.api.getBySlugPublic(slug).subscribe({
       next: (data) => {
         this.onCampaignLoaded(data, slug, ambassadorSlug, sinceParm);
         // Normal case (campaign already public): the public call already
@@ -229,16 +345,16 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
         const token = localStorage.getItem('token');
         if (!token) { this.showNotFound(); return; }
 
-        this.api.getBySlug(slug).subscribe({
+        this.routeRequests.add(this.api.getBySlug(slug).subscribe({
           next: (data) => {
             this.ownerPreview = true;
             this.canEdit       = true;
             this.onCampaignLoaded(data, slug, ambassadorSlug, sinceParm);
           },
           error: () => this.showNotFound(),
-        });
+        }));
       },
-    });
+    }));
   }
 
   // Silent ownership probe for the common case (campaign already public) —
@@ -246,10 +362,10 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
   // join; a non-manager (or anonymous visitor, though this is only called
   // when a token exists) just gets a 403/404 here and canEdit stays false.
   private checkOwnership(slug: string): void {
-    this.api.getBySlug(slug).subscribe({
+    this.routeRequests.add(this.api.getBySlug(slug).subscribe({
       next: () => { this.canEdit = true; },
       error: () => {},
-    });
+    }));
   }
 
   private showNotFound(): void {
@@ -281,9 +397,7 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
       this.router.navigate([], { relativeTo: this.route, queryParams: { lang: null }, queryParamsHandling: 'merge', replaceUrl: true });
     }
     this.applyLanguage(lang, true);
-    this.loader.hide();
-    this.isLoading = false;
-    this.studioCheckout.resumeOnPublicPage(this.state.draft);
+
 
     this.analytics.init(data.entityGaMeasurementId);
     this.analytics.trackEvent('campaign_view', {
@@ -291,21 +405,77 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
       campaign_id:   data.id,
     });
 
-    // The shared preview owns the paginated public ambassador feed.
+    this.retryAmbassadorLookup();
+    const render = () => {
+      this.loader.hide();
+      this.isLoading = false;
+      this.studioCheckout.resumeOnPublicPage(this.state.draft);
+      this.startLivePolling(slug, sinceParm ?? undefined);
+    };
+    this.loadAmbassadorRoute(slug, ambassadorSlug, data.id, false, render);
+  }
 
-    if (ambassadorSlug) {
-      this.ambassadorSvc.getBySlug(slug, ambassadorSlug).subscribe({
-        next: amb => {
-          if (amb?.status === 'inactive') {
-            this.router.navigate(['/campaigns', slug, 'view'], { replaceUrl: true });
-            return;
-          }
-          this.currentAmbassador = amb;
-        },
-      });
-    }
+  private loadAmbassadorRoute(
+    slug: string, ambassadorSlug: string | null, campaignId: string | undefined,
+    preservePage: boolean, render = () => {},
+  ): void {
+    this.currentAmbassador = null;
+    this.ambassadorRoutePending = !!ambassadorSlug;
+    if (!ambassadorSlug) { render(); return; }
 
-    this.startLivePolling(slug, sinceParm ?? undefined);
+    this.ambassadorRouteRequest = this.ambassadorSvc.getBySlug(slug, ambassadorSlug, true).subscribe({
+      next: ambassador => {
+        this.ambassadorRoutePending = false;
+        if (!ambassador || ambassador.status !== 'active' || String(ambassador.campaignId) !== String(campaignId)) {
+          if (preservePage) this.ambassadorRouteIssue = 'not-found';
+          else this.showNotFound();
+          return;
+        }
+        this.currentAmbassador = ambassador;
+        render();
+      },
+      error: () => {
+        this.ambassadorRoutePending = false;
+        if (preservePage) this.ambassadorRouteIssue = 'failed';
+        else {
+          this.ambassadorPageError = true;
+          this.loader.hide();
+          this.isLoading = false;
+        }
+      },
+    });
+  }
+
+  retryAmbassadorPage(): void { this.loadRoute(true); }
+
+  retryAmbassadorLookup(): void {
+    this.membershipRequest?.unsubscribe();
+    const campaign = this.stored;
+    const userId = this.auth.currentUser()?.id;
+    this.myAmbassador = null;
+    this.ambassadorLookupError = false;
+    this.ambassadorLookupReady = !userId;
+    if (!campaign || !userId) return;
+
+    this.membershipRequest = this.ambassadorSvc.getMyCampaigns(true).subscribe({
+      next: campaigns => {
+        if (this.stored !== campaign || this.auth.currentUser()?.id !== userId) return;
+        const matches = campaigns.filter(row => String(row.id) === String(campaign.id));
+        const active = matches.filter(row => row.ambassadorStatus === 'active');
+        const membership = active.length === 1 ? active[0] : matches.length === 1 ? matches[0] : undefined;
+        if (matches.length && (!membership?.ambassadorId || !membership.ambassadorSlug)) {
+          this.ambassadorLookupError = true;
+          return;
+        }
+        this.myAmbassador = membership ? {
+          id: membership.ambassadorId, slug: membership.ambassadorSlug, status: membership.ambassadorStatus,
+        } : null;
+        this.ambassadorLookupReady = true;
+      },
+      error: () => {
+        if (this.stored === campaign && this.auth.currentUser()?.id === userId) this.ambassadorLookupError = true;
+      },
+    });
   }
 
   private startLivePolling(slug: string, since?: string): void {
@@ -323,7 +493,7 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
     // non-overlapping windows. lastSeenAt (below) dedupes the overlap.
     this.pollLookback = new Date(Date.now() - 8000).toISOString();
 
-    this.donationSvc.getLive(this.pollSlug, since).subscribe({
+    this.routeRequests.add(this.donationSvc.getLive(this.pollSlug, since).subscribe({
       next: items => {
         const newItems = items.filter(item => item.completedAt > this.lastSeenAt);
         if (newItems.length === 0) return;
@@ -349,10 +519,14 @@ export class CampaignPublicPageComponent implements OnInit, OnDestroy {
           this.toast?.add(item);
         }
       },
-    });
+    }));
   }
 
   ngOnDestroy(): void {
+    this.lifetime.unsubscribe();
+    this.ambassadorRouteRequest?.unsubscribe();
+    this.routeRequests.unsubscribe();
+    this.membershipRequest?.unsubscribe();
     if (this.pollInterval) clearInterval(this.pollInterval);
     if (this.goalCelebrationTimer) clearTimeout(this.goalCelebrationTimer);
   }

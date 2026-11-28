@@ -1,3 +1,4 @@
+import { PublicAmbassadorPanelComponent } from '../../../shared/components/public-ambassador-panel.component';
 import { CampaignJoinDialogComponent } from '../../../shared/components/campaign-join-dialog/campaign-join-dialog.component';
 import {campaignBodyRoot} from '../../../utils/campaign-body-root';
 import {ContainerColumnResizeDirective} from '../../canvas/container-column-resize.directive';
@@ -70,7 +71,7 @@ import { CheckoutModalComponent, PendingRegistration } from '../../../shared/com
 import { CheckoutV2Component } from '../../../shared/components/checkout-v2/checkout-v2.component';
 import { CHECKOUT_V2_ENABLED } from '../../../shared/config/checkout-v2.config';
 import { DonationService, Donor, DonorPeriod } from '../../../services/donation.service';
-import { Ambassador, AmbassadorPublicInfo, AmbassadorService } from '../../../services/ambassador.service';
+import { Ambassador, AmbassadorMembership, AmbassadorPublicInfo, AmbassadorService } from '../../../services/ambassador.service';
 import { CampaignAmbassador } from '../../../services/campaign-studio-state.service';
 import { CampaignCommentsComponent } from '../../../shared/components/campaign-comments/campaign-comments.component';
 import { CampaignCountdownComponent } from '../../../shared/components/campaign-countdown/campaign-countdown.component';
@@ -122,7 +123,7 @@ function readableOn(color: string | null | undefined): string {
 @Component({
   selector: 'app-campaign-preview',
   standalone: true,
-  imports: [CampaignJoinDialogComponent, ContainerColumnResizeDirective, CampaignNavigationComponent, FundraisingSummaryComponent, SectionSurfaceDirective, AmountCardComponent, CampaignProgressComponent, CampaignContactComponent, CampaignCommentsComponent, CampaignCountdownComponent, CampaignBadgeComponent, GallerySlideshowComponent, StatsGridDirective, HmCurrencyPipe, HmMoneyArgPipe, HmMoneyPipe, HmAmountButtonsDirective, HmTextRoleDirective, HmPublicTextPipe, HmTextPipe, HmIconComponent, CommonModule, FormsModule, RouterLink, CheckoutModalComponent, CheckoutV2Component, LucideAngularModule, AmbassadorSlugFieldComponent],
+  imports: [PublicAmbassadorPanelComponent,CampaignJoinDialogComponent, ContainerColumnResizeDirective, CampaignNavigationComponent, FundraisingSummaryComponent, SectionSurfaceDirective, AmountCardComponent, CampaignProgressComponent, CampaignContactComponent, CampaignCommentsComponent, CampaignCountdownComponent, CampaignBadgeComponent, GallerySlideshowComponent, StatsGridDirective, HmCurrencyPipe, HmMoneyArgPipe, HmMoneyPipe, HmAmountButtonsDirective, HmTextRoleDirective, HmPublicTextPipe, HmTextPipe, HmIconComponent, CommonModule, FormsModule, RouterLink, CheckoutModalComponent, CheckoutV2Component, LucideAngularModule, AmbassadorSlugFieldComponent],
   templateUrl: './campaign-preview.component.html',
   // One stylesheet split by page area, in the original cascade order (the
   // Studio-only canvas rules last; their classes appear nowhere else).
@@ -317,6 +318,10 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, AfterVie
 
   @Input() ambassador:      Ambassador | null = null;
   @Input() ambassadorsList: AmbassadorPublicInfo[] | null = null;
+  @Input() myAmbassador: AmbassadorMembership | null = null;
+  @Input() ambassadorLookupReady = true;
+  donationAmbassador: Ambassador | null = null;
+  private attributionRevision = 0;
   @Input() autoOpenJoin = false;
   // Set by the real public-facing pages (campaign-public-page,
   // partner-public-page) only -- stays false everywhere this component is
@@ -409,7 +414,32 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, AfterVie
     return draft.campaignLifecycle === 'ongoing';
   }
 
-  openJoinModal(): void { this.showJoinModal = true; }
+  ngOnChanges(): void {
+    if (this.state.draft.slug) this.openRequestedJoin();
+  }
+
+  private openRequestedJoin(): void {
+    if (!this.autoOpenJoin || this.autoOpenJoinTriggered || !this.joinActionAvailable) return;
+    this.autoOpenJoinTriggered = true;
+    this.openJoinModal();
+  }
+
+  get joinActionAvailable(): boolean {
+    if (!this.isPublicPage) return true;
+    if (!this.ambassadorLookupReady) return false;
+    return !this.myAmbassador || (this.myAmbassador.status === 'active' && this.myAmbassador.id !== this.ambassador?.id);
+  }
+
+  openJoinModal(): void {
+    if (!this.joinActionAvailable) return;
+    if (this.isPublicPage && this.myAmbassador?.slug) {
+      if (this.myAmbassador.status === 'active' && this.ambassador?.id !== this.myAmbassador.id) {
+        this.viewAmbassador(this.myAmbassador.slug, this.state.draft);
+      }
+    } else {
+      this.showJoinModal = true;
+    }
+  }
   closeJoinModal(): void { this.showJoinModal = false; }
   joinedAmbassador(result:{slug:string}):void {void this.router.navigate(['/campaigns',this.state.draft.slug,result.slug]);}
 
@@ -449,7 +479,16 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, AfterVie
   }
 
   viewAmbassador(slug: string, draft: { slug: string }): void {
-    window.location.href = `/campaigns/${draft.slug}/${slug}`;
+    void this.router.navigate(['/campaigns', draft.slug, slug]);
+  }
+
+  donateThrough(slug: string, draft: CampaignDraft): void {
+    const revision = ++this.attributionRevision;
+    this.ambassadorSvc.getBySlug(draft.slug, slug).subscribe(ambassador => {
+      if (revision !== this.attributionRevision || !ambassador || ambassador.status !== 'active') return;
+      this.donationAmbassador = ambassador;
+      this.scrollTo('section-donate');
+    });
   }
 
   copyAmbLink(slug: string, draft: { slug: string }): void {
@@ -461,7 +500,8 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, AfterVie
   linkCopied = false;
 
   campaignShareUrl(draft: CampaignDraft): string {
-    return `${window.location.origin}/campaigns/${draft.slug}/view`;
+    const end = this.isPublicPage && this.ambassador ? this.ambassador.slug : 'view';
+    return new URL(this.router.serializeUrl(this.router.createUrlTree(['/campaigns', draft.slug, end])), window.location.origin).href;
   }
 
   copyShareLink(draft: CampaignDraft): void {
@@ -656,10 +696,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, AfterVie
         this.loadedAmbSlug = draft.slug;
         this.loadAmbassadors(draft.slug);
       }
-      if (draft?.slug && this.autoOpenJoin && !this.autoOpenJoinTriggered) {
-        this.autoOpenJoinTriggered = true;
-        this.openJoinModal();
-      }
+      if (draft?.slug) this.openRequestedJoin();
       // Sprint 5.2 — "בשיתוף עם X" badge on reward cards linking to the
       // partner's own public page. Campaign-only (a Partner draft has no
       // rewards of its own — 'rewards' isn't even in its SECTION_REGISTRY).
@@ -1862,7 +1899,7 @@ export class CampaignPreviewComponent implements OnInit, AfterViewInit, AfterVie
     if (this.isPublicPage && draft.layout.simpleStudio && !this.pendingRegistration) {
       try {
         this.closeSimpleCheckout = this.simpleCheckout.open({ draft, amount: this.explicitAmount, currency: this.selectedCurrency,
-          recurring: this.donationFrequency === 'monthly', ambassadorId: this.ambassador?.id,
+          recurring: this.donationFrequency === 'monthly', ambassadorId: (this.donationAmbassador ?? this.ambassador)?.id,
           rewards: this.cartOfferingList(draft) });
       } catch (error) { this.paymentToasts.show('error', 'לא ניתן לפתוח תשלום', (error as Error).message); }
       return;

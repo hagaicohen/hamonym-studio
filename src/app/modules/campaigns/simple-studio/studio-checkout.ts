@@ -10,6 +10,6 @@ export interface StudioCheckout {
   currency?: DonationPayload['currency'];
   preview?: boolean;
   enabled?(): boolean;
-  submit(entries: CartEntry[], donor: DonationPayload['donor']): Promise<void | StudioPaymentSession>;
+  submit(entries: CartEntry[], donor: DonationPayload['donor'], note?: string): Promise<void | StudioPaymentSession>;
 }
 export const STUDIO_CHECKOUT = new InjectionToken<StudioCheckout>('HAMONYM public checkout');

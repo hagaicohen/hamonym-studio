@@ -1,92 +1,35 @@
-<dialog #dialog class="hm-join-modal" dir="rtl" aria-labelledby="hm-join-title" (cancel)="cancel($event)" (click)="backdrop($event)">
-  <ng-container *ngIf="{ draft: draft$ | async } as vm2">
-  <div class="hm-join-content" *ngIf="vm2.draft as draft">
-
-    <!-- Header -->
-    <div class="hm-join-header">
-      <h3 id="hm-join-title" class="hm-join-title">{{ 'publicPage.campaignPreview.joinAsAnAmbassador' | hmPublic }}</h3>
-      <button type="button" aria-label="סגירה" [disabled]="joinStatus === 'loading'" class="hm-join-close" (click)="closeJoinModal()">✕</button>
-    </div>
-
-    <!-- FORM STATE -->
-    <ng-container *ngIf="joinStatus === 'idle' || joinStatus === 'loading' || joinStatus === 'error'">
-      <div class="hm-join-body">
-        <p class="hm-join-sub">{{ 'publicPage.campaignPreview.getAPersonalSharingLink' | hmPublic }}</p>
-
-        <div class="hm-join-field">
-          <label class="hm-join-label">{{ 'publicPage.campaignPreview.fullName' | hmPublic }} <span style="color:#ef4444">*</span></label>
-          <input class="hm-join-input" type="text" autofocus autocomplete="name" [(ngModel)]="joinForm.fullName"
-                 [placeholder]="'publicPage.campaignPreview.janeDoe' | hmPublic" [disabled]="joinStatus === 'loading'">
-        </div>
-        <div class="hm-join-field">
-          <label class="hm-join-label">{{ 'publicPage.campaignPreview.phone2' | hmPublic }}</label>
-          <input class="hm-join-input" type="tel" [(ngModel)]="joinForm.phone"
-                 placeholder="050-0000000" [disabled]="joinStatus === 'loading'">
-        </div>
-        <div class="hm-join-field">
-          <label class="hm-join-label">{{ 'publicPage.campaignPreview.email2' | hmPublic }}</label>
-          <input class="hm-join-input" type="email" [(ngModel)]="joinForm.email"
-                 placeholder="you@example.com" [disabled]="joinStatus === 'loading'">
-        </div>
-        <div class="hm-join-field">
-          <label class="hm-join-label">{{ 'publicPage.campaignPreview.personalFundraisingGoal' | hmPublic }} <span style="color:#94a3b8;font-weight:400">{{ 'publicPage.campaignPreview.required' | hmPublic }}</span></label>
-          <div class="hm-join-money-wrap">
-            <span class="hm-join-money-sym">{{ '' | hmCurrency }}</span>
-            <input class="hm-join-input hm-join-input--money" type="text" inputmode="numeric"
-                   [value]="joinGoalDisplay"
-                   (input)="onJoinGoalInput($event)"
-                   placeholder="5,000"
-                   [disabled]="joinStatus === 'loading'">
-          </div>
-          <p class="hm-join-goal-warning" *ngIf="joinGoalAboveCampaignGoal(draft)">
-            {{ 'publicPage.campaignPreview.noteTheGoalYouChose' | hmPublic: { targetAmount: (draft.targetAmount | hmMoneyArg) } }}
-          </p>
-        </div>
-        <div class="hm-join-field">
-          <app-ambassador-slug-field
-            [campaignSlug]="draft.slug!"
-            [disabled]="joinStatus === 'loading'"
-            [nameForDefault]="joinForm.fullName"
-            [(value)]="joinForm.slug"
-            (availabilityChange)="joinSlugAvailable = $event">
-          </app-ambassador-slug-field>
-        </div>
-        <p *ngIf="joinError" class="hm-join-error" role="alert">{{ joinError }}</p>
-      </div>
-      <div class="hm-join-footer">
-        <button class="hm-join-submit"
-                [style.background]="primaryColor(draft)"
-                [disabled]="!joinForm.fullName.trim() || joinStatus === 'loading' || !joinSlugAvailable"
-                (click)="submitJoin(draft)">
-          <span *ngIf="joinStatus !== 'loading'">{{ 'publicPage.campaignPreview.getAPersonalSharingLink2' | hmPublic }} <app-icon name="rocket" /></span>
-          <span *ngIf="joinStatus === 'loading'" class="hm-join-spinner"></span>
-        </button>
-      </div>
-    </ng-container>
-
-    <!-- SUCCESS STATE -->
-    <ng-container *ngIf="joinStatus === 'success'">
-      <div class="hm-join-body hm-join-success">
-        <div class="hm-join-success-icon" [style.color]="primaryColor(draft)">✓</div>
-        <h4 class="hm-join-success-title">{{ 'publicPage.campaignPreview.youreRegisteredAsAnAmbassador' | hmPublic }}</h4>
-        <p class="hm-join-success-sub">{{ 'publicPage.campaignPreview.yourPersonalLinkIsReady' | hmPublic }}</p>
+@if (draft$ | async; as draft) {
+  <app-ambassador-form-drawer [title]="editing ? 'עריכת הדף שלי' : 'הצטרפות כשגריר/ה'"
+    [accent]="primaryColor(draft)" [busy]="joinStatus === 'loading' || photoUploading" (dismissed)="closeJoinModal()">
+    @if (joinStatus === 'success') {
+      <div class="hm-join-success">
+        <h4 class="hm-join-success-title">הצטרפתם כשגרירים</h4>
+        <p class="hm-join-success-sub">הקישור האישי שלכם מוכן</p>
         <div class="hm-join-link-box">
           <span class="hm-join-link-text">{{ joinShareUrl }}</span>
-          <button class="hm-join-copy-btn" [style.background]="primaryColor(draft)"
-                  (click)="copyJoinLink()">
-            {{ joinCopied ? ('publicPage.campaignPreview.copied' | hmPublic) : ('publicPage.campaignPreview.copy' | hmPublic) }}
+          <button class="hm-join-copy-btn" [style.background]="primaryColor(draft)" (click)="copyJoinLink()">
+            {{ joinCopied ? 'הועתק' : 'העתקה' }}
           </button>
         </div>
-        <p class="hm-join-upsell">
-          {{ 'publicPage.campaignPreview.wantToTrackTheDonations' | hmPublic }}<br>
-          <a class="hm-join-upsell-link" [style.color]="primaryColor(draft)" [routerLink]="['/register']" [queryParams]="{returnUrl:returnUrl}">
-            {{ 'publicPage.campaignPreview.openAFreePersonalArea' | hmPublic }}
-          </a>
-        </p>
       </div>
-    </ng-container>
-
-
-  </div>
-  </ng-container>
-</dialog>
+    } @else if (!auth.currentUser()) {
+      <p>כדי להצטרף כשגריר יש להתחבר לחשבון.</p>
+      <a [routerLink]="['/login']" [queryParams]="{ returnUrl: loginReturnUrl }">התחברות</a>
+    } @else {
+      <app-ambassador-form-fields [model]="joinForm" [identityOnly]="true" [editingId]="editing?.id"
+        [savedSlug]="editing?.slug" [photoUrl]="editing?.photoUrl || auth.currentUser()?.picture"
+        [campaignTitle]="draft.title" [campaignSlug]="draft.slug ?? ''" [target]="draft.targetAmount" [disabled]="joinStatus === 'loading'"
+        (availabilityChange)="joinSlugAvailable = $event" (photoBusy)="photoUploading = $event" />
+      @if (joinError) { <p class="hm-join-error" role="alert">{{ joinError }}</p> }
+    }
+    <button drawer-action type="button" [disabled]="joinStatus === 'loading' || photoUploading" (click)="closeJoinModal()">
+      {{ joinStatus === 'success' ? 'סגירה' : 'ביטול' }}
+    </button>
+    <button drawer-action="primary" type="button" [hidden]="!auth.currentUser() || joinStatus === 'success'"
+      [disabled]="!joinForm.fullName.trim() || joinStatus === 'loading' || !joinSlugAvailable || photoUploading"
+      (click)="submitJoin(draft)">
+      @if (joinStatus === 'loading' && !editing) { <span class="amb-create-spinner" aria-hidden="true"></span> }
+      {{ joinStatus === 'loading' ? (editing ? 'שומר…' : 'יוצר דף שגריר…') : editing ? 'שמירת שינויים' : 'יצירת דף השגריר שלי' }}
+    </button>
+  </app-ambassador-form-drawer>
+}

@@ -115,8 +115,8 @@
                       *ngIf="hasAmbassadorsSection(draft)"
                       [style.color]="themePrimaryColor(draft)"
                       [style.borderColor]="themePrimaryColor(draft)"
-                      (click)="openJoinModal()">
-                <span><app-icon name="rocket" /> {{ 'publicPage.campaignPreview.becomeAnAmbassador' | hmPublic }}</span>
+                      [hidden]="!joinActionAvailable" (click)="openJoinModal()">
+                <span><app-icon name="rocket" /> {{ myAmbassador ? 'לדף השגריר שלי' : ('publicPage.campaignPreview.becomeAnAmbassador' | hmPublic) }}</span>
               </button>
               <button class="nav-donate-btn" *ngIf="hasDonationWidget(draft)" [style.background]="themePrimaryColor(draft)" (click)="scrollToDonation()">
                 {{ 'publicPage.campaignPreview.donateNow' | hmPublic }}
@@ -146,7 +146,7 @@
           [class.nav-link--faded]="item.faded"
           [style.color]="primaryColor(draft)" (click)="onNavItemClick(item)">{{ item.label | hmPublic }}</a>
         <a class="nav-drawer-link" *ngIf="hasAmbassadorsSection(draft)"
-          [style.color]="primaryColor(draft)" (click)="openJoinModal(); navOpen=false"><app-icon name="rocket" /> {{ 'publicPage.campaignPreview.becomeAnAmbassador' | hmPublic }}</a>
+          [style.color]="primaryColor(draft)" [hidden]="!joinActionAvailable" (click)="openJoinModal(); navOpen=false"><app-icon name="rocket" /> {{ myAmbassador ? 'לדף השגריר שלי' : ('publicPage.campaignPreview.becomeAnAmbassador' | hmPublic) }}</a>
         <a class="nav-drawer-link" [style.color]="primaryColor(draft)" (click)="goToAccount(); navOpen=false">{{ 'publicPage.campaignPreview.logInPersonalArea' | hmPublic }}</a>
         <a class="nav-drawer-link" [style.color]="primaryColor(draft)">{{ 'publicPage.campaignPreview.contactUs' | hmPublic }}</a>
       </div>
@@ -190,43 +190,8 @@
     <!-- ══ AMBASSADOR BANNER ══ -->
     <div class="ambassador-strip" *ngIf="ambassador">
 
-      <!-- Info: name + personal title + message -->
-      <div class="ambassador-info">
-        <div class="ambassador-details">
-          <div class="ambassador-name">{{ ambassador.fullName }}</div>
-          <div class="ambassador-role">{{ ambassador.personalTitle || ('publicPage.campaignPreview.campaignAmbassador' | hmPublic) }}</div>
-        </div>
-        <div class="ambassador-personal-msg" *ngIf="ambassador.personalMessage">
-          "{{ ambassador.personalMessage }}"
-        </div>
-      </div>
-
-      <!-- Stats: donors | amount+bar | pct -->
-      <div class="ambassador-stats">
-
-        <div class="amb-stat">
-          <div class="amb-stat-value">{{ ambassador.donorCount || 0 | number }}</div>
-          <div class="amb-stat-label">{{ 'publicPage.campaignPreview.donors' | hmPublic }}</div>
-        </div>
-
-        <div class="amb-progress-section">
-          <div class="amb-amount">
-            {{ formatAmount(ambassador.raisedTotal) }}
-            <span *ngIf="ambassador.goalAmount">{{ 'publicPage.campaignPreview.ofFormatamount' | hmPublic: { formatAmount: (formatAmount(ambassador.goalAmount)) } }}</span>
-          </div>
-          <div class="amb-progress-bar">
-            <div class="amb-progress-fill"
-                 [style.width.%]="ambassadorPct() > 100 ? 100 : ambassadorPct()"
-                 [style.background]="primaryColor(draft)"></div>
-          </div>
-        </div>
-
-        <div class="amb-stat">
-          <div class="amb-stat-value" [style.color]="primaryColor(draft)">{{ ambassadorPct() }}%</div>
-          <div class="amb-stat-label">{{ 'publicPage.campaignPreview.ofGoal' | hmPublic }}</div>
-        </div>
-
-      </div>
+      <app-public-ambassador-panel [ambassador]="ambassador"
+        [campaignUrl]="'/campaigns/' + draft.slug + '/view'" [style.--fundraising-accent]="primaryColor(draft)" />
 
       <!-- Actions -->
       <div class="ambassador-actions">
@@ -971,7 +936,7 @@
   [cartOfferings]="cartOfferingList(draft)"
   [entityLogoUrl]="resolvedEntityLogo(draft)"
   [entityName]="resolvedEntityName(draft)"
-  [ambassador]="ambassador"
+  [ambassador]="donationAmbassador ?? ambassador"
   (paymentSucceeded)="onCheckoutPaymentSucceeded($event)"
   (closed)="closeCheckout()">
 </app-checkout-v2>
@@ -986,7 +951,7 @@
   [pendingRegistration]="pendingRegistration"
   [entityLogoUrl]="resolvedEntityLogo(draft)"
   [entityName]="resolvedEntityName(draft)"
-  [ambassador]="ambassador"
+  [ambassador]="donationAmbassador ?? ambassador"
   (closed)="closeCheckout()"
   (participantsSaved)="onParticipantsSaved($event)"
   (cleared)="pendingRegistration = null">
@@ -1925,12 +1890,12 @@
               [style.borderRadius.px]="ambassadorCardBorderRadius(draft, asAmbassadorsBlock(block.data))">
               <div class="hm-amb-list-top">
                 <div class="hm-lb-avatar" [style.background]="primaryColor(draft) + '1a'" [style.color]="primaryColor(draft)">
-                  {{ a.fullName.charAt(0) }}
+                  <a [routerLink]="['/campaigns', draft.slug, a.slug]" [attr.aria-label]="a.fullName">@if (a.photoUrl) { <img [src]="a.photoUrl" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%" /> } @else { {{ a.fullName.charAt(0) }} }</a>
                 </div>
                 <div class="hm-amb-list-info">
                   <span class="hm-amb-list-name" data-text-role="ambassadorName" [hmTextRole]="$any(block.data).textStyles?.ambassadorName"
                         [style.color]="ambassadorNameColor(draft, asAmbassadorsBlock(block.data))"
-                        [style.fontWeight]="ambassadorNameWeight(asAmbassadorsBlock(block.data))">{{ a.fullName }}</span>
+                        [style.fontWeight]="ambassadorNameWeight(asAmbassadorsBlock(block.data))"><a [routerLink]="['/campaigns', draft.slug, a.slug]">{{ a.fullName }}</a></span>
                   <span class="hm-amb-list-raised" data-text-role="raisedAmount" [hmTextRole]="$any(block.data).textStyles?.raisedAmount" [style.color]="ambassadorRaisedColor(draft, asAmbassadorsBlock(block.data))">{{ a.raisedTotal | hmMoney }}</span>
                 </div>
               </div>
@@ -1941,6 +1906,7 @@
                 [style.background]="ambassadorViewButtonBackground(draft, asAmbassadorsBlock(block.data))"
                 [style.color]="ambassadorViewButtonTextColor(asAmbassadorsBlock(block.data))"
                 (click)="viewAmbassador(a.slug, draft)">{{ 'publicPage.campaignPreview.toTheAmbassadorsPage' | hmPublic }}</button>
+              <button *ngIf="isPublicPage" class="hm-lb-view-btn" type="button" (click)="donateThrough(a.slug, draft)">תרמו דרכי</button>
             </div>
           </div>
 
@@ -1954,12 +1920,12 @@
               [style.borderRadius.px]="ambassadorCardBorderRadius(draft, asAmbassadorsBlock(block.data))">
               <div class="hm-lb-card-header">
                 <div class="hm-lb-avatar" [style.background]="primaryColor(draft) + '1a'" [style.color]="primaryColor(draft)">
-                  {{ a.fullName.charAt(0) }}
+                  <a [routerLink]="['/campaigns', draft.slug, a.slug]" [attr.aria-label]="a.fullName">@if (a.photoUrl) { <img [src]="a.photoUrl" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%" /> } @else { {{ a.fullName.charAt(0) }} }</a>
                 </div>
                 <div class="hm-lb-card-info">
                   <div class="hm-lb-card-name" data-text-role="ambassadorName" [hmTextRole]="$any(block.data).textStyles?.ambassadorName"
                        [style.color]="ambassadorNameColor(draft, asAmbassadorsBlock(block.data))"
-                       [style.fontWeight]="ambassadorNameWeight(asAmbassadorsBlock(block.data))">{{ a.fullName }}</div>
+                       [style.fontWeight]="ambassadorNameWeight(asAmbassadorsBlock(block.data))"><a [routerLink]="['/campaigns', draft.slug, a.slug]">{{ a.fullName }}</a></div>
                   <div class="hm-lb-card-msg" *ngIf="a.personalMessage">{{ a.personalMessage }}</div>
                 </div>
               </div>
@@ -1984,6 +1950,7 @@
                   (click)="viewAmbassador(a.slug, draft)">
                   {{ 'publicPage.campaignPreview.toTheAmbassadorsPage' | hmPublic }}
                 </button>
+              <button *ngIf="isPublicPage" class="hm-lb-view-btn" type="button" (click)="donateThrough(a.slug, draft)">תרמו דרכי</button>
               </div>
             </div>
           </div>
@@ -1996,8 +1963,8 @@
           <div class="hm-lb-empty">
             <div class="hm-lb-empty-icon"><app-icon name="handshake" /></div>
             <div class="hm-lb-empty-title">{{ 'publicPage.campaignPreview.beTheFirstToJoin' | hmPublic }}</div>
-            <button class="hm-lb-empty-btn" [style.background]="primaryColor(draft)" [ngStyle]="joinCtaStyle($any(block.data).joinCta)" [hmTextRole]="$any(block.data).joinCta?.textStyle" (click)="openJoinModal()">
-              <app-icon name="rocket" /> {{ $any(block.data).joinCta?.label || ('publicPage.campaignPreview.becomeAnAmbassador' | hmPublic) }}
+            <button class="hm-lb-empty-btn" [style.background]="primaryColor(draft)" [ngStyle]="joinCtaStyle($any(block.data).joinCta)" [hmTextRole]="$any(block.data).joinCta?.textStyle" [hidden]="!joinActionAvailable" (click)="openJoinModal()">
+              <app-icon name="rocket" /> {{ myAmbassador ? 'לדף השגריר שלי' : ($any(block.data).joinCta?.label || ('publicPage.campaignPreview.becomeAnAmbassador' | hmPublic)) }}
             </button>
           </div>
         </ng-template>
@@ -2013,8 +1980,8 @@
            centers on its own. -->
       <div class="hm-lb-section-header" [class.hm-lb-section-header--center]="ambEffective.length === 0">
         <h2 class="hm-lb-section-title" data-text-role="sectionTitle" [hmTextRole]="$any(block.data).textStyles?.sectionTitle" [style.color]="ambassadorsSectionTitleColor(draft, asAmbassadorsBlock(block.data))">{{ 'publicPage.campaignPreview.ambassadors' | hmPublic }}</h2>
-        <button class="hm-amb-join-btn" *ngIf="ambEffective.length > 0" [style.background]="primaryColor(draft)" [ngStyle]="joinCtaStyle($any(block.data).joinCta)" [hmTextRole]="$any(block.data).joinCta?.textStyle" (click)="openJoinModal()">
-          <app-icon name="rocket" /> {{ $any(block.data).joinCta?.label || ('publicPage.campaignPreview.becomeAnAmbassador' | hmPublic) }}
+        <button class="hm-amb-join-btn" *ngIf="ambEffective.length > 0" [style.background]="primaryColor(draft)" [ngStyle]="joinCtaStyle($any(block.data).joinCta)" [hmTextRole]="$any(block.data).joinCta?.textStyle" [hidden]="!joinActionAvailable" (click)="openJoinModal()">
+          <app-icon name="rocket" /> {{ myAmbassador ? 'לדף השגריר שלי' : ($any(block.data).joinCta?.label || ('publicPage.campaignPreview.becomeAnAmbassador' | hmPublic)) }}
         </button>
       </div>
 
@@ -2066,12 +2033,12 @@
             <!-- Card header: avatar + name + copy -->
             <div class="hm-lb-card-header">
               <div class="hm-lb-avatar" [style.background]="primaryColor(draft) + '1a'" [style.color]="primaryColor(draft)">
-                {{ a.fullName.charAt(0) }}
+                <a [routerLink]="['/campaigns', draft.slug, a.slug]" [attr.aria-label]="a.fullName">@if (a.photoUrl) { <img [src]="a.photoUrl" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%" /> } @else { {{ a.fullName.charAt(0) }} }</a>
               </div>
               <div class="hm-lb-card-info">
                 <div class="hm-lb-card-name" data-text-role="ambassadorName" [hmTextRole]="$any(block.data).textStyles?.ambassadorName"
                      [style.color]="ambassadorNameColor(draft, asAmbassadorsBlock(block.data))"
-                     [style.fontWeight]="ambassadorNameWeight(asAmbassadorsBlock(block.data))">{{ a.fullName }}</div>
+                     [style.fontWeight]="ambassadorNameWeight(asAmbassadorsBlock(block.data))"><a [routerLink]="['/campaigns', draft.slug, a.slug]">{{ a.fullName }}</a></div>
                 <div class="hm-lb-card-msg" *ngIf="a.personalMessage">{{ a.personalMessage }}</div>
               </div>
             </div>
@@ -2100,6 +2067,7 @@
                       (click)="viewAmbassador(a.slug, draft)">
                 {{ 'publicPage.campaignPreview.toTheAmbassadorsPage' | hmPublic }}
               </button>
+              <button *ngIf="isPublicPage" class="hm-lb-view-btn" type="button" (click)="donateThrough(a.slug, draft)">תרמו דרכי</button>
             </div>
 
           </div>
@@ -2114,12 +2082,12 @@
             [style.borderRadius.px]="ambassadorCardBorderRadius(draft, asAmbassadorsBlock(block.data))">
             <div class="hm-amb-list-top">
               <div class="hm-lb-avatar" [style.background]="primaryColor(draft) + '1a'" [style.color]="primaryColor(draft)">
-                {{ a.fullName.charAt(0) }}
+                <a [routerLink]="['/campaigns', draft.slug, a.slug]" [attr.aria-label]="a.fullName">@if (a.photoUrl) { <img [src]="a.photoUrl" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%" /> } @else { {{ a.fullName.charAt(0) }} }</a>
               </div>
               <div class="hm-amb-list-info">
                 <span class="hm-amb-list-name" data-text-role="ambassadorName" [hmTextRole]="$any(block.data).textStyles?.ambassadorName"
                       [style.color]="ambassadorNameColor(draft, asAmbassadorsBlock(block.data))"
-                      [style.fontWeight]="ambassadorNameWeight(asAmbassadorsBlock(block.data))">{{ a.fullName }}</span>
+                      [style.fontWeight]="ambassadorNameWeight(asAmbassadorsBlock(block.data))"><a [routerLink]="['/campaigns', draft.slug, a.slug]">{{ a.fullName }}</a></span>
                 <span class="hm-amb-list-raised" data-text-role="raisedAmount" [hmTextRole]="$any(block.data).textStyles?.raisedAmount" [style.color]="ambassadorRaisedColor(draft, asAmbassadorsBlock(block.data))">{{ a.raisedTotal | hmMoney }}</span>
               </div>
             </div>
@@ -2130,6 +2098,7 @@
               [style.background]="ambassadorViewButtonBackground(draft, asAmbassadorsBlock(block.data))"
               [style.color]="ambassadorViewButtonTextColor(asAmbassadorsBlock(block.data))"
               (click)="viewAmbassador(a.slug, draft)">{{ 'publicPage.campaignPreview.toTheAmbassadorsPage' | hmPublic }}</button>
+              <button *ngIf="isPublicPage" class="hm-lb-view-btn" type="button" (click)="donateThrough(a.slug, draft)">תרמו דרכי</button>
           </div>
         </div>
 
@@ -2152,8 +2121,8 @@
           <div class="hm-lb-empty-icon"><app-icon name="handshake" /></div>
           <div class="hm-lb-empty-title">{{ 'publicPage.campaignPreview.beTheFirstToJoin' | hmPublic }}</div>
           <div class="hm-lb-empty-sub">{{ 'publicPage.campaignPreview.helpUsSpreadTheWord' | hmPublic }}</div>
-          <button class="hm-lb-empty-btn" [style.background]="primaryColor(draft)" [ngStyle]="joinCtaStyle($any(block.data).joinCta)" [hmTextRole]="$any(block.data).joinCta?.textStyle" (click)="openJoinModal()">
-            <app-icon name="rocket" /> {{ $any(block.data).joinCta?.label || ('publicPage.campaignPreview.becomeAnAmbassador' | hmPublic) }}
+          <button class="hm-lb-empty-btn" [style.background]="primaryColor(draft)" [ngStyle]="joinCtaStyle($any(block.data).joinCta)" [hmTextRole]="$any(block.data).joinCta?.textStyle" [hidden]="!joinActionAvailable" (click)="openJoinModal()">
+            <app-icon name="rocket" /> {{ myAmbassador ? 'לדף השגריר שלי' : ($any(block.data).joinCta?.label || ('publicPage.campaignPreview.becomeAnAmbassador' | hmPublic)) }}
           </button>
         </div>
       </ng-template>
@@ -2198,6 +2167,7 @@
           </div>
           <div class="hm-donor-list-info">
             <span class="hm-donor-list-name" data-text-role="donorName" [hmTextRole]="$any(block.data).textStyles?.donorName" [style.color]="donorNameColor(draft, asDonors(block.data))">{{ d.name }}</span>
+            <small style="display:block;min-block-size:1.4em" [attr.aria-hidden]="!d.ambassadorName || d.isAnonymous ? true : null">{{ d.ambassadorName && !d.isAnonymous ? 'דרך ' + d.ambassadorName : '' }}</small>
             <span class="hm-donor-list-note" *ngIf="d.note">{{ d.note }}</span>
             <span class="hm-donor-list-time" data-text-role="donorMeta" [hmTextRole]="$any(block.data).textStyles?.donorMeta" [style.color]="donorMetaColor(draft, asDonors(block.data))">{{ timeAgo(d.completedAt) }}</span>
           </div>
@@ -2224,6 +2194,7 @@
                 <span class="hm-donor-v2-tag" *ngIf="d.isAnonymous">{{ 'publicPage.campaignPreview.anonymous' | hmPublic }}</span>
                 <span class="hm-donor-v2-tag hm-donor-v2-tag--first" *ngIf="d.isFirst">{{ 'publicPage.campaignPreview.firstDonation' | hmPublic }}</span>
               </div>
+              <small style="display:block;min-block-size:1.4em" [attr.aria-hidden]="!d.ambassadorName || d.isAnonymous ? true : null">{{ d.ambassadorName && !d.isAnonymous ? 'דרך ' + d.ambassadorName : '' }}</small>
               <span class="hm-donor-v2-note" *ngIf="d.note">{{ d.note }}</span>
               <span class="hm-donor-v2-time" data-text-role="donorMeta" [hmTextRole]="$any(block.data).textStyles?.donorMeta" [style.color]="donorMetaColor(draft, asDonors(block.data))">{{ timeAgo(d.completedAt) }}</span>
             </div>
@@ -2303,6 +2274,7 @@
                     <span class="hm-donor-v2-tag" *ngIf="d.isAnonymous">{{ 'publicPage.campaignPreview.anonymous' | hmPublic }}</span>
                     <span class="hm-donor-v2-tag hm-donor-v2-tag--first" *ngIf="d.isFirst">{{ 'publicPage.campaignPreview.firstDonation' | hmPublic }}</span>
                   </div>
+                  <small style="display:block;min-block-size:1.4em" [attr.aria-hidden]="!d.ambassadorName || d.isAnonymous ? true : null">{{ d.ambassadorName && !d.isAnonymous ? 'דרך ' + d.ambassadorName : '' }}</small>
                   <span class="hm-donor-v2-note" *ngIf="d.note">{{ d.note }}</span>
                   <span class="hm-donor-v2-time" data-text-role="donorMeta" [hmTextRole]="$any(block.data).textStyles?.donorMeta" [style.color]="donorMetaColor(draft, asDonors(block.data))">{{ timeAgo(d.completedAt) }}</span>
                 </div>
@@ -2324,6 +2296,7 @@
               </div>
               <div class="hm-donor-list-info">
                 <span class="hm-donor-list-name" data-text-role="donorName" [hmTextRole]="$any(block.data).textStyles?.donorName" [style.color]="donorNameColor(draft, asDonors(block.data))">{{ d.name }}</span>
+                <small style="display:block;min-block-size:1.4em" [attr.aria-hidden]="!d.ambassadorName || d.isAnonymous ? true : null">{{ d.ambassadorName && !d.isAnonymous ? 'דרך ' + d.ambassadorName : '' }}</small>
                 <span class="hm-donor-list-note" *ngIf="d.note">{{ d.note }}</span>
                 <span class="hm-donor-list-time" data-text-role="donorMeta" [hmTextRole]="$any(block.data).textStyles?.donorMeta" [style.color]="donorMetaColor(draft, asDonors(block.data))">{{ timeAgo(d.completedAt) }}</span>
               </div>

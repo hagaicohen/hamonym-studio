@@ -1,2 +1,4 @@
 <button type="button" data-donate="true">♡ תרמו עכשיו</button>
-<button type="button" data-ambassador="true">הצטרף כשגריר</button>
+@if (ambassadorLabel; as label) {
+  <button type="button" data-ambassador="true">{{ label }}</button>
+}

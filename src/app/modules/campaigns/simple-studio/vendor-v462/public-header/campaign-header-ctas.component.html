@@ -1,2 +1,4 @@
-<button type="button" class="ham-header-ambassadors" data-ambassador="true">הצטרף כשגריר</button>
+@if (ambassadorLabel; as label) {
+  <button type="button" class="ham-header-ambassadors" data-ambassador="true">{{ label }}</button>
+}
 <button type="button" class="ham-header-donate" data-donate="true">תרמו עכשיו</button>

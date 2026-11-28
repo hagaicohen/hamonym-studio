@@ -1,3 +1,6 @@
+import { AmbassadorFormDrawerComponent } from '../../shared/components/ambassador-form-drawer.component';
+import { AuthService } from '../../../../core/services/auth.service';
+import { AmbassadorFormFieldsComponent, DEFAULT_AMBASSADOR_SLOGAN } from '../../shared/components/ambassador-form-fields.component';
 import { MoneyInputDirective } from '../../../../shared/directives/money-input.directive';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -13,7 +16,7 @@ import { AmbassadorSlugFieldComponent } from '../../shared/components/ambassador
 @Component({
   selector: 'app-ambassador-studio-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, MoneyInputDirective, HttpClientModule, LucideAngularModule, AmbassadorSlugFieldComponent],
+  imports: [AmbassadorFormDrawerComponent, AmbassadorFormFieldsComponent, CommonModule, FormsModule, MoneyInputDirective, HttpClientModule, LucideAngularModule, AmbassadorSlugFieldComponent],
   templateUrl: './ambassador-studio-page.component.html',
   styleUrls: ['./ambassador-studio-page.component.css'],
 })
@@ -35,6 +38,10 @@ export class AmbassadorStudioPageComponent implements OnInit {
   campaign: any = null;
   ambassador    = signal<Ambassador | null>(null);
 
+  readonly auth = inject(AuthService);
+  photoUploading = false;
+  private initialDraft = '';
+  saveError = '';
   isLoading = true;
   isSaving  = false;
   errorMsg  = '';
@@ -51,6 +58,7 @@ export class AmbassadorStudioPageComponent implements OnInit {
     personalMessage: '',
     goalAmount:      null as number | null,
     slug:            '',
+    photoUrl:        null as string | null,
   };
   // Pre-existing saved slug always starts available (the slug field
   // component confirms it optimistically on first change without a round
@@ -85,6 +93,7 @@ export class AmbassadorStudioPageComponent implements OnInit {
           email:           r.email       ?? null,
           goalAmount:      r.goal_amount != null ? Number(r.goal_amount) : null,
           personalMessage: r.personal_message ?? '',
+          photoUrl:        r.photo_url ?? null,
           personalTitle:   r.personal_title   ?? '',
           status:          r.status,
           slug:            r.slug,
@@ -101,10 +110,12 @@ export class AmbassadorStudioPageComponent implements OnInit {
           phone:           ambassador.phone           ?? '',
           email:           ambassador.email           ?? '',
           personalTitle:   ambassador.personalTitle   ?? '',
-          personalMessage: ambassador.personalMessage ?? '',
+          personalMessage: ambassador.personalMessage || DEFAULT_AMBASSADOR_SLOGAN,
           goalAmount:      ambassador.goalAmount,
           slug:            ambassador.slug ?? '',
+          photoUrl:        ambassador.photoUrl ?? null,
         };
+        this.initialDraft = JSON.stringify(this.draft);
         this.isLoading = false;
         this.loader.hide();
       },
@@ -115,6 +126,8 @@ export class AmbassadorStudioPageComponent implements OnInit {
       },
     });
   }
+
+  saveAfterEdit(): void { this.save(() => { this.currentStep = 3; }); }
 
   next(): void {
     if (this.currentStep === 2) {
@@ -131,7 +144,8 @@ export class AmbassadorStudioPageComponent implements OnInit {
   }
 
   save(onDone?: () => void): void {
-    if (!this.ambassador() || !this.slugAvailable) return;
+    if (this.isSaving || this.photoUploading || !this.ambassador() || !this.slugAvailable || !this.draft.fullName.trim()) return;
+    this.saveError = '';
     this.isSaving = true;
     const token = localStorage.getItem('token') ?? '';
     this.http.patch<{ ambassador: any }>(
@@ -143,6 +157,7 @@ export class AmbassadorStudioPageComponent implements OnInit {
         personal_message: this.draft.personalMessage,
         personal_title:   this.draft.personalTitle || null,
         goal_amount:      this.draft.goalAmount,
+        ...(this.draft.photoUrl !== this.ambassador()?.photoUrl && this.draft.photoUrl ? {photo_url:this.draft.photoUrl} : {}),
         ...(this.draft.slug !== this.ambassador()?.slug ? {slug:this.draft.slug} : {}),
 
       },
@@ -159,15 +174,17 @@ export class AmbassadorStudioPageComponent implements OnInit {
           personalTitle:   r.personal_title   ?? '',
           goalAmount:      r.goal_amount != null ? Number(r.goal_amount) : null,
           slug:            r.slug ?? a.slug,
+          photoUrl:        r.photo_url ?? a.photoUrl,
         } : a);
         this.isSaving = false;
+        this.initialDraft = JSON.stringify(this.draft);
         this.saved    = true;
         setTimeout(() => this.saved = false, 2500);
         onDone?.();
       },
       error: (err) => {
         this.isSaving = false;
-        this.errorMsg = err?.error?.error || 'שגיאה בשמירה';
+        this.saveError = err?.error?.error || 'שגיאה בשמירה';
       },
     });
   }
@@ -185,6 +202,8 @@ export class AmbassadorStudioPageComponent implements OnInit {
   }
 
   back(): void {
+    if (this.isSaving || this.photoUploading) return;
+    if (!this.errorMsg && this.initialDraft && this.initialDraft !== JSON.stringify(this.draft) && !window.confirm('לצאת בלי לשמור את השינויים?')) return;
     this.router.navigate(['/campaigns']);
   }
 

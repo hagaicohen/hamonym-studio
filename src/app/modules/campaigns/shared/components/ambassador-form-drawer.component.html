@@ -1,0 +1,10 @@
+﻿<dialog #drawer class="drawer" dir="rtl" aria-labelledby="ambassador-drawer-title"
+  [style.--amb-form-accent]="accent || null" [class.public]="!!accent"
+  (cancel)="dismiss($event)" (click)="backdrop($event)">
+  <header class="drawer-head">
+    <h2 id="ambassador-drawer-title">{{ title }}</h2>
+    <button class="close" type="button" aria-label="סגירה" [disabled]="busy" (click)="dismiss()">×</button>
+  </header>
+  <div class="formbody"><ng-content /></div>
+  <footer class="foot"><ng-content select="[drawer-action]" /></footer>
+</dialog>

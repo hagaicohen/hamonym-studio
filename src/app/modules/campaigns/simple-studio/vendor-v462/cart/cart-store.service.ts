@@ -1,3 +1,4 @@
+import type { DonationAmbassador } from './cart.types';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { CampaignStateService } from '../core/campaign-state.service';
 import { CartCampaign, CartEntry, RaceCartInput, formatCurrency, lineQty, lineTotal } from './cart.types';
@@ -16,6 +17,14 @@ const newId = () => String(Date.now()) + '-' + Math.random().toString(36).slice(
 export class CartStoreService {
   private readonly campaignState = inject(CampaignStateService);
   private seedCampaign?: CartCampaign;
+  private pageAmbassadorId?: string;
+  private selectedAmbassadorId?: string;
+  setPageAmbassador(id?: string): void {
+    this.pageAmbassadorId = id;
+    this.selectedAmbassadorId = undefined;
+  }
+  selectDonationAmbassador(id?: string): void { this.selectedAmbassadorId = id; }
+  private get donationAmbassadorId(): string | undefined { return this.selectedAmbassadorId ?? this.pageAmbassadorId; }
   private publicCampaign?: CartCampaign;
   usePublicCampaign(campaign: CartCampaign): void { this.publicCampaign = campaign; }
   readonly entries = signal<CartEntry[]>([]);
@@ -68,17 +77,19 @@ export class CartStoreService {
     if (!reward) return false;
     const price = Number(reward.amount);
     if (!Number.isFinite(price) || price < 0) { this.notify('מחיר התשורה אינו תקין'); return false; }
-    const match = this.entries().find(x => x.kind === 'reward' && x.sourceIndex === index);
-    if (reward.stockEnabled && (match?.qty || 0) >= Number(reward.quantity || 0)) { this.notify('לא נותר מלאי לתשורה הזו'); return false; }
+    const match = this.entries().find(x => x.kind === 'reward' && x.sourceIndex === index && x.ambassadorId === this.pageAmbassadorId);
+    const selectedQty = this.entries().filter(x => x.kind === 'reward' && x.sourceIndex === index)
+      .reduce((total, x) => total + x.qty, 0);
+    if (reward.stockEnabled && selectedQty >= Number(reward.quantity || 0)) { this.notify('לא נותר מלאי לתשורה הזו'); return false; }
     this.update(list => match
       ? list.map(x => x === match ? { ...x, qty: x.qty + 1 } : x)
-      : [...list, { uid: newId(), kind: 'reward', businessId:reward.businessId || reward.id, sourceIndex: index, title: String(reward.name || 'תשורה'), info: String(reward.description || ''), price, qty: 1 }]);
+      : [...list, { uid: newId(), kind: 'reward', ambassadorId: this.pageAmbassadorId, businessId:reward.businessId || reward.id, sourceIndex: index, title: String(reward.name || 'תשורה'), info: String(reward.description || ''), price, qty: 1 }]);
     this.notify('התשורה נוספה לסל');
     return true;
   }
 
   toggleReward(index: number): boolean {
-    const isReward = (x: CartEntry) => x.kind === 'reward' && Number(x.sourceIndex) === index;
+    const isReward = (x: CartEntry) => x.kind === 'reward' && Number(x.sourceIndex) === index && x.ambassadorId === this.pageAmbassadorId;
     if (!this.entries().some(isReward)) return this.addReward(index);
     this.update(list => list.filter(x => !isReward(x)));
     this.notify('בחירת התשורה בוטלה');
@@ -86,15 +97,16 @@ export class CartStoreService {
   }
 
   /** Adds (or replaces) the donation chosen in a rendered donation box. */
-  addDonation(box: Element | null): boolean {
+  addDonation(box: Element | null, ambassador?: DonationAmbassador, presets = this.campaign().content?.donate?.boxAmounts): boolean {
     if (!box) return false;
     const chosen = box.querySelector<HTMLElement>('[data-donation-choice].donation-selected,[data-donation-choice].is-chosen,[data-donation-other].donation-selected,[data-donation-other].is-chosen');
+    if (ambassador && !chosen) return false;
     const customInput = box.querySelector<HTMLInputElement>('.donation-custom-entry input');
     let amount: number, recurring = false, months = 1;
     if (chosen?.hasAttribute('data-donation-other')) {
       amount = Number(String(customInput?.value || '').replace(/[₪,\s]/g, ''));
     } else {
-      const preset = this.campaign().content?.donate?.boxAmounts?.[Number(chosen?.dataset['donationChoice'] ?? 0)];
+      const preset = presets?.[Number(chosen?.dataset['donationChoice'] ?? 0)];
       if (!preset) { this.notify('בחרו תחילה סכום לתרומה'); return false; }
       amount = Number(preset.amount);
       recurring = preset.kind === 'recurring';
@@ -102,14 +114,14 @@ export class CartStoreService {
     }
     if (!Number.isFinite(amount) || amount <= 0) { this.notify('יש להזין סכום תרומה תקין'); customInput?.focus(); return false; }
     const line = {
-      kind: 'donation' as const, price: amount, qty: 1, recurring, months,
+      kind: 'donation' as const, ambassadorId: ambassador?.id ?? this.donationAmbassadorId, ambassadorName: ambassador?.name, price: amount, qty: 1, recurring, months,
       title: recurring ? 'תרומה חודשית' : 'תרומה חד־פעמית',
       info: recurring ? `${months} חודשים · ${formatCurrency(amount)} לחודש` : 'למען הקמפיין'
     };
     this.update(list => {
-      const i = list.findIndex(x => x.kind === 'donation' && x.selectionBased === true);
+      const i = ambassador ? -1 : list.findIndex(x => x.kind === 'donation' && x.selectionBased === true && x.ambassadorId === line.ambassadorId);
       if (i >= 0) list[i] = { ...list[i], ...line };
-      else list.push({ uid: newId(), selectionBased: true, ...line });
+      else list.push({ uid: newId(), selectionBased: !ambassador, ...line });
       return list;
     });
     this.notify('התרומה נכללה בסל');
@@ -121,7 +133,7 @@ export class CartStoreService {
     const participants = Array.isArray(data.participants) ? data.participants : [];
     const qty = participants.length || Math.max(1, Math.floor(Number(data.qty) || 1));
     this.update(list => [...list, {
-      uid: newId(), kind: 'race', sourceIndex: data.raceIndex, title: String(data.title || 'הרשמה למירוץ'),
+      uid: newId(), kind: 'race', ambassadorId: this.pageAmbassadorId, sourceIndex: data.raceIndex, title: String(data.title || 'הרשמה למירוץ'),
       info: String(data.type || 'הרשמה רגילה'), price: Number(data.unitPrice), qty,
       participants: participants.map(p => ({ ...p })), contact: data.contact ? { ...data.contact } : null
     }]);
@@ -137,12 +149,14 @@ export class CartStoreService {
     const qty = Math.max(0, (item.qty || 1) + delta);
     if (qty === 0) { this.remove(index); return; }
     const original = item.kind === 'reward' ? this.campaign().content?.rewards?.items?.[item.sourceIndex ?? -1] : undefined;
-    if (original?.stockEnabled && qty > Number(original.quantity || 0)) { this.notify('לא ניתן לעבור את המלאי הזמין'); return; }
+    const otherQty = item.kind === 'reward' ? this.entries().filter(x =>
+      x.uid !== item.uid && x.kind === 'reward' && x.sourceIndex === item.sourceIndex).reduce((total, x) => total + x.qty, 0) : 0;
+    if (original?.stockEnabled && qty + otherQty > Number(original.quantity || 0)) { this.notify('לא ניתן לעבור את המלאי הזמין'); return; }
     this.update(list => list.map((x, i) => i === index ? { ...x, qty } : x));
   }
 
   reset(): void { this.entries.set([]); }
-  removeSelectedDonation(): void { this.update(list => list.filter(x => !(x.kind === 'donation' && x.selectionBased === true))); }
+  removeSelectedDonation(): void { this.update(list => list.filter(x => !(x.kind === 'donation' && x.selectionBased === true && x.ambassadorId === this.donationAmbassadorId))); }
 
   exportCart(): CartEntry[] {
     return this.entries().map(x => ({ ...x, participants: x.participants?.map(p => ({ ...p })), contact: x.contact ? { ...x.contact } : null }));

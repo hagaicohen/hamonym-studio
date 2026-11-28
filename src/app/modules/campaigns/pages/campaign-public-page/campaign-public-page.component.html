@@ -1,6 +1,6 @@
 <!-- The whole page speaks the campaign language the visitor chose: content,
      platform strip, donation and checkout text (bilingual campaign content, D-43). -->
-<div class="public-campaign" [hmCampaignContent]="contentLang" [hmCampaignLanguages]="languages" (hmCampaignLanguageChange)="setLanguage($event)">
+<div class="public-campaign hm-public-campaign-controls" [style.--hm-public-campaign-accent]="publicCampaignAccent" [hmCampaignContent]="contentLang" [hmCampaignLanguages]="languages" (hmCampaignLanguageChange)="setLanguage($event)">
   @if (languages.length > 1 && !notFound && !isLoading) {
     <nav class="public-lang-switch" [attr.aria-label]="'publicPage.campaignPublic.languageSwitch' | hmPublic">
       @for (l of languages; track l) {
@@ -11,7 +11,12 @@
     </nav>
   }
 
-  @if (notFound) {
+  @if (ambassadorPageError) {
+    <div class="public-not-found" role="alert">
+      <p>לא ניתן לטעון את דף השגריר.</p>
+      <button type="button" (click)="retryAmbassadorPage()">נסו שוב</button>
+    </div>
+  } @else if (notFound) {
     <div class="public-not-found">
       <p>{{ 'publicPage.campaignPublic.campaignNotFound' | hmPublic }}</p>
     </div>
@@ -28,7 +33,7 @@
       </div>
     }
 
-    @if (isAmbassadorMode && currentAmbassador) {
+    @if (!state.draft.layout.simpleStudio && isAmbassadorMode && currentAmbassador) {
       <div class="ambassador-edit-bar">
         <span class="ambassador-edit-label">{{ 'publicPage.campaignPublic.youAreViewingYourAmbassador' | hmPublic }}</span>
         <button class="ambassador-edit-btn" (click)="editMyAmbassadorPage()">
@@ -37,6 +42,12 @@
       </div>
     }
 
+    @if (ambassadorLookupError) {
+      <div class="owner-preview-bar" role="alert">
+        <span>לא ניתן לבדוק את השיוך לשגרירות בקמפיין.</span>
+        <button type="button" (click)="retryAmbassadorLookup()">נסו שוב</button>
+      </div>
+    }
     <div class="public-preview-wrap">
       @if (goalAchieved) {
         <section class="campaign-goal-success" [class.is-celebrating]="celebratingGoal" [attr.aria-label]="'publicPage.campaignPublic.campaignGoalReached' | hmPublic">
@@ -47,11 +58,26 @@
         </section>
       }
       @if (state.draft.layout.simpleStudio) {
-        <app-simple-studio-public-page [draft]="state.draft" [ambassadorId]="currentAmbassador?.id" />
+        @if (ambassadorRouteIssue) {
+          <div class="public-not-found" role="alert">
+            @if (ambassadorRouteIssue === 'failed') {
+              <p>לא ניתן לטעון את דף השגריר.</p>
+              <button type="button" (click)="retryAmbassadorPage()">נסו שוב</button>
+            } @else {
+              <p>{{ 'publicPage.campaignPublic.campaignNotFound' | hmPublic }}</p>
+            }
+          </div>
+        }
+        <app-simple-studio-public-page [ambassadorRouteBlocked]="ambassadorRoutePending || !!ambassadorRouteIssue"
+          [canEditAmbassador]="isAmbassadorMode" (editAmbassador)="editMyAmbassadorPage()" [draft]="state.draft" [ambassadorId]="currentAmbassador?.id" [myAmbassador]="myAmbassador" [ambassadorLookupReady]="ambassadorLookupReady" [ambassador]="currentAmbassador" (ambassadorJoined)="retryAmbassadorLookup()" />
       } @else if (isMinimalFormat) {
-        <app-minimal-donation-page [ambassador]="currentAmbassador" />
+        <app-minimal-donation-page [ambassador]="currentAmbassador" [ambassadorActionLabel]="minimalAmbassadorActionLabel"
+          (ambassadorAction)="runMinimalAmbassadorAction()" />
+        @if (minimalJoinOpen) {
+          <app-campaign-join-dialog (closed)="minimalJoinOpen = false" (joined)="retryAmbassadorLookup()" />
+        }
       } @else {
-        <app-campaign-preview [ambassador]="currentAmbassador" [ambassadorsList]="ambassadorsList" [autoOpenJoin]="autoOpenJoin" [isPublicPage]="true" />
+        <app-campaign-preview [myAmbassador]="myAmbassador" [ambassadorLookupReady]="ambassadorLookupReady" [ambassador]="currentAmbassador" [ambassadorsList]="ambassadorsList" [autoOpenJoin]="autoOpenJoin" [isPublicPage]="true" />
       }
     </div>
   }
@@ -74,3 +100,8 @@
 
   <app-donation-toast />
 </div>
+
+@if (ambassadorEditorError) { <p role="alert">{{ ambassadorEditorError }}</p> }
+@if (editingAmbassador) {
+  <app-campaign-join-dialog [editing]="editingAmbassador" (closed)="editingAmbassador = null" (saved)="ambassadorEditSaved($event)" />
+}

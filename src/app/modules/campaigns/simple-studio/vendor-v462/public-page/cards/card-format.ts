@@ -49,3 +49,16 @@ export function safeLink(url: unknown): string {
   const link = String(url || '').trim();
   return /^https?:\/\/[^\s]+$/i.test(link) ? link : '';
 }
+
+/** Internal public campaign links are handled separately from external URLs. */
+export function internalCampaignLink(value: unknown): string {
+  if (typeof value !== 'string' || /[\s\\]/.test(value)) return '';
+  const match = /^\/campaigns\/([^/?#]+)(?:\/([^/?#]+))?(?:\?[^#]*)?(?:#.*)?$/.exec(value);
+  if (!match) return '';
+  try {
+    return match.slice(1).filter(Boolean).every(segment =>
+      /^[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*$/u.test(decodeURIComponent(segment))) ? value : '';
+  } catch {
+    return '';
+  }
+}

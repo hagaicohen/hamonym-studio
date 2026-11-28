@@ -398,6 +398,10 @@ export class SimpleStudioPageComponent implements AfterViewInit, OnDestroy {
     doc.content.hero.orgLogo = draft.campaignLogoUrl ?? draft.entityLogo ?? '';
     doc.content.hero.showOrgLogo = !!doc.content.hero.orgLogo;
     if (!existing) {
+      Object.assign(doc.content.stats, {
+        desktopAppearance: 'meter', mobileAppearance: 'meter',
+        desktopAnimate: true, mobileAnimate: true,
+      });
       doc.content.hero.logoAnchor = 'bottom-right';
       doc.content.hero.logoBelowText = false;
       doc.content.hero.logoWidth = 64;

@@ -1,9 +1,41 @@
+@if (compact) {
+  <div class="v5-segments" role="group" aria-label="סוג כתובת">
+    <button type="button" [disabled]="disabled" [attr.aria-pressed]="mode === 'he'" (click)="selectSuggestion('he')">עברית</button>
+    <button type="button" [disabled]="disabled" [attr.aria-pressed]="mode === 'en'" (click)="selectSuggestion('en')">אנגלית</button>
+    <button type="button" [disabled]="disabled" [attr.aria-pressed]="mode === 'custom'" (click)="selectSuggestion('custom')">בחירה אישית</button>
+  </div>
+  <div class="v5-urlinput">
+    <input type="text" dir="auto" placeholder="הזינו כתובת" aria-label="כתובת אישית" [disabled]="disabled"
+      [ngModel]="value" (ngModelChange)="onInput($event)" (blur)="normalizeOnBlur()" maxlength="60" autocomplete="off" spellcheck="false">
+    @if (status === 'checking') { <span class="v5-status-icon asf-spinner" aria-hidden="true"></span> }
+    @if (status === 'available') { <span class="v5-status-icon" aria-hidden="true">✓</span> }
+    @if (status === 'taken' || status === 'invalid' || status === 'error') { <span class="v5-status-icon v5-error" aria-hidden="true">!</span> }
+  </div>
+  <div class="v5-status" [class.v5-available]="status === 'available'" role="status" aria-live="polite" [class.v5-error]="['taken','invalid','error'].includes(status)">
+    @switch (status) {
+      @case ('checking') { בודק זמינות… }
+      @case ('available') { הכתובת זמינה לשימוש }
+      @case ('taken') { הכתובת תפוסה — בחרו אחרת }
+      @case ('invalid') { כתובת לא תקינה }
+      @case ('error') { הבדיקה נכשלה <button type="button" [disabled]="disabled" (click)="retry()">ניסיון חוזר</button> }
+      @default { {{ savedValue && value === savedValue ? 'הכתובת הקיימת נשמרת' : 'הזינו שם או כתובת לבחירתכם' }} }
+    }
+  </div>
+  <div class="v5-preview"><small>הקישור האישי</small><span dir="ltr">{{ value ? publicUrl : prefix }}</span></div>
+} @else {
 <div class="asf-wrap">
+ @if (suggestions) {
+  <div class="asf-modes" role="group" aria-label="סוג כתובת">
+   <button type="button" [disabled]="disabled" [attr.aria-pressed]="mode === 'he'" (click)="selectSuggestion('he')">הצעה בעברית</button>
+   <button type="button" [disabled]="disabled" [attr.aria-pressed]="mode === 'en'" (click)="selectSuggestion('en')">הצעה באנגלית</button>
+   <button type="button" [disabled]="disabled" [attr.aria-pressed]="mode === 'custom'" (click)="selectSuggestion('custom')">מותאם אישית</button>
+  </div>
+ }
  <label class="asf-label">{{ 'publicPage.ambassadorSlugField.yourPersonalLink' | hmPublic }}
   <div class="asf-input-row" dir="ltr" [class.asf-input-row--available]="status === 'available'" [class.asf-input-row--taken]="status === 'taken' || status === 'invalid'">
    <span class="asf-prefix" [title]="prefix">{{ prefix }}</span>
-   <input class="asf-input" type="text" [disabled]="disabled" dir="ltr" [ngModel]="value" (ngModelChange)="onInput($event)" maxlength="60" autocomplete="off" spellcheck="false" placeholder="israel-cohen" [attr.aria-invalid]="status === 'taken' || status === 'invalid'" aria-label="הסיומת של הכתובת האישית">
-   <span *ngIf="status === 'checking'" class="asf-spinner" aria-hidden="true">{{ 'publicPage.ambassadorSlugField.checkingAvailability' | hmPublic }}</span>
+   <input class="asf-input" type="text" [disabled]="disabled" dir="auto" [ngModel]="value" (ngModelChange)="onInput($event)" (blur)="normalizeOnBlur()" maxlength="60" autocomplete="off" spellcheck="false" placeholder="israel-cohen" [attr.aria-invalid]="status === 'taken' || status === 'invalid'" aria-label="הסיומת של הכתובת האישית">
+   <span *ngIf="status === 'checking'" class="asf-spinner" aria-hidden="true"></span>
    <span *ngIf="status === 'available'" class="asf-check" aria-hidden="true">{{ 'publicPage.ambassadorSlugField.theLinkIsAvailable' | hmPublic }}</span>
    <span *ngIf="status === 'taken' || status === 'invalid'" class="asf-cross" aria-hidden="true">×</span>
   </div>
@@ -14,6 +46,9 @@
   <span *ngIf="status === 'taken'" class="asf-status--taken">{{ 'publicPage.ambassadorSlugField.thisLinkIsAlreadyTaken' | hmPublic }}</span>
   <span *ngIf="status === 'invalid'" class="asf-status--taken">יש להזין 2–60 אותיות קטנות באנגלית, אותיות בעברית, מספרים או מקפים בין מילים.</span>
   <span *ngIf="status === 'error'" class="asf-status--error">{{ 'publicPage.ambassadorSlugField.weCouldntCheckTheLinks' | hmPublic }}</span>
+  <button *ngIf="status === 'error'" type="button" [disabled]="disabled" (click)="retry()">נסו שוב</button>
  </div>
  <p class="asf-preview" dir="ltr">{{ publicUrl }}</p>
 </div>
+
+}

@@ -1,5 +1,16 @@
 <ng-container *ngIf="{ active: (studioActive$ | async) && embedded } as studio">
 <ng-container *ngIf="draft$ | async as draft">
+<ng-template #ambassadorPanel>
+  @if (!embedded && ambassadorActionLabel) {
+    <button type="button" class="mdp-ambassador-action" [style.--mdp-primary]="draft.layout.theme.primaryColor"
+      (click)="ambassadorAction.emit()">{{ ambassadorActionLabel }}</button>
+  }
+  @if (!embedded && ambassador; as profile) {
+    <app-public-ambassador-panel class="compact" [ambassador]="profile"
+      [campaignUrl]="'/campaigns/' + draft.slug + '/view'"
+      [style.--fundraising-accent]="draft.layout.theme.primaryColor" />
+  }
+</ng-template>
 
 <!-- Checkout V2 (2026-09-24) — IS the donation page itself when enabled,
      not a second interface opened on top of this one. See its own
@@ -13,6 +24,9 @@
   [entityLogoUrl]="logoUrl(draft)"
   [entityName]="draft.entityName || ''"
   [ambassador]="ambassador">
+  <ng-container ngProjectAs="[checkout-page-intro]">
+    <ng-container *ngTemplateOutlet="ambassadorPanel" />
+  </ng-container>
 </app-checkout-v2>
 
 <ng-container *ngIf="!CHECKOUT_V2_ENABLED">
@@ -55,6 +69,8 @@
     <ng-template #simpleSubtitle>
       <p [ngStyle]="headerTextStyle(draft, 'subtitle')" [attr.data-studio-part]="studio.active ? 'subtitle' : null" [attr.data-inline-edit]="studio.active ? (draft.layout.minimalAdvancedText ? 'layout.projectDescription' : 'shortDescription') : null" [attr.data-inline-rich]="studio.active && draft.layout.minimalAdvancedText ? '' : null" class="mdp-subtitle" *ngIf="draft.shortDescription">{{ draft.shortDescription }}</p>
     </ng-template>
+
+    <ng-container *ngTemplateOutlet="ambassadorPanel" />
 
     <div class="mdp-frequency-toggle" *ngIf="draft.allowMonthlyDonation && draft.monthlyAmounts.length > 0">
       <button type="button" class="mdp-frequency-btn" [class.is-selected]="donationFrequency === 'one-time'"

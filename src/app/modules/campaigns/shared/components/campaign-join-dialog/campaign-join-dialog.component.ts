@@ -1,117 +1,122 @@
-import { Component, EventEmitter, AfterViewInit, ElementRef, OnDestroy, ViewChild, OnInit, Output, inject } from '@angular/core';
+import { AmbassadorFormDrawerComponent } from '../ambassador-form-drawer.component';
+import { AmbassadorFormFieldsComponent, DEFAULT_AMBASSADOR_SLOGAN } from '../ambassador-form-fields.component';
+import { Component, EventEmitter, ViewChild, OnInit, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { CampaignDraft, CampaignStudioStateService } from '../../../services/campaign-studio-state.service';
-import { AmbassadorService } from '../../../services/ambassador.service';
+import { Ambassador, AmbassadorService } from '../../../services/ambassador.service';
 import { AuthService } from '../../../../../core/services/auth.service';
-import { HmPublicTextPipe } from '../../../../../core/i18n/content-language';
-import { HmCurrencyPipe, HmMoneyArgPipe } from '../../../../../core/i18n/money';
-import { HmIconComponent } from '../../../../../shared/ui/design-system/icon.component';
-import { AmbassadorSlugFieldComponent } from '../ambassador-slug-field/ambassador-slug-field.component';
 @Component({selector:'app-campaign-join-dialog',standalone:true,
- imports:[CommonModule,FormsModule,RouterModule,HmPublicTextPipe,HmCurrencyPipe,HmMoneyArgPipe,HmIconComponent,AmbassadorSlugFieldComponent],
+ imports:[AmbassadorFormDrawerComponent,AmbassadorFormFieldsComponent,CommonModule,RouterModule],
  templateUrl:'./campaign-join-dialog.component.html',styleUrl:'./campaign-join-dialog.component.css'})
-export class CampaignJoinDialogComponent implements OnInit, AfterViewInit, OnDestroy {
+export class CampaignJoinDialogComponent implements OnInit {
  private readonly state=inject(CampaignStudioStateService);
  private readonly ambassadorSvc=inject(AmbassadorService);
- private readonly auth=inject(AuthService);
+ readonly auth=inject(AuthService);
  readonly draft$=this.state.draft$;
- readonly returnUrl=location.pathname+location.search;
+ get loginReturnUrl(): string {
+  const url = new URL(location.href);
+  url.searchParams.set('join', 'ambassador');
+  return url.pathname + url.search;
+ }
+ @Input() editing: Ambassador | null = null;
+ @Output() saved = new EventEmitter<Ambassador>();
+ private initialForm = '';
  @Output() closed=new EventEmitter<void>();
  @Output() joined=new EventEmitter<{slug:string;shareUrl:string}>();
- ngOnInit():void {this.openJoinModal(); const user=this.auth.currentUser(); if(user){this.joinForm.fullName=user.full_name;this.joinForm.email=user.email;}}
- @ViewChild('dialog', { static: true }) private dialog!: ElementRef<HTMLDialogElement>;
- @ViewChild(AmbassadorSlugFieldComponent) private slugField?: AmbassadorSlugFieldComponent;
- private oldBodyOverflow = '';
- private oldRootOverflow = '';
- private oldBodyPriority = '';
- private oldRootPriority = '';
- ngAfterViewInit(): void {
-  this.oldBodyOverflow = document.body.style.overflow;
-  this.oldRootOverflow = document.documentElement.style.overflow;
-  this.oldBodyPriority = document.body.style.getPropertyPriority('overflow');
-  this.oldRootPriority = document.documentElement.style.getPropertyPriority('overflow');
-  document.body.style.setProperty('overflow', 'hidden', 'important');
-  document.documentElement.style.setProperty('overflow', 'hidden', 'important');
-  this.dialog.nativeElement.showModal();
+ ngOnInit(): void {
+  this.openJoinModal();
+  const user = this.auth.currentUser();
+  if (this.editing) {
+   const row = this.editing;
+   this.joinForm = {
+    fullName: row.fullName, phone: '', email: user?.email ?? '', goalAmount: row.goalAmount,
+    slug: row.slug, personalMessage: row.personalMessage || this.defaultMessage, photoUrl: row.photoUrl ?? null,
+   };
+   this.joinSlugAvailable = true;
+  } else if (user) {
+   this.joinForm.fullName = user.full_name;
+   this.joinForm.email = user.email;
+  }
+  this.initialForm = JSON.stringify(this.joinForm);
  }
- ngOnDestroy(): void {
-  this.dialog.nativeElement.close();
-  document.body.style.setProperty('overflow', this.oldBodyOverflow, this.oldBodyPriority);
-  document.documentElement.style.setProperty('overflow', this.oldRootOverflow, this.oldRootPriority);
- }
- cancel(event: Event): void { event.preventDefault(); this.closeJoinModal(); }
- backdrop(event: MouseEvent): void {
-  const d = this.dialog.nativeElement, r = d.getBoundingClientRect();
-  if (event.target === d && (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom)) this.closeJoinModal();
- }
+ @ViewChild(AmbassadorFormFieldsComponent) private formFields?: AmbassadorFormFieldsComponent;
+ photoUploading = false;
  primaryColor(draft:CampaignDraft):string {return (draft.layout.simpleStudio as any)?.theme?.primary || draft.layout?.theme?.secondaryColor || '#217365';}
-  showJoinModal = false;
   joinStatus: 'idle' | 'loading' | 'success' | 'error' = 'idle';
-  joinForm     = { fullName: '', phone: '', email: '', goalAmount: null as number | null, slug: '' };
+  readonly defaultMessage = DEFAULT_AMBASSADOR_SLOGAN;
+  joinForm     = { fullName: '', phone: '', email: '', goalAmount: null as number | null, slug: '', personalMessage: this.defaultMessage, photoUrl: null as string | null };
   // Gates submit alongside fullName -- mirrors how the existing campaign-slug
   // field gates the publish flow on its own availability flag.
   joinSlugAvailable = false;
-  joinGoalDisplay = '';
   joinShareUrl = '';
   joinCopied   = false;
   joinError    = '';
 
   openJoinModal(): void {
-    this.joinForm          = { fullName: '', phone: '', email: '', goalAmount: null, slug: '' };
+    this.joinForm          = { fullName: '', phone: '', email: '', goalAmount: null, slug: '', personalMessage: this.defaultMessage, photoUrl: null as string | null };
     this.joinSlugAvailable = false;
-    this.joinGoalDisplay   = '';
     this.joinStatus        = 'idle';
     this.joinShareUrl      = '';
     this.joinCopied        = false;
     this.joinError         = '';
-    this.showJoinModal     = true;
   }
 
-  // Non-blocking (Product Requirement 2): a personal goal above the
-  // campaign's target is allowed, just flagged -- never disables submit.
-  joinGoalAboveCampaignGoal(draft: CampaignDraft): boolean {
-    const target = draft.targetAmount ?? 0;
-    return !!this.joinForm.goalAmount && target > 0 && this.joinForm.goalAmount > target;
+  closeJoinModal(): void {
+    if (this.joinStatus === 'loading' || this.photoUploading) return;
+    if (this.joinStatus !== 'success' && this.initialForm !== JSON.stringify(this.joinForm)
+        && !window.confirm('לצאת בלי לשמור את השינויים?')) return;
+    this.closed.emit();
   }
-
-  onJoinGoalInput(event: Event): void {
-    const raw = (event.target as HTMLInputElement).value.replace(/[^\d]/g, '');
-    const num = raw ? parseInt(raw, 10) : null;
-    this.joinForm.goalAmount = num && num > 0 ? num : null;
-    const formatted = num ? num.toLocaleString('he-IL') : '';
-    (event.target as HTMLInputElement).value = formatted;
-    this.joinGoalDisplay = formatted;
-  }
-
-  closeJoinModal(): void { if (this.joinStatus === 'loading') return; this.dialog.nativeElement.close(); this.showJoinModal = false; this.closed.emit(); }
 
   submitJoin(draft: CampaignDraft): void {
-    if (!this.joinForm.fullName.trim() || this.joinStatus === 'loading' || !this.joinSlugAvailable) return;
+    if (!this.auth.currentUser() || !this.joinForm.fullName.trim() || this.joinStatus === 'loading' || !this.joinSlugAvailable || this.photoUploading) return;
     this.joinError = '';
     this.joinStatus = 'loading';
+    const editing = this.editing;
+    if (editing) {
+      this.ambassadorSvc.update(editing.id, {
+        goalAmount: this.joinForm.goalAmount,
+        personalMessage: this.joinForm.personalMessage,
+        ...(this.joinForm.photoUrl && this.joinForm.photoUrl !== editing.photoUrl ? { photoUrl: this.joinForm.photoUrl } : {}),
+        ...(editing.slug !== this.joinForm.slug ? { slug: this.joinForm.slug } : {}),
+      }).subscribe({
+        next: row => this.saved.emit(row),
+        error: error => this.joinFailed(error),
+      });
+      return;
+    }
     this.ambassadorSvc.selfRegister(draft.slug!, {
       fullName: this.joinForm.fullName,
       phone: this.joinForm.phone,
       email: this.joinForm.email,
       goalAmount: this.joinForm.goalAmount,
       slug: this.joinForm.slug,
+      personalMessage: this.joinForm.personalMessage,
+        ...(this.joinForm.photoUrl ? { photoUrl: this.joinForm.photoUrl } : {}),
     }).subscribe({
       next: (res: { slug: string; shareUrl: string }) => {
         this.joinShareUrl = res.shareUrl;
         this.joinStatus   = 'success';
         this.joined.emit(res);
       },
-      error: (err: { status?: number; error?: { error?: string } }) => {
-        this.joinStatus = 'error';
-        if (err.status === 409) {
-          this.joinSlugAvailable = false;
-          this.slugField?.markTaken();
-          this.joinError = 'הכתובת תפוסה. יש לבחור כתובת אחרת ולנסות שוב.';
-        } else { this.joinError = err?.error?.error || 'אירעה שגיאה. נסה שוב.'; }
-      },
+      error: err => this.joinFailed(err),
     });
+  }
+
+  private joinFailed(err: { status?: number; error?: { error?: string } }): void {
+    this.joinStatus = 'error';
+    if (err.error?.error?.includes('campaign_ambassadors_unique_account')) {
+      this.joinError = 'לחשבון שלך כבר קיימת שגרירות בקמפיין, גם אם היא בארכיון. שינוי הכתובת לא יאפשר יצירה מחדש.';
+      return;
+    }
+    if (err.status === 409) {
+      this.joinSlugAvailable = false;
+      this.formFields?.markSlugTaken();
+      this.joinError = 'הכתובת תפוסה. בחרו כתובת אחרת.';
+    } else {
+      this.joinError = err?.error?.error || 'אירעה שגיאה. נסו שוב.';
+    }
   }
 
   copyJoinLink(): void {

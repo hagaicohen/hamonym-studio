@@ -430,13 +430,6 @@ export const routes: Routes = [
         .then((m) => m.AcceptInviteComponent),
   },
 
-  {
-    path: 'campaigns/:slug/view',
-    loadComponent: () =>
-      import('./modules/campaigns/pages/campaign-public-page/campaign-public-page.component')
-        .then((m) => m.CampaignPublicPageComponent),
-  },
-
   // Phase 5, Sprint 5.1 — Public Partner Page. id-based (no slug yet — see
   // docs/PARTNER_DOMAIN_MODEL_ADR.md §8, deliberately not implemented until
   // actually needed). Renderer-only: no Builder, no auth, no navigation —
@@ -467,13 +460,6 @@ export const routes: Routes = [
   // it's a UUID-gated matcher, not a plain wildcard. See its own comment.
   CAMPAIGN_WORKSPACE_ROUTE,
 
-  {
-    path: 'campaigns/:slug/:ambassadorSlug',
-    loadComponent: () =>
-      import('./modules/campaigns/pages/campaign-public-page/campaign-public-page.component')
-        .then((m) => m.CampaignPublicPageComponent),
-  },
-
   /* OpenFields entity-credentials feasibility POC (2026-09-27), dev-only —
      see openfields-poc-page.component.ts's own doc comment. Not linked from
      any nav/menu, reached only by typing the URL directly. Isolated from
@@ -501,12 +487,15 @@ export const routes: Routes = [
         .then((m) => m.CampaignDiscoverComponent),
   },
 
-  /* Bare /campaigns/:slug (no /view suffix) — same public, unguarded page as
-     campaigns/:slug/view, just reachable via the shorter link people actually
-     share. Must stay below every literal campaigns/<word> route above
-     (create, discover, etc.) or :slug would swallow them as a "slug" value. */
+  // One route config preserves the public component across aliases of the same campaign.
+  // Keep this after literal routes such as discover and success and the workspace matcher.
   {
-    path: 'campaigns/:slug',
+    matcher: (segments: UrlSegment[]): UrlMatchResult | null => {
+      if (segments[0]?.path !== 'campaigns' || (segments.length !== 2 && segments.length !== 3)) return null;
+      const posParams: Record<string, UrlSegment> = { slug: segments[1] };
+      if (segments[2] && segments[2].path !== 'view') posParams['ambassadorSlug'] = segments[2];
+      return { consumed: segments, posParams };
+    },
     loadComponent: () =>
       import('./modules/campaigns/pages/campaign-public-page/campaign-public-page.component')
         .then((m) => m.CampaignPublicPageComponent),

@@ -13,7 +13,7 @@ import {
   CampaignDraft, Offering,
   DonorFieldsConfig, DEFAULT_DONOR_FIELDS, CampaignStudioStateService,
 } from '../../../services/campaign-studio-state.service';
-import { DonationService } from '../../../services/donation.service';
+import { DONATION_DEDICATION_MAX_LENGTH, DonationService } from '../../../services/donation.service';
 import { AnalyticsService } from '../../../../../core/services/analytics.service';
 import { Ambassador } from '../../../services/ambassador.service';
 import { sanitizeRichHtml } from '../../../../../shared/utils/sanitize-rich-html';
@@ -457,7 +457,7 @@ export class CheckoutV2Component implements OnInit, OnDestroy {
   isAnonymous = false;
   dedicationEnabled = false;
   dedicationText = '';
-  readonly DEDICATION_MAX_LENGTH = 300;
+  readonly DEDICATION_MAX_LENGTH = DONATION_DEDICATION_MAX_LENGTH;
 
   get donorFields(): DonorFieldsConfig {
     return { ...DEFAULT_DONOR_FIELDS, ...(this.draft?.donorFields ?? {}) };

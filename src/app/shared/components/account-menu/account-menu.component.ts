@@ -16,6 +16,7 @@ import { HmIconComponent } from '../../ui/design-system/icon.component';
 
 type Organization = { id: string; display_name: string; legal_name?: string; entity_type?: string; status?: string };
 @Component({
+ host: { '[attr.data-hm-public-account-menu]': 'publicPage ? "" : null' },
  selector: 'app-account-menu', standalone: true,
  imports: [CommonModule, FormsModule, HmIconComponent],
  templateUrl: './account-menu.component.html', styleUrl: './account-menu.component.css',

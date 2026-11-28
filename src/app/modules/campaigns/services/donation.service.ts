@@ -4,6 +4,7 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 export interface Donor {
+  ambassadorName?: string;
   name: string;
   amount: number;
   // The donation's own currency (2026-11); absent on older responses = ILS.
@@ -29,6 +30,8 @@ export interface DonationToastItem {
   isAnonymous: boolean;
   note?: string | null;
 }
+
+export const DONATION_DEDICATION_MAX_LENGTH = 300;
 
 export interface DonationPayload {
   campaignId: string;
@@ -164,6 +167,7 @@ export class DonationService {
         isAnonymous: d.is_anonymous,
         isFirst: d.is_first,
         note: d.note,
+        ambassadorName: d.ambassador_name || undefined,
       })),
       topDonors: (r.topDonors ?? []).map((t: any) => ({ name: t.name, total: t.total })),
     })));

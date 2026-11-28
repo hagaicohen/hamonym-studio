@@ -8,28 +8,28 @@
  @if (auth.currentUser()) {
   <p class="section-label">מעבר לסביבת עבודה</p>
   <nav class="workspace-list" aria-label="סביבות עבודה">
-   <button type="button" class="account-workspace-option" [class.selected]="selectedWorkspace === 'donor'" [disabled]="navigating" (click)="donor()"><app-icon name="heart" /><span><strong>תורם</strong><small>התרומות והקבלות שלי</small></span>@if (selectedWorkspace === 'donor') { <app-icon name="check" /> }</button>
+   <button type="button" class="account-workspace-option" [class.account-option-selected]="selectedWorkspace === 'donor'" [disabled]="navigating" (click)="donor()"><app-icon name="heart" /><span><strong>תורם</strong><small>התרומות והקבלות שלי</small></span>@if (selectedWorkspace === 'donor') { <app-icon name="check" /> }</button>
    @if (campaigns.length) {
-    <button type="button" class="account-workspace-option" [class.selected]="selectedWorkspace === 'ambassador'" [attr.aria-expanded]="mode === 'ambassadors'" [disabled]="navigating || loading" (click)="choose('ambassadors')"><app-icon name="megaphone" /><span><strong>שגריר</strong><small>הקמפיינים שלי</small></span><span class="submenu-chevron" [class.expanded]="mode === 'ambassadors'" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" focusable="false"><path d="m6 8 4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg></span></button>
+    <button type="button" class="account-workspace-option" [class.account-option-selected]="selectedWorkspace === 'ambassador'" [attr.aria-expanded]="mode === 'ambassadors'" [disabled]="navigating || loading" (click)="choose('ambassadors')"><app-icon name="megaphone" /><span><strong>שגריר</strong><small>הקמפיינים שלי</small></span><span class="submenu-chevron" [class.expanded]="mode === 'ambassadors'" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" focusable="false"><path d="m6 8 4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg></span></button>
     @if (mode === 'ambassadors') {
      <div class="workspace-submenu" role="group" aria-label="הקמפיינים שלי כשגריר">
       @if (campaigns.length > 5) { <label class="account-search"><app-icon name="search" /><input type="search" [ngModel]="search" (ngModelChange)="searchChanged($event)" placeholder="חיפוש קמפיין…" aria-label="חיפוש קמפיין שגריר"></label> }
       <div class="context-list">
        @for (campaign of filteredCampaigns; track campaign.id) {
-        <button type="button" class="context-row" [class.selected]="ctx.isActiveContext('ambassador', campaign.id)" [disabled]="navigating" (click)="selectCampaign(campaign)"><app-icon name="megaphone" /><span>{{ campaign.name }}</span>@if (ctx.isActiveContext('ambassador', campaign.id)) { <app-icon name="check" /> }</button>
+        <button type="button" class="context-row" [class.account-option-selected]="ctx.isActiveContext('ambassador', campaign.id)" [disabled]="navigating" (click)="selectCampaign(campaign)"><app-icon name="megaphone" /><span>{{ campaign.name }}</span>@if (ctx.isActiveContext('ambassador', campaign.id)) { <app-icon name="check" /> }</button>
        } @empty { <p class="account-empty">לא נמצאו קמפיינים</p> }
       </div>
      </div>
     }
    }
    @if (organizations.length) {
-    <button type="button" class="account-workspace-option" [class.selected]="selectedWorkspace === 'entity-manager'" [attr.aria-expanded]="mode === 'organizations'" [disabled]="navigating || loading" (click)="choose('organizations')"><app-icon name="building" /><span><strong>{{ organizationLabel }}</strong><small>הארגונים שלי</small></span><span class="submenu-chevron" [class.expanded]="mode === 'organizations'" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" focusable="false"><path d="m6 8 4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg></span></button>
+    <button type="button" class="account-workspace-option" [class.account-option-selected]="selectedWorkspace === 'entity-manager'" [attr.aria-expanded]="mode === 'organizations'" [disabled]="navigating || loading" (click)="choose('organizations')"><app-icon name="building" /><span><strong>{{ organizationLabel }}</strong><small>הארגונים שלי</small></span><span class="submenu-chevron" [class.expanded]="mode === 'organizations'" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" focusable="false"><path d="m6 8 4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg></span></button>
     @if (mode === 'organizations') {
      <div class="workspace-submenu" role="group" aria-label="הארגונים שלי">
       @if (organizations.length > 5) { <label class="account-search"><app-icon name="search" /><input type="search" [ngModel]="search" (ngModelChange)="searchChanged($event)" placeholder="חיפוש ארגון…" aria-label="חיפוש ארגון"></label> }
       <div class="context-list">
        @for (entity of filteredOrganizations; track entity.id) {
-        <button type="button" class="context-row" [class.selected]="ctx.isActiveContext('entity-manager', entity.id)" [disabled]="navigating" (click)="selectOrganization(entity)"><app-icon name="building" /><span>{{ entity.display_name || entity.legal_name }}</span>@if (ctx.isActiveContext('entity-manager', entity.id)) { <app-icon name="check" /> }</button>
+        <button type="button" class="context-row" [class.account-option-selected]="ctx.isActiveContext('entity-manager', entity.id)" [disabled]="navigating" (click)="selectOrganization(entity)"><app-icon name="building" /><span>{{ entity.display_name || entity.legal_name }}</span>@if (ctx.isActiveContext('entity-manager', entity.id)) { <app-icon name="check" /> }</button>
        } @empty { <p class="account-empty">לא נמצאו ארגונים</p> }
       </div>
      </div>

@@ -1,3 +1,5 @@
+import { PublicAmbassadorPanelComponent } from '../../../../shared/components/public-ambassador-panel.component';
+import { STUDIO_PUBLIC_ACTIONS } from '../../../studio-public-actions';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, Input, OnDestroy, QueryList, ViewChild, ViewChildren, ViewEncapsulation, inject } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { CardData } from '../cards/card-format';
@@ -75,7 +77,7 @@ export class BlockPartComponent {
   selector: 'div[ham-public-page]',
   standalone: true,
   host: { '[attr.class]': 'hostClass', '[attr.data-hero-subtitle-wrap]': 'hostWrap', '[style]': 'hostStyle' },
-  imports: [NgTemplateOutlet, BlockPartComponent, HeaderPartComponent, HeroPartComponent, CampaignInfoPartComponent, TitlePartComponent, StatsPartComponent, DonatePartComponent,
+  imports: [PublicAmbassadorPanelComponent, NgTemplateOutlet, BlockPartComponent, HeaderPartComponent, HeroPartComponent, CampaignInfoPartComponent, TitlePartComponent, StatsPartComponent, DonatePartComponent,
     CampaignNavPartComponent, StoryPartComponent, FooterPartComponent, StickyCtaComponent, CampaignShareComponent, DonationBoxComponent, RaceCardComponent,
     SponsorsComponent, ContentCollectionComponent, DonorsCollectionComponent, RewardTileComponent, RaceParticipantsComponent, CampaignMobileActionsComponent, SimpleDonationComponent],
   encapsulation: ViewEncapsulation.None,
@@ -99,14 +101,14 @@ export class BlockPartComponent {
     @default {<div [attr.class]="n.cls"><ng-container *ngTemplateOutlet="nodes; context: { $implicit: n.children }" /></div>}
   }}
 }}</ng-template><ng-template #part let-n>@switch (n.id) {
-  @case ('header') {<section ham-header-part></section>}
-  @case ('hero') {<section ham-hero-part><ng-container *ngTemplateOutlet="nodes; context: { $implicit: n.children }" /></section>}
+  @case ('header') {<section ham-header-part></section>@if (ambassadorPanelAnchor === 'header') {<ng-container *ngTemplateOutlet="ambassadorPanel" />}}
+  @case ('hero') {<section ham-hero-part><ng-container *ngTemplateOutlet="nodes; context: { $implicit: n.children }" /></section>@if (ambassadorPanelAnchor === 'hero') {<ng-container *ngTemplateOutlet="ambassadorPanel" />}}
   @case ('campaignInfo') {<section ham-campaign-info-part></section>}
   @case ('title') {<section ham-title-part [cls]="n.cls" [attr.style]="n.style" [hidden]="storyHidden(n)"></section>}
   @case ('stats') {<section ham-stats-part [cls]="n.cls" [attr.style]="n.style"></section>}
   @case ('donationBox') {<section ham-block-part [part]="'donationBox'" [cls]="n.cls" [attr.style]="n.style">@if (donationBox) {<div ham-donation-box [donate]="donationBox"></div>}</section>}
   @case ('donate') {<section ham-donate-part [cls]="n.cls" [attr.style]="n.style"></section>}
-  @case ('share') {<section ham-block-part [part]="'share'" [cls]="n.cls" [attr.style]="n.style"><div ham-campaign-share [cfg]="c['share']" [strip]="layout.shareStrip"></div></section>}
+  @case ('share') {<section ham-block-part [part]="'share'" [cls]="n.cls" [attr.style]="n.style"><div ham-campaign-share [cfg]="c['share']" [strip]="layout.shareStrip"></div></section><ng-container *ngTemplateOutlet="ambassadorPanel" />}
   @case ('nav') {<section ham-campaign-nav-part [cls]="n.cls" [attr.style]="n.style"><ng-container *ngTemplateOutlet="nodes; context: { $implicit: n.children }" /></section>}
   @case ('story') {<section ham-story-part [cls]="cls('story') + ' ' + n.cls" [attr.style]="n.style" [hidden]="storyHidden(n)"></section>}
   @case ('races') {<section ham-block-part [part]="'races'" [cls]="cls('races') + ' ' + n.cls" [attr.style]="n.style"><section ham-race-card></section></section>}
@@ -116,9 +118,24 @@ export class BlockPartComponent {
   @case ('footer') {<section ham-footer-part></section>}
   @case ('sticky') {<div ham-sticky-cta></div>}
   @default {<section ham-block-part [part]="n.id" [cls]="cls(n.id) + ' ' + n.cls" [attr.style]="n.style"><section ham-content-collection [kind]="n.id" [device]="device"></section></section>}
-}</ng-template><ng-container *ngTemplateOutlet="nodes; context: { $implicit: layout.top }" />`
+}</ng-template>
+<ng-template #ambassadorPanel>@if (actions?.ambassadorPanel?.(); as panel) {
+    <app-public-ambassador-panel [ambassador]="panel.ambassador" [campaignUrl]="panel.campaignUrl" [showAmounts]="panel.showAmounts" [editAction]="panel.edit" [style.--fundraising-accent]="panel.accent" />
+  }</ng-template>
+@if (ambassadorPanelAnchor === 'top') {<ng-container *ngTemplateOutlet="ambassadorPanel" />}
+<ng-container *ngTemplateOutlet="nodes; context: { $implicit: layout.top }" />`
 })
 export class PublicPageComponent implements OnDestroy {
+  get ambassadorPanelAnchor(): 'share' | 'hero' | 'header' | 'top' | null {
+    if (!this.actions?.ambassadorPanel?.()) return null;
+    const has = (nodes: PageNode[], id: string): boolean =>
+      nodes.some(node => (node.t === 'part' && node.id === id) || has(node.children ?? [], id));
+    return has(this.layout.top, 'share') ? 'share'
+      : has(this.layout.top, 'hero') ? 'hero'
+      : has(this.layout.top, 'header') ? 'header' : 'top';
+  }
+
+  readonly actions = inject(STUDIO_PUBLIC_ACTIONS, { optional: true });
   private readonly parts = inject(PublicPartsService);
   private readonly blocks = inject(CollectionBlocksService);
   private readonly cdr = inject(ChangeDetectorRef);

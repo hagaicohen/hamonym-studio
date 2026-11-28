@@ -337,6 +337,7 @@ export class ManagementModelService {
     const s = this.state(), c = s['content'];
     const ci = c.campaignInfo, h = c.hero, t = c.title, d = c.donate, st = c.stats;
     if (path.startsWith('visibility.')) { const id = path.slice(11); return id === 'donationBox' ? d.boxEnabled !== false : s['visible'][id] !== false; }
+    if (/^stats\.(desktop|mobile)Appearance$/.test(path)) return st[path.slice(6)] || 'existing';
     if (path.startsWith('stats.')) return st[path.slice(6)] !== false;
     if (path.startsWith('donors.')) return c.donors?.[path.slice(7)] !== false;
     if (path.startsWith('ambassadors.')) return c.ambassadors?.[path.slice(12)] !== false;
@@ -372,6 +373,7 @@ export class ManagementModelService {
       if (md) { md.visible = !!value; md.enabled = !!value; }
       return;
     }
+    if (/^stats\.(desktop|mobile)Appearance$/.test(path)) { st[path.slice(6)] = value === 'meter' ? 'meter' : 'existing'; return; }
     if (path.startsWith('stats.')) { st[path.slice(6)] = !!value; return; }
     if (path.startsWith('donors.')) { c.donors[path.slice(7)] = !!value; return; }
     if (path.startsWith('ambassadors.')) { c.ambassadors[path.slice(12)] = !!value; return; }

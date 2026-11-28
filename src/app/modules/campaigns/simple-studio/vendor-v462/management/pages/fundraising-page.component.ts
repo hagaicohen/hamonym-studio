@@ -69,6 +69,14 @@ export class FundraisingPageComponent {
   readonly controller = inject(ManagementControllerService);
   private readonly model = inject(ManagementModelService);
   private readonly edit = inject(ManagementEditService);
+  readonly statsDevices = [{ id: 'desktop', label: 'דסקטופ' }, { id: 'mobile', label: 'מובייל' }];
+  statsAppearance(device: string): string { return this.model.get('stats.' + device + 'Appearance') || 'existing'; }
+  statsAnimate(device: string): boolean { return this.model.get('stats.' + device + 'Animate') !== false; }
+  changeStats(device: string, field: 'Appearance' | 'Animate', value: string | boolean): void {
+    this.edit.snapshot();
+    this.edit.commit('stats.' + device + field, value, { rebuild: true });
+  }
+
   setNoEndDate(checked: boolean): void {
     this.edit.snapshot();
     this.edit.commit('funding.duration', checked ? 'ongoing' : 'one-time', { rebuild: true });

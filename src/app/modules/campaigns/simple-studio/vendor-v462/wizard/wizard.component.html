@@ -71,7 +71,7 @@
     <section class="hw-form-card"><div class="hw-card-head"><span class="hw-card-symbol">01</span><div><strong>פרטי דף התרומה</strong><small>רק הכותרת וכתובת הדף הן חובה</small></div></div>
       <ham-wizard-field fieldId="campaignName" [required]="true" [error]="wizard.fieldError('campaignName')" title="כותרת הדף" [value]="c.hero.title" placeholder="לדוגמה: בונים עתיד טוב יותר" (valueChange)="write('campaignName', $event)" />
       <ham-wizard-field fieldId="hwHeroSubtitle" title="תת־כותרת (לא חובה)" [value]="c.hero.subtitle" placeholder="משפט אחד מתחת לכותרת" (valueChange)="write('hwHeroSubtitle', $event)" />
-      <ham-wizard-slug [simple]="true" [slug]="wizard.displaySlug()" (slugChange)="write('hwCampaignSlug', $event)" />
+      <ham-wizard-slug [simple]="true" [slug]="wizard.displaySlug()" [title]="c.hero.title" (slugChange)="write('hwCampaignSlug', $event)" />
     </section>
     <section class="hw-form-card"><div class="hw-card-head"><span class="hw-card-symbol">02</span><div><strong>מראה אזור הפתיחה</strong><small>אפשר להוסיף תמונה או לוגו — לא חובה</small></div></div>
       <ham-wizard-choice choice="identity" [mode]="identity().mode" (chosen)="wizard.setSimpleIdentity($any($event))" />
@@ -108,7 +108,7 @@
       <label class="hw-toggle-card"><span class="hw-toggle-copy"><strong>להציג את הכותרת ותת־הכותרת על התמונה?</strong><small>אפשר להסתיר אותן בלי למחוק את הטקסטים</small></span><input #heroText class="hw-toggle-input" type="checkbox" role="switch" [checked]="c.hero.showText !== false" (change)="wizard.setHeroText(heroText.checked)" aria-label="הצגת הכותרת ותת־הכותרת על תמונת הקמפיין"></label>
     </section>
     <section class="hw-form-card"><div class="hw-card-head"><span class="hw-card-symbol">02</span><div><strong>בקצרה על הקמפיין</strong><small>הפרטים שיופיעו מתחת לתמונת הפתיחה</small></div></div>
-      <ham-wizard-slug [simple]="false" [slug]="wizard.displaySlug()" (slugChange)="write('hwCampaignSlug', $event)" />
+      <ham-wizard-slug [simple]="false" [slug]="wizard.displaySlug()" [title]="c.hero.title" (slugChange)="write('hwCampaignSlug', $event)" />
       <ham-wizard-field fieldId="hwStoryHeading" title="כותרת אזור התיאור" [value]="c.title.title" placeholder="לדוגמה: נותנים תקווה לילדים" (valueChange)="write('hwStoryHeading', $event)" />
       <ham-wizard-field fieldId="hwStorySubtitle" title="תת־כותרת לתיאור (לא חובה)" [value]="c.title.subtitle" placeholder="משפט נוסף שמסביר את המטרה" (valueChange)="write('hwStorySubtitle', $event)" />
       <ham-wizard-description [error]="wizard.fieldError('campaignDescription')" [description]="c.title.description" (descriptionChange)="write('campaignDescription', $event)" />

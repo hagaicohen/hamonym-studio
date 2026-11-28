@@ -443,3 +443,10 @@
 /* English (LTR): the currency code follows the amount — at the field's end. */
 .mdp-currency-symbol:dir(ltr) { inset-inline-start: auto; inset-inline-end: 16px; font-size: 13px; }
 .mdp-custom-amount:dir(ltr) { padding-inline: 16px 52px; }
+
+.mdp-ambassador-action {
+  display:block; margin:0 0 10px auto; padding:6px 12px; border-radius:8px;
+  border:1px solid var(--mdp-primary,currentColor); color:var(--mdp-primary,currentColor);
+  background:white; font:inherit; cursor:pointer;
+}
+.mdp-ambassador-action:focus-visible { outline:2px solid var(--mdp-primary,currentColor); outline-offset:2px; }

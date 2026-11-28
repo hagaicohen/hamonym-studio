@@ -939,12 +939,12 @@ exports.getMyDonations = async (userId, proof = null) => {
 exports.getLiveDonations = async (slug, since) => {
   const sinceDate = since ? new Date(since) : new Date(0);
   const res = await db.query(
-    `SELECT d.donor_name AS name,
+    `SELECT CASE WHEN d.is_anonymous THEN NULL ELSE d.donor_name END AS name,
             d.amount::float AS amount,
             d.currency,
             d.completed_at,
             d.is_anonymous,
-            d.note
+            CASE WHEN d.is_anonymous = false THEN d.note END AS note
      FROM donations d
      JOIN campaigns c ON c.id = d.campaign_id
      JOIN entities  e ON e.id = c.entity_id
@@ -1014,7 +1014,7 @@ exports.getCampaignDonors = async (slug, period) => {
          camp.currency,
          camp.completed_at,
          camp.is_anonymous,
-         camp.note,
+         CASE WHEN camp.is_anonymous = false THEN camp.note END AS note,
          camp.ambassador_name,
          (camp.id IN (SELECT id FROM first_ids)) AS is_first
        FROM camp

@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, Input, ViewEncapsulation } from '@angular/core';
+import { FundraisingMeterComponent } from '../../../../shared/components/fundraising-meter.component';
+import { STUDIO_PUBLIC_ACTIONS } from '../../../studio-public-actions';
+import { ChangeDetectionStrategy, Component, Input, ViewEncapsulation, inject } from '@angular/core';
 import { CardData, asText, money } from '../cards/card-format';
 import { StatsCard } from './page-layout';
 import { titleDescriptionStyle, titleStyle, titleSubtitleStyle } from './part-format';
@@ -59,12 +61,38 @@ export class TitlePartComponent extends PagePart {
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[attr.class]': 'parts.partClass("stats", cls)', 'data-part': 'stats' },
-  template: `@if (card; as k) {@if (k.textOnly) {<div class="ham-cdl-text-stats">@for (m of k.text; track $index) {<div class="ham-cdl-text-item">@if (k.textIcons) {<span class="ham-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">@switch (m.icon) {@case ('days') {<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6m10-6v6M3 11h18"/>}@case ('percent') {<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/><path d="m12 12 7-7"/>}@case ('donors') {<circle cx="9" cy="8" r="3"/><path d="M2 20v-2a7 7 0 0 1 14 0v2"/><circle cx="18" cy="9" r="2"/><path d="M18 14a5 5 0 0 1 4 5"/>}@default {<ellipse cx="12" cy="6" rx="7.5" ry="3"/><path d="M4.5 6v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6M4.5 12v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6"/>}}</svg></span>}<strong>{{ m.value }}</strong><small>{{ m.label }}</small></div>}</div>} @else {<div class="ham-cdl-main"><div class="ham-cdl-copy">@if (k.caption) {<span class="ham-cdl-kicker">{{ k.caption }}</span>}@if (k.raised) {<strong class="ham-cdl-raised">{{ k.raised }}</strong>}@if (k.goal) {<span class="ham-cdl-target">{{ k.goal }}</span>}</div>@if (k.meter) {<div class="ham-cdl-ring" role="img" [attr.aria-label]="'התקדמות ' + k.meter"><span><b>{{ k.meter }}</b><small>מהיעד</small></span></div>}</div>@if (k.meter) {<div class="ham-cdl-horizontal"><div class="ham-cdl-track"><span [attr.style]="'width:' + k.barWidth"></span></div><b>{{ k.barLabel }}</b></div>}@if (k.donors !== null || k.days !== null) {<div class="ham-cdl-kpis">@if (k.donors !== null) {<div class="ham-cdl-kpi"><span><strong>{{ k.donors }}</strong><small>תורמים</small></span><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><path d="M2 20v-2a7 7 0 0 1 14 0v2"/><circle cx="18" cy="9" r="2"/><path d="M18 14a5 5 0 0 1 4 5"/></svg></div>}@if (k.days !== null) {<div class="ham-cdl-kpi"><span><strong>{{ k.days }}</strong><small>ימים נותרו</small></span><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6m10-6v6M3 11h18"/></svg></div>}</div>}}} @else {<div class="stats"><div class="stats-head"><div>@if (s['showRaised']) {<div class="stats-caption">גויסו עד כה</div><div class="stats-amount">{{ money(s['raised']) }}</div>}</div>@if (s['showGoal']) {<div class="stats-goal">{{ 'מתוך יעד של ' }}<b>{{ money(s['goal']) }}</b></div>}</div>@if (progress) {<div class="progress"><div class="progress-fill" [attr.style]="'width:' + fill + '%'"></div></div>}<div class="stats-bottom">@if (progress) {<b>{{ percent }}% מהיעד</b>}<span>{{ details }}</span></div></div>}`
+  imports: [FundraisingMeterComponent],
+  styles: ['.public-meter-stats{--fundraising-track-size:14px;display:grid;gap:10px;text-align:center}.public-meter-stats .donate-btn{width:100%}'],
+  template: `@if (meter) {
+    <div class="stats public-meter-stats" [style.--fundraising-accent]="accent">
+      @if (s['showRaised'] !== false) { <div class="stats-caption">סך התרומות שגויסו</div> }
+      <app-fundraising-meter [raised]="s['raised']" [goal]="s['goal']" [animated]="animate"
+        [showRaised]="s['showRaised'] !== false" [showGoal]="s['showGoal'] !== false"
+        [showProgress]="s['showProgress'] !== false" />
+      @if (meterDetails) { <div class="stats-bottom">{{ meterDetails }}</div> }
+      @if (actions && parts.deviceAllowed('donate')) {
+        <button type="button" class="donate-btn" (click)="actions.donate()">{{ donateLabel }}</button>
+      }
+    </div>
+  } @else if (card) {@let k = card;@if (k.textOnly) {<div class="ham-cdl-text-stats">@for (m of k.text; track $index) {<div class="ham-cdl-text-item">@if (k.textIcons) {<span class="ham-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">@switch (m.icon) {@case ('days') {<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6m10-6v6M3 11h18"/>}@case ('percent') {<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/><path d="m12 12 7-7"/>}@case ('donors') {<circle cx="9" cy="8" r="3"/><path d="M2 20v-2a7 7 0 0 1 14 0v2"/><circle cx="18" cy="9" r="2"/><path d="M18 14a5 5 0 0 1 4 5"/>}@default {<ellipse cx="12" cy="6" rx="7.5" ry="3"/><path d="M4.5 6v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6M4.5 12v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6"/>}}</svg></span>}<strong>{{ m.value }}</strong><small>{{ m.label }}</small></div>}</div>} @else {<div class="ham-cdl-main"><div class="ham-cdl-copy">@if (k.caption) {<span class="ham-cdl-kicker">{{ k.caption }}</span>}@if (k.raised) {<strong class="ham-cdl-raised">{{ k.raised }}</strong>}@if (k.goal) {<span class="ham-cdl-target">{{ k.goal }}</span>}</div>@if (k.meter) {<div class="ham-cdl-ring" role="img" [attr.aria-label]="'התקדמות ' + k.meter"><span><b>{{ k.meter }}</b><small>מהיעד</small></span></div>}</div>@if (k.meter) {<div class="ham-cdl-horizontal"><div class="ham-cdl-track"><span [attr.style]="'width:' + k.barWidth"></span></div><b>{{ k.barLabel }}</b></div>}@if (k.donors !== null || k.days !== null) {<div class="ham-cdl-kpis">@if (k.donors !== null) {<div class="ham-cdl-kpi"><span><strong>{{ k.donors }}</strong><small>תורמים</small></span><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><path d="M2 20v-2a7 7 0 0 1 14 0v2"/><circle cx="18" cy="9" r="2"/><path d="M18 14a5 5 0 0 1 4 5"/></svg></div>}@if (k.days !== null) {<div class="ham-cdl-kpi"><span><strong>{{ k.days }}</strong><small>ימים נותרו</small></span><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6m10-6v6M3 11h18"/></svg></div>}</div>}}} @else {<div class="stats"><div class="stats-head"><div>@if (s['showRaised']) {<div class="stats-caption">גויסו עד כה</div><div class="stats-amount">{{ money(s['raised']) }}</div>}</div>@if (s['showGoal']) {<div class="stats-goal">{{ 'מתוך יעד של ' }}<b>{{ money(s['goal']) }}</b></div>}</div>@if (progress) {<div class="progress"><div class="progress-fill" [attr.style]="'width:' + fill + '%'"></div></div>}<div class="stats-bottom">@if (progress) {<b>{{ percent }}% מהיעד</b>}<span>{{ details }}</span></div></div>}`
 })
 export class StatsPartComponent extends PagePart {
   @Input() cls = '';
 
   s!: CardData;
+  readonly actions = inject(STUDIO_PUBLIC_ACTIONS, { optional: true });
+  get meter(): boolean { return this.s[this.device + 'Appearance'] === 'meter'; }
+  get animate(): boolean { return this.s[this.device + 'Animate'] !== false; }
+  get accent(): string { return this.parts.campaign['theme']?.primary || 'currentColor'; }
+  get meterDetails(): string {
+    const days = this.s['meterDays'] === undefined ? this.s['days'] : this.s['meterDays'];
+    return [
+      this.s['showDonors'] !== false ? (this.s['donors'] ?? 0) + ' תורמים' : '',
+      this.s['showDays'] !== false && days != null ? days + ' ימים נותרו' : '',
+    ].filter(Boolean).join(' · ');
+  }
+  get donateLabel(): string { return this.parts.campaign['content'].donate?.text || 'תרמו עכשיו'; }
+  private get device(): string { return this.parts.device() === 'desktop' ? 'desktop' : 'mobile'; }
   /** In the panorama's Hero stats card (v4.47; old `hamApplyHeroStatsCard` rewrote this section): the card's content. */
   card: StatsCard | null = null;
   readonly money = money;

@@ -2,7 +2,7 @@ import { STUDIO_PUBLIC_ACTIONS } from '../../studio-public-actions';
 import { DonationPayload } from '../../../services/donation.service';
 import { ApplicationRef, ComponentRef, DestroyRef, EnvironmentInjector, Injectable, Type, createComponent, effect, inject } from '@angular/core';
 import { CartStoreService } from './cart-store.service';
-import { CartBridge } from './cart.types';
+import { CartBridge, DonationAmbassador } from './cart.types';
 import { CartDialogComponent } from './cart-dialog.component';
 import { CartToastComponent } from './cart-toast.component';
 import { RaceQuickRegisterComponent } from './race-quick-register.component';
@@ -65,11 +65,13 @@ export class CampaignCartService {
     this.syncRewardTiles();
   }
 
-  open(checkout = false, donor?: DonationPayload['donor']): void {
+  open(checkout = false, donor?: DonationPayload['donor'], ambassador?: DonationAmbassador, dedication?: string): void {
     this.destroyRef_(this.dialog);
     document.getElementById('hamUnifiedCartDialog')?.remove();
     const ref = this.attach(CartDialogComponent, document.body, false);
     ref.setInput('checkout', checkout);
+    if (ambassador) ref.setInput('donationAmbassador', ambassador);
+    if (dedication) ref.setInput('initialDedication', dedication);
     if(donor)ref.setInput('initialDonor',donor);
     ref.instance.closed.subscribe(() => { if (this.dialog === ref) this.dialog = undefined; this.destroyRef_(ref); });
     this.dialog = ref;
@@ -92,7 +94,13 @@ export class CampaignCartService {
   private attach<T>(type: Type<T>, parent: Element, detect = true): ComponentRef<T> {
     const ref = createComponent(type, { environmentInjector: this.injector });
     this.appRef.attachView(ref.hostView);
-    parent.appendChild(studioAdopt(ref.location.nativeElement));
+    const host = ref.location.nativeElement as HTMLElement;
+    const accent = this.platform?.campaignAccent?.();
+    if (accent) {
+      host.classList.add('hm-public-campaign-controls');
+      host.style.setProperty('--hm-public-campaign-accent', accent);
+    }
+    parent.appendChild(studioAdopt(host));
     if (detect) ref.changeDetectorRef.detectChanges();
     return ref;
   }
@@ -108,13 +116,14 @@ export class CampaignCartService {
 
   private onChange(e: Event): void {
     const input = (e.target as Element | null)?.closest?.('.donation-box [data-donation-custom-input]');
+    if (input?.closest('[data-ambassador-donation-drawer]')) return;
     const box = input?.closest('.donation-box');
     if (box?.querySelector('[data-donation-other].donation-selected,[data-donation-other].is-chosen')) this.store.addDonation(box);
   }
 
   private onClick(e: MouseEvent): void {
     const b = (e.target as Element | null)?.closest?.<HTMLButtonElement>('button');
-    if (!b) return;
+    if (!b || b.closest('[data-ambassador-donation-drawer]')) return;
     const win = window as CartWindow;
     const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };
 

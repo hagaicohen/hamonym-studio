@@ -1,3 +1,18 @@
+<section class="hu-panel" aria-labelledby="fundraising-stats-appearance">
+  <h3 id="fundraising-stats-appearance">מראה תיבת נתוני גיוס</h3>
+  @for (device of statsDevices; track device.id) {
+    <fieldset>
+      <legend>{{ device.label }}</legend>
+      <label>מראה
+        <select [value]="statsAppearance(device.id)" (change)="changeStats(device.id, 'Appearance', $any($event.target).value)">
+          <option value="meter">תיבת גיוס מונפשת</option><option value="existing">מראה קיים</option>
+        </select>
+      </label>
+      <label><input type="checkbox" [checked]="statsAnimate(device.id)"
+        (change)="changeStats(device.id, 'Animate', $any($event.target).checked)" /> אנימציית התקדמות בגיוס</label>
+    </fieldset>
+  }
+</section>
 @let v = vm();
 <div class="hu-eyebrow">ניהול הקמפיין / תרומות וגיוס</div><h1 class="hu-page-title">תרומות וגיוס</h1><p class="hu-lead">כל הגדרות הגיוס והתרומות במקום אחד.</p>
 

@@ -1,5 +1,6 @@
+import { AmbassadorFormDrawerComponent } from '../../shared/components/ambassador-form-drawer.component';
+import { AmbassadorFormFieldsComponent, DEFAULT_AMBASSADOR_SLOGAN } from '../../shared/components/ambassador-form-fields.component';
 import { DropdownComponent, DropdownOptionComponent } from '../../../../shared/ui/dropdown/dropdown.component';
-import { UploadService } from '../../../../core/services/upload.service';
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
@@ -12,7 +13,6 @@ import {
 import { AmbassadorService, Ambassador, AmbassadorFormData, ImportRow } from '../../services/ambassador.service';
 import { CampaignApiService } from '../../services/campaign-api.service';
 import { AppLoaderService } from '../../../../core/services/app-loader.service';
-import { AmbassadorSlugFieldComponent } from '../../shared/components/ambassador-slug-field/ambassador-slug-field.component';
 
 
 import { HmIconComponent } from '../../../../shared/ui/design-system/icon.component';
@@ -35,13 +35,13 @@ function normalizePhone(raw: string): string {
 }
 
 const EMPTY_FORM: AmbassadorFormData = {
-  fullName: '', phone: '', email: '', goalAmount: null, personalMessage: '', personalTitle: '', slug: '',
+  fullName: '', phone: '', email: '', goalAmount: null, personalMessage: DEFAULT_AMBASSADOR_SLOGAN, personalTitle: '', slug: '',
 };
 
 @Component({
   selector: 'app-campaign-ambassadors-page',
   standalone: true,
-  imports: [DropdownComponent, DropdownOptionComponent, HmIconComponent, CommonModule, FormsModule, LucideAngularModule, AmbassadorSlugFieldComponent],
+  imports: [AmbassadorFormDrawerComponent, AmbassadorFormFieldsComponent, DropdownComponent, DropdownOptionComponent, HmIconComponent, CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './campaign-ambassadors-page.component.html',
   styleUrls: ['./campaign-ambassadors-page.component.css'],
 })
@@ -104,12 +104,11 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
   bulkSaving = false;
   actionReason = '';
   loadError = '';
-  pauseTarget: Ambassador | null = null;
-  photoSupported = false;
+  actionTarget: Ambassador | null = null;
   photoUploading = false;
-  photoFileName = '';
-  private readonly photoUpload = inject(UploadService);
   actionMessage = '';
+  bulkProgressMessage = '';
+  bulkResultError = false;
 
   get filteredAmbassadors(): Ambassador[] {
     const text = this.search.trim().toLowerCase();
@@ -129,10 +128,23 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
     return this.filteredAmbassadors.slice(this.page * this.pageSize, (this.page + 1) * this.pageSize);
   }
 
+  get selectableAmbassadors(): Ambassador[] {
+    return this.filteredAmbassadors.filter(row => row.status === 'active');
+  }
+
+  toggleSelectAll(rows: Ambassador[], checked: boolean): void {
+    if (this.bulkSaving) return;
+    for (const row of rows) {
+      if (checked) this.selectedIds.add(row.id);
+      else this.selectedIds.delete(row.id);
+    }
+  }
+
   resetFilters(): void {
     this.page = 0;
     this.selectedIds.clear();
     this.bulkAction = null;
+    this.actionTarget = null;
   }
 
   toggleSelection(id: string): void {
@@ -144,15 +156,24 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
     const action = this.bulkAction;
     const reason = this.actionReason.trim();
     if (!action || !reason || this.bulkSaving) return;
-    const rows = this.ambassadors.filter(row => this.selectedIds.has(row.id));
+    const targetId = this.actionTarget?.id;
+    const rows = this.ambassadors.filter(row =>
+      targetId ? row.id === targetId : row.status === 'active' && this.selectedIds.has(row.id)
+    );
+    if (!rows.length) return;
+    this.actionMessage = '';
+    this.bulkResultError = false;
+    this.bulkProgressMessage = action === 'remove' ? 'מסיר את השגרירים שנבחרו…' : 'משהה את השגרירים שנבחרו…';
     this.bulkSaving = true;
-    this.bulkAction = null;
+    this.cancelStatusAction();
     let removed = 0;
     let paused = 0;
     let failed = 0;
+    let removalUnavailable = false;
+    let removalBlocked = false;
     for (const row of rows) {
       try {
-        if (action === 'remove' && !this.hasHistory(row)) {
+        if (action === 'remove') {
           await firstValueFrom(this.ambassadorSvc.archive(row.id, reason));
           this.ambassadors = this.ambassadors.filter(item => item.id !== row.id);
           removed++;
@@ -161,18 +182,20 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
           this.ambassadors = this.ambassadors.map(item => item.id === row.id ? updated : item);
           paused++;
         }
-      } catch {
+      } catch (error) {
+        const failure = error as { status?: number };
+        if (action === 'remove' && failure.status === 404) removalUnavailable = true;
+        if (action === 'remove' && failure.status === 409) removalBlocked = true;
         failed++;
       }
     }
-    this.actionMessage = [removed ? `הוסרו ${removed}` : '', paused ? `הושהו ${paused}` : '',
-      failed ? `${failed} פעולות נכשלו` : ''].filter(Boolean).join(' · ');
+    this.bulkProgressMessage = '';
+    this.bulkResultError = failed > 0;
+    this.actionMessage = [removed ? `הוסרו ${removed} שגרירים בהצלחה` : '',
+      paused ? `הושהו ${paused} שגרירים` : '', failed ? `${failed} פעולות נכשלו` : '',
+      removalUnavailable ? 'נתיב ההסרה עדיין אינו זמין בשרת.' : ''].filter(Boolean).join(' · ');
     this.resetFilters();
     this.bulkSaving = false;
-  }
-
-  private hasHistory(row: Ambassador): boolean {
-    return row.donorCount > 0 || row.raisedOnline > 0 || row.raisedManual > 0 || row.raisedTotal > 0;
   }
 
   get editedAmbassador(): Ambassador | undefined {
@@ -192,13 +215,11 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
     }
   }
   togglingId: string | null = null;
-  deletingId: string | null = null;
-  confirmDelete: { id: string; name: string; hasDonations: boolean } | null = null;
 
   // ── Add ambassador ──
   showDrawer = false;
   form: AmbassadorFormData = { ...EMPTY_FORM };
-  goalDisplay = '';
+  private initialForm = '';
   saving = false;
   saveError: string | null = null;
   // Gates save() alongside fullName — same pattern as the self-registration
@@ -256,21 +277,28 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
   toggleStatus(a: Ambassador): void {
     if (this.togglingId || this.bulkSaving) return;
     if (a.status === 'active') {
-      this.actionReason = '';
-      this.pauseTarget = a;
+      this.openStatusAction('pause', a);
       return;
     }
     this.changeStatus(a, 'active');
   }
 
-  confirmPause(): void {
-    if (!this.pauseTarget || !this.actionReason.trim()) return;
-    const target = this.pauseTarget;
-    this.pauseTarget = null;
-    this.changeStatus(target, 'inactive', this.actionReason.trim());
+  openStatusAction(action: 'pause' | 'remove', target: Ambassador | null = null): void {
+    if (this.bulkSaving || this.togglingId) return;
+    this.actionReason = '';
+    this.actionMessage = '';
+    this.actionTarget = target;
+    this.bulkAction = action;
+  }
+
+  cancelStatusAction(): void {
+    this.bulkAction = null;
+    this.actionTarget = null;
   }
 
   private changeStatus(a: Ambassador, status: 'active' | 'inactive', reason?: string): void {
+    this.actionMessage = '';
+    this.bulkResultError = false;
     this.togglingId = a.id;
     this.ambassadorSvc.setStatus(a.id, status, reason).subscribe({
       next: (updated) => {
@@ -280,46 +308,11 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
           updated,
           ...this.ambassadors.slice(i + 1),
         ];
+        if (status === 'active') this.actionMessage = 'השגריר הופעל מחדש';
         this.togglingId = null;
       },
-      error: err => { this.togglingId = null; this.actionMessage = err?.error?.error || 'שינוי הסטטוס נכשל'; },
+      error: err => { this.togglingId = null; this.bulkResultError = true; this.actionMessage = err?.error?.error || 'שינוי הסטטוס נכשל'; },
     });
-  }
-
-  openDeleteConfirm(a: Ambassador): void {
-    if (this.bulkSaving) return;
-    this.actionReason = '';
-    this.confirmDelete = { id: a.id, name: a.fullName, hasDonations: this.hasHistory(a) };
-  }
-  cancelDelete(): void { this.confirmDelete = null; }
-
-  confirmDeleteAction(): void {
-    const reason = this.actionReason.trim();
-    if (!this.confirmDelete || !reason) return;
-    const { id, hasDonations } = this.confirmDelete;
-    this.confirmDelete = null;
-    this.deletingId = id;
-
-    if (hasDonations) {
-      // Deactivate — never delete an ambassador with donation history
-      this.ambassadorSvc.setStatus(id, 'inactive', reason).subscribe({
-        next: (updated) => {
-          const i = this.ambassadors.findIndex(x => x.id === id);
-          if (i !== -1) this.ambassadors = [
-            ...this.ambassadors.slice(0, i),
-            updated,
-            ...this.ambassadors.slice(i + 1),
-          ];
-          this.deletingId = null;
-        },
-        error: err => { this.deletingId = null; this.actionMessage = err?.error?.error || 'הפעולה נכשלה'; },
-      });
-    } else {
-      this.ambassadorSvc.archive(id, reason).subscribe({
-        next: () => { this.ambassadors = this.ambassadors.filter(a => a.id !== id); this.deletingId = null; },
-        error: err => { this.deletingId = null; this.actionMessage = err?.error?.error || 'הפעולה נכשלה'; },
-      });
-    }
   }
 
   back(): void { this.router.navigate(['/campaigns', this.campaignId, 'dashboard']); }
@@ -340,47 +333,27 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
 
   openAdd(): void {
     this.editingId = null;
-    this.photoSupported = false;
-    this.photoFileName = '';
     this.form = { ...EMPTY_FORM };
-    this.goalDisplay = '';
     this.slugAvailable = false;
     this.saveError = null;
+    this.initialForm = JSON.stringify(this.form);
     this.showDrawer = true;
   }
 
   openEdit(a: Ambassador): void {
     this.editingId = a.id;
-    this.photoSupported = false;
-    this.photoFileName = '';
-    this.ambassadorSvc.getManagementCapabilities(a.id).subscribe({
-      next: value => { if (this.editingId === a.id) this.photoSupported = value.photoSupported; },
-      error: () => { if (this.editingId === a.id) this.photoSupported = false; },
-    });
     this.form = {
       fullName: a.fullName, phone: a.phone ?? '', email: a.email ?? '',
-      goalAmount: a.goalAmount, personalMessage: a.personalMessage, personalTitle: a.personalTitle,
+      goalAmount: a.goalAmount, personalMessage: a.personalMessage || DEFAULT_AMBASSADOR_SLOGAN, personalTitle: a.personalTitle,
       slug: a.slug,
     };
-    this.goalDisplay = a.goalAmount != null ? a.goalAmount.toLocaleString('he-IL') : '';
     // The slug field component optimistically confirms a non-empty
     // pre-existing value as available on its first change, so this is
     // the normal case rather than a race — see ngOnChanges there.
     this.slugAvailable = true;
     this.saveError = null;
+    this.initialForm = JSON.stringify(this.form);
     this.showDrawer = true;
-  }
-
-  selectPhoto(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    const editingId = this.editingId;
-    if (!file || !editingId || !this.photoSupported || this.photoUploading) return;
-    this.photoUploading = true;
-    this.photoFileName = file.name;
-    this.photoUpload.upload(file, 'campaigns/ambassadors').subscribe({
-      next: url => { this.photoUploading = false; if (this.editingId === editingId) this.form.photoUrl = url; },
-      error: () => { this.photoUploading = false; this.saveError = 'העלאת תמונת השגריר נכשלה'; },
-    });
   }
 
   goalAboveCampaignGoal(): boolean {
@@ -388,17 +361,9 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
   }
 
   closeDrawer(): void {
-    if (this.saving) return;
+    if (this.saving || this.photoUploading) return;
+    if (this.initialForm !== JSON.stringify(this.form) && !window.confirm('לצאת בלי לשמור את השינויים?')) return;
     this.showDrawer = false;
-  }
-
-  onGoalInput(event: Event): void {
-    const raw    = (event.target as HTMLInputElement).value;
-    const parsed = parseCommas(raw);
-    this.form.goalAmount = parsed;
-    const formatted = parsed != null ? parsed.toLocaleString('he-IL') : '';
-    (event.target as HTMLInputElement).value = formatted;
-    this.goalDisplay = formatted;
   }
 
   get canSaveAmbassador(): boolean {
@@ -410,6 +375,8 @@ export class CampaignAmbassadorsPageComponent implements OnInit {
     this.saving = true;
     this.saveError = null;
     const data = { ...this.form, fullName: this.form.fullName.trim() };
+
+    if (this.editingId && data.slug === this.editedAmbassador?.slug) delete data.slug;
 
     const request$ = this.editingId
       ? this.ambassadorSvc.update(this.editingId, data)

@@ -1,6 +1,6 @@
 import {AmountCardComponent} from '../amount-card.component';
 import { minimalTextStyle } from '../../../utils/minimal-text-style';
-import { Component, inject, OnInit, AfterViewInit, OnDestroy, Input, HostBinding } from '@angular/core';
+import { Component, inject, OnInit, AfterViewInit, OnDestroy, Input, Output, EventEmitter, HostBinding } from '@angular/core';
 import { HmAmountButtonsDirective } from '../../../utils/amount-buttons';
 import { campaignLang } from '../../../../../core/i18n/content-language';
 import { FontRole, typographyVars } from '../../../utils/campaign-fonts';
@@ -12,6 +12,7 @@ import { CheckoutModalComponent } from '../checkout-modal/checkout-modal.compone
 import { CheckoutV2Component } from '../checkout-v2/checkout-v2.component';
 import { CHECKOUT_V2_ENABLED } from '../../config/checkout-v2.config';
 import { sanitizeRichHtml } from '../../../../../shared/utils/sanitize-rich-html';
+import { PublicAmbassadorPanelComponent } from '../public-ambassador-panel.component';
 import { Ambassador } from '../../../services/ambassador.service';
 import { resolveCampaignLogo } from '../../../utils/campaign-branding.util';
 
@@ -31,7 +32,7 @@ import { HmMoneyPipe, HmMoneyArgPipe, HmCurrencyPipe } from '../../../../../core
 @Component({
   selector: 'app-minimal-donation-page',
   standalone: true,
-  imports: [AmountCardComponent, HmCurrencyPipe, HmMoneyArgPipe, HmMoneyPipe, HmAmountButtonsDirective, HmPublicTextPipe, HmIconComponent, CommonModule, CheckoutModalComponent, CheckoutV2Component],
+  imports: [PublicAmbassadorPanelComponent, AmountCardComponent, HmCurrencyPipe, HmMoneyArgPipe, HmMoneyPipe, HmAmountButtonsDirective, HmPublicTextPipe, HmIconComponent, CommonModule, CheckoutModalComponent, CheckoutV2Component],
   templateUrl: './minimal-donation-page.component.html',
   styleUrl: './minimal-donation-page.component.css',
 })
@@ -83,6 +84,8 @@ export class MinimalDonationPageComponent implements OnInit, AfterViewInit, OnDe
   // campaign-public-page.component.ts the same way it's set on
   // CampaignPreviewComponent for the full format. 2026-09-24.
   @Input() ambassador: Ambassador | null = null;
+  @Input() ambassadorActionLabel: string | null = null;
+  @Output() ambassadorAction = new EventEmitter<void>();
 
   selectedAmount: number | null = null;
   customAmount: number | null = null;

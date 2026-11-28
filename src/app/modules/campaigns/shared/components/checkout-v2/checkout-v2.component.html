@@ -75,6 +75,7 @@
 
     <!-- SCROLLABLE BODY — only this region scrolls, header/footer stay put. -->
     <div class="cv2-body">
+      <ng-content select="[checkout-page-intro]" />
 
       <!-- ── STEP 1 — סכום ── -->
       <ng-container *ngIf="step === 1">

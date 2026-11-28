@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, catchError, of } from 'rxjs';
+import { Observable, map, catchError, of, throwError } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 export interface Ambassador {
@@ -48,7 +48,10 @@ export interface ImportRow {
   error?: string;
 }
 
+export type AmbassadorMembership = Pick<Ambassador, 'id' | 'slug' | 'status'>;
+
 export interface AmbassadorPublicInfo {
+  photoUrl?: string;
   id:              string;
   fullName:        string;
   slug:            string;
@@ -66,7 +69,7 @@ export interface AmbassadorCampaignSummary {
   cover:            string | null;
   status:           string;
   ambassadorSlug:   string;
-  ambassadorStatus: string;
+  ambassadorStatus: Ambassador['status'];
   personalGoal:     number | null;
 }
 
@@ -141,6 +144,12 @@ export class AmbassadorService {
     );
   }
 
+  getEditable(id: string): Observable<Ambassador> {
+    return this.http.get<{ ambassador: unknown }>(
+      `${this.apiBase}/ambassadors/${encodeURIComponent(id)}`, { headers: this.headers() },
+    ).pipe(map(response => this.fromSnake(response.ambassador)));
+  }
+
   getManagementCapabilities(id: string): Observable<{ photoSupported: boolean }> {
     return this.http.get<{ ambassador: { photo_supported?: boolean } }>(
       `${this.apiBase}/ambassadors/${id}`, { headers: this.headers() },
@@ -169,7 +178,7 @@ export class AmbassadorService {
     );
   }
 
-  listPublic(campaignSlug: string): Observable<AmbassadorPublicInfo[]> {
+  listPublic(campaignSlug: string, strict = false): Observable<AmbassadorPublicInfo[]> {
     return this.http
       .get<{ ambassadors: any[] }>(
         `${this.apiBase}/campaigns/${campaignSlug}/ambassadors/public`
@@ -178,24 +187,25 @@ export class AmbassadorService {
         map(r => (r.ambassadors ?? []).map(a => ({
           id:              a.id,
           fullName:        a.full_name,
+          photoUrl:        a.photo_url || a.account_photo_url || undefined,
           slug:            a.slug,
           goalAmount:      a.goal_amount  ?? null,
           personalMessage: a.personal_message ?? '',
           raisedTotal:     Number(a.raised_total  ?? 0),
           donorCount:      Number(a.donor_count   ?? 0),
         }))),
-        catchError(() => of([]))
+        catchError(error => { if (strict) throw error; return of([]); })
       );
   }
 
-  getBySlug(campaignSlug: string, ambassadorSlug: string): Observable<Ambassador | null> {
+  getBySlug(campaignSlug: string, ambassadorSlug: string, strict = false): Observable<Ambassador | null> {
     return this.http
       .get<{ ambassador: any }>(
-        `${this.apiBase}/campaigns/${campaignSlug}/ambassadors/by-slug/${ambassadorSlug}`
+        `${this.apiBase}/campaigns/${encodeURIComponent(campaignSlug)}/ambassadors/by-slug/${encodeURIComponent(ambassadorSlug)}`
       )
       .pipe(
         map(r => (r.ambassador ? this.fromSnake(r.ambassador) : null)),
-        catchError(() => of(null))
+        catchError(error => strict && error.status !== 404 ? throwError(() => error) : of(null))
       );
   }
 
@@ -208,7 +218,7 @@ export class AmbassadorService {
       .pipe(map(r => this.fromSnake(r.ambassador)));
   }
 
-  getMyCampaigns(): Observable<AmbassadorCampaignSummary[]> {
+  getMyCampaigns(strict = false): Observable<AmbassadorCampaignSummary[]> {
     return this.http
       .get<{ campaigns: any[] }>(
         `${this.apiBase}/campaigns/my-ambassador-campaigns`,
@@ -223,16 +233,16 @@ export class AmbassadorService {
           cover:            c.cover            ?? null,
           status:           c.status           || 'published',
           ambassadorSlug:   c.ambassadorSlug   || '',
-          ambassadorStatus: c.ambassadorStatus || 'active',
+          ambassadorStatus: c.ambassadorStatus === 'active' || c.ambassadorStatus === 'pending' ? c.ambassadorStatus : 'inactive',
           personalGoal:     c.personalGoal     ?? null,
         }))),
-        catchError(() => of([]))
+        catchError(error => strict ? throwError(() => error) : of([]))
       );
   }
 
   selfRegister(
     campaignSlug: string,
-    data: { fullName: string; phone: string; email: string; goalAmount?: number | null; slug?: string }
+    data: { fullName: string; phone: string; email: string; goalAmount?: number | null; slug?: string; personalMessage?: string; photoUrl?: string | null }
   ): Observable<{ slug: string; shareUrl: string }> {
     return this.http.post<{ slug: string; shareUrl: string }>(
       `${this.apiBase}/campaigns/${campaignSlug}/ambassadors/self-register`,
@@ -241,6 +251,8 @@ export class AmbassadorService {
         phone:       data.phone || null,
         email:       data.email || null,
         goal_amount: data.goalAmount ?? null,
+        personal_message: data.personalMessage,
+        ...(data.photoUrl ? { photo_url: data.photoUrl } : {}),
         ...(data.slug ? { slug: data.slug } : {}),
       },
       localStorage.getItem('token') ? { headers: this.headers() } : {}
@@ -264,7 +276,7 @@ export class AmbassadorService {
   ): Observable<{ slug: string; available: boolean; failed?: boolean }> {
     const url = `${this.apiBase}/campaigns/${campaignSlug}/ambassadors/check-slug/${encodeURIComponent(candidateSlug)}`
       + (excludeAmbassadorId ? `?excludeAmbassadorId=${encodeURIComponent(excludeAmbassadorId)}` : '');
-    return this.http.get<{ slug: string; available: boolean }>(url)
+    return this.http.get<{ slug: string; available: boolean }>(url, excludeAmbassadorId ? { headers: this.headers() } : {})
       .pipe(catchError(() => of({ slug: candidateSlug, available: false, failed: true })));
   }
 

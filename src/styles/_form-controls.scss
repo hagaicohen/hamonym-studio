@@ -76,7 +76,7 @@ html body :is(.url-field-wrapper, .asf-input-row) {
 
 /* Accessible keyboard focus for actions, choices and custom widgets. Text
    inputs use their single purple/red border instead of a competing outline. */
-html body :is(button, a[href], [role="button"], [role="combobox"], summary, input[type="checkbox"], input[type="radio"], input[type="range"], input[type="color"], input[type="file"]):not(:where(app-openfields-form *)):focus-visible {
+html body :is(button, a[href], [role="button"], [role="combobox"], summary, input[type="checkbox"], input[type="radio"], input[type="range"], input[type="color"], input[type="file"]):not(:where(app-openfields-form *, [data-hm-public-account-menu] *)):focus-visible {
   outline: 2px solid var(--hm-control-focus);
   outline-offset: 3px;
 }
@@ -180,4 +180,16 @@ $dropdown: 'select:not([multiple], [size]):not(:where(app-openfields-form *, [da
 }
 @media (forced-colors: active) {
   html body #{$native}:focus { outline: 2px solid Highlight !important; outline-offset: 2px; }
+}
+
+/* Public campaign controls and public checkout portals inherit campaign branding. */
+.hm-public-campaign-controls {
+  --hm-control-focus: var(--hm-public-campaign-accent);
+  --hm-select-accent: var(--hm-public-campaign-accent);
+  --hm-admin-focus-ring: var(--hm-public-campaign-accent);
+  --hm-admin-focus-halo: color-mix(in srgb, var(--hm-public-campaign-accent) 12%, transparent);
+}
+
+.hm-public-campaign-controls :is(.url-field-wrapper, .asf-input-row):focus-within:not(.invalid, .asf-input-row--taken, [aria-invalid="true"]) {
+  box-shadow: 0 0 0 2px var(--hm-admin-focus-halo);
 }

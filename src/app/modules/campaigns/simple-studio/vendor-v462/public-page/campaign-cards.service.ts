@@ -138,6 +138,8 @@ export class CampaignCardsService implements OnDestroy {
     if (this.page && !this.page.hostView.destroyed) this.page.changeDetectorRef.detectChanges();
   }
   syncDonationCtas(): void { this.pageInstance()?.syncCtas(); }
+  /** Refresh route-derived bindings without recomputing the campaign layout. */
+  refreshPublicActions(): void { this.pageInstance()?.check(); }
   private pageInstance(): PublicPageComponent | undefined { return this.page?.instance as PublicPageComponent | undefined; }
 
   /** Renders `component` as the only child of `container`, replacing what it held. */

@@ -54,7 +54,12 @@ export function carouselStep(track: HTMLElement, direction: 1 | -1): void {
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'hc-carousel-nav', 'aria-label': 'ניווט בקרוסלה', 'data-hc-ready': '1', '[hidden]': '!active' },
-  template: `<button type="button" data-hc-prev aria-label="הקודם" [disabled]="prevDisabled" (click)="step(-1)">‹</button><span class="hc-page-count">{{ label }}</span><button type="button" data-hc-next aria-label="הבא" [disabled]="nextDisabled" (click)="step(1)">›</button>`
+  template: `<button type="button" data-hc-prev aria-label="הקודם" [disabled]="prevDisabled" (click)="step(-1)">{{ showDots ? '→' : '‹' }}</button><span class="hc-page-count" [class.donor-v3-carousel-count]="showDots">{{ label }}</span>
+  @if (showDots) {
+    <span class="donor-v3-carousel-dots">
+      @for (dot of dots; track $index) { <button type="button" [class.active]="dot === dotIndex" [attr.aria-current]="dot === dotIndex ? 'true' : null" [attr.aria-label]="'מיקום ' + (dot + 1)" (click)="goToDot(dot)"></button> }
+    </span>
+  }<button type="button" data-hc-next aria-label="הבא" [disabled]="nextDisabled" (click)="step(1)">{{ showDots ? '←' : '›' }}</button>`
 })
 export class CollectionNavComponent implements OnInit, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
@@ -63,6 +68,9 @@ export class CollectionNavComponent implements OnInit, OnDestroy {
   @Input({ required: true }) track!: HTMLElement;
   /** The collection shows the carousel view. */
   @Input() active = false;
+  @Input() showDots = false;
+  dots: number[] = [];
+  dotIndex = 0;
   label = '1 / 1';
   prevDisabled = false;
   nextDisabled = false;
@@ -81,7 +89,23 @@ export class CollectionNavComponent implements OnInit, OnDestroy {
   /** The old function's call on an existing nav: refresh on the next frame when shown. */
   sync(): void { if (this.active) this.frame(); }
 
-  step(direction: 1 | -1): void { carouselStep(this.track, direction); }
+  step(direction: 1 | -1): void {
+    if (this.showDots) this.goToDot(this.dotIndex + direction);
+    else carouselStep(this.track, direction);
+  }
+
+  private dotStep(): number {
+    const [first, second] = carouselCards(this.track);
+    return second && first ? Math.abs(second.offsetLeft - first.offsetLeft) : this.track.clientWidth;
+  }
+
+  goToDot(index: number): void {
+    const position = Math.max(0, Math.min(index, this.dots.length - 1));
+    this.track.scrollTo({
+      left: -position * this.dotStep(),
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    });
+  }
 
   private frame(): void { this.zone.runOutsideAngular(() => requestAnimationFrame(() => this.refresh())); }
 
@@ -91,6 +115,17 @@ export class CollectionNavComponent implements OnInit, OnDestroy {
     this.label = status.label;
     this.prevDisabled = status.prevDisabled;
     this.nextDisabled = status.nextDisabled;
+    if (this.showDots) {
+      const step = this.dotStep();
+      const distance = Math.max(0, this.track.scrollWidth - this.track.clientWidth);
+      const last = step ? Math.ceil(Math.max(0, distance - 2) / step) : 0;
+      const scrolled = Math.abs(this.track.scrollLeft);
+      this.dotIndex = scrolled >= distance - 2 ? last : Math.min(last, step ? Math.round(scrolled / step) : 0);
+      if (this.dots.length !== last + 1) this.dots = Array.from({ length:last + 1 }, (_, index) => index);
+      this.label = (this.dotIndex + 1) + ' / ' + this.dots.length;
+      this.prevDisabled = this.dotIndex === 0;
+      this.nextDisabled = this.dotIndex === last;
+    }
     this.cdr.detectChanges();
   }
 }

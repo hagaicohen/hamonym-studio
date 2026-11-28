@@ -1,3 +1,4 @@
+import { suggestPublicSlug } from '../../../shared/components/slug-suggestions';
 import { Component, EventEmitter, Input, Output, OnChanges, OnDestroy, inject, signal } from '@angular/core';
 import { STUDIO_SLUG, StudioSlugCheck } from '../../studio-slug';
 
@@ -10,6 +11,13 @@ export class WizardSlugComponent implements OnChanges, OnDestroy {
  private timer?: ReturnType<typeof setTimeout>;
  private revision = 0;
  @Input() slug = '';
+ @Input() title = '';
+ mode: 'he' | 'en' | 'custom' = 'custom';
+ readonly baseUrl = new URL('/campaigns/', location.origin).href;
+ select(mode: 'he' | 'en' | 'custom'): void {
+   this.mode = mode;
+   if (mode !== 'custom') this.edit(suggestPublicSlug(this.title, mode, 70));
+ }
  @Input() simple = false;
  @Output() slugChange = new EventEmitter<string>();
  ngOnChanges(): void { this.schedule(this.slug); }
@@ -31,7 +39,7 @@ export class WizardSlugComponent implements OnChanges, OnDestroy {
    }, 350);
  }
  onChange(input: HTMLInputElement): void {
-   input.value = String(input.value || '').trim().replace(/\s+/g, '-');
+   input.value = suggestPublicSlug(input.value, 'he', 70);
    this.edit(input.value);
  }
 }
